@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.net.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane fx:id="parallelView" minHeight="0.0" minWidth="0.0" style="-fx-background-color: black;" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.ParallelViewController">
+    <children>
+        <TabPane disable="true" layoutX="288.0" layoutY="120.0" prefHeight="600.0" prefWidth="900.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <tabs>
+                <Tab text="内网资产">
+                    <content>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="300.0">
+                            <children>
+                        <StackPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                           <children>
+                                      <GridPane fx:id="hostDetailGridPane" maxWidth="1.7976931348623157E308">
+                                          <columnConstraints>
+                                              <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.0" prefWidth="100.0" />
+                                              <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                          </columnConstraints>
+                                          <rowConstraints>
+                                              <RowConstraints minHeight="10.0" percentHeight="30.00" prefHeight="150.0" vgrow="NEVER" />
+                                              <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                              <RowConstraints minHeight="10.0" percentHeight="8.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                                          </rowConstraints>
+                                          <children>
+                                              <ToolBar maxWidth="1.7976931348623157E308" prefHeight="40.0" GridPane.columnSpan="2" GridPane.rowIndex="2" GridPane.valignment="BOTTOM">
+                                                  <items>
+                                                      <Button fx:id="returnListBtn" mnemonicParsing="false" text="返回列表" />
+                                                      <MenuButton mnemonicParsing="false" text="服务扫描">
+                                                          <items>
+                                                              <MenuItem mnemonicParsing="false" text="快速扫描" />
+                                                              <MenuItem mnemonicParsing="false" text="自定义扫描" />
+                                                          </items>
+                                                      </MenuButton>
+                                                  </items>
+
+                                              </ToolBar>
+                                              <ScrollPane style="-fx-background-color: black;" GridPane.columnIndex="1" GridPane.rowSpan="2">
+                                                  <stylesheets>
+                                                      <URL value="@ui.css" />
+                                                  </stylesheets>
+                                                  <content>
+                                                      <FlowPane fx:id="serviceDetailFlowPane" maxWidth="1.7976931348623157E308" style="-fx-background-color: black;" vgap="10.0" />
+                                                  </content>
+                                       <GridPane.margin>
+                                          <Insets top="10.0" />
+                                       </GridPane.margin>
+                                              </ScrollPane>
+                                          </children>
+                                      </GridPane>
+                              <GridPane fx:id="hostListGridPane">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                     <RowConstraints minHeight="10.0" vgrow="NEVER" />
+                                 </rowConstraints>
+                                 <children>
+                                            <ToolBar prefHeight="40.0" prefWidth="200.0" GridPane.rowIndex="1">
+                                                <items>
+                                                    <RadioButton fx:id="hostViewRadio" mnemonicParsing="false" text="主机视图" />
+                                                    <RadioButton fx:id="serviceViewRadio" mnemonicParsing="false" text="服务视图" />
+                                                    <MenuButton mnemonicParsing="false" text="主机发现">
+                                                        <items>
+                                                            <MenuItem mnemonicParsing="false" text="被动探测" />
+                                                            <MenuItem fx:id="doScanBtn" mnemonicParsing="false" text="主动扫描" />
+                                                            <MenuItem fx:id="addHostBtn" mnemonicParsing="false" text="手动添加" />
+                                                            <RadioMenuItem mnemonicParsing="false" text="Unspecified Action" />
+                                                        </items>
+                                                    </MenuButton>
+                                                    <Button mnemonicParsing="false" text="存活探测" />
+                                                    <TextField promptText="输入关键字过滤" />
+            
+                                                </items>
+                                            </ToolBar>
+                                            <FlowPane fx:id="hostFlowPane" hgap="20.0" prefHeight="200.0" prefWidth="200.0" vgap="20.0">
+                                                <padding>
+                                                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                                                </padding>
+                                            </FlowPane>
+                                 </children>
+                              </GridPane>
+                              <GridPane fx:id="hostDetailGridPane1" layoutX="10.0" layoutY="10.0" maxWidth="1.7976931348623157E308" opacity="0.8" style="-fx-background-color: gray;">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.0" prefWidth="100.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" percentHeight="30.00" prefHeight="150.0" vgrow="NEVER" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" percentHeight="8.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                    <Label opacity="0.99" text="&quot;平行空间&quot;模块正在完善中，将于冰蝎 v3.0正式版开放使用" textFill="WHITE" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowSpan="2">
+                                       <font>
+                                          <Font name="System Bold" size="16.0" />
+                                       </font></Label>
+                                 </children>
+                              </GridPane>
+                           </children>
+                        </StackPane>
+                            </children>
+                        </AnchorPane>
+                    </content>
+                </Tab>
+                <Tab disable="true" text="会话列表">
+                    <content>
+                        <AnchorPane minHeight="0.0" minWidth="0.0" />
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </children>
+</AnchorPane>

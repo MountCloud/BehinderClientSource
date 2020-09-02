@@ -1,0 +1,19 @@
+.root {
+  -fx-background-color: cornsilk;
+  -fx-padding: 10;
+}
+
+.context-menu {
+  -fx-background-color: white;
+  -fx-text-fill: red;
+}
+
+.menu-item .label {
+  -fx-text-fill: black;
+}
+
+.menu-item:focused .label {
+  -fx-text-fill: white;
+}
+
+.scroll-pane > .viewport  { -fx-background-color: black; }

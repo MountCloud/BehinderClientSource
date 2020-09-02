@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.DatabaseViewController">
+        <children>
+            <GridPane layoutX="340.0" layoutY="243.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="25.00" prefWidth="100.0" />
+                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="75.00" prefWidth="100.0" />
+                </columnConstraints>
+                <rowConstraints>
+                    <RowConstraints minHeight="10.0" percentHeight="10.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="15.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="75.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                </rowConstraints>
+                <children>
+                    <GridPane GridPane.columnSpan="2">
+                        <columnConstraints>
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="15.00" prefWidth="100.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="55.00" prefWidth="100.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        </rowConstraints>
+                        <children>
+                            <ComboBox fx:id="databaseTypeCombo" prefWidth="150.0" promptText="请选择……" GridPane.columnIndex="1" GridPane.halignment="CENTER" />
+                            <Label text="数据库类型：" GridPane.halignment="RIGHT" />
+                            <Label text="连接字符串：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" />
+                            <TextField fx:id="connStrText" GridPane.columnIndex="3" />
+                            <Button fx:id="connectBtn" mnemonicParsing="false" text="连接" GridPane.columnIndex="4" GridPane.halignment="CENTER" />
+                        </children>
+                    </GridPane>
+                    <TreeView fx:id="schemaTree" prefHeight="200.0" prefWidth="200.0" GridPane.rowIndex="1" GridPane.rowSpan="2">
+                        <GridPane.margin>
+                            <Insets left="10.0" right="5.0" top="5.0" />
+                        </GridPane.margin></TreeView>
+                    <GridPane GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <columnConstraints>
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="80.00" prefWidth="100.0" />
+                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
+                        </columnConstraints>
+                        <rowConstraints>
+                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        </rowConstraints>
+                        <children>
+                            <Label text="SQL语句：" GridPane.halignment="RIGHT" />
+                            <TextArea fx:id="sqlText" prefHeight="200.0" prefWidth="200.0" wrapText="true" GridPane.columnIndex="1">
+                                <GridPane.margin>
+                                    <Insets bottom="5.0" top="5.0" />
+                                </GridPane.margin></TextArea>
+                            <Button fx:id="executeSqlBtn" mnemonicParsing="false" text="执行" GridPane.columnIndex="2" GridPane.halignment="CENTER" />
+                        </children>
+                    </GridPane>
+                    <TableView fx:id="dataTable" prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <columns>
+
+                        </columns>
+                        <GridPane.margin>
+                            <Insets right="5.0" />
+                        </GridPane.margin>
+                    </TableView>
+                    <Separator GridPane.columnSpan="2" GridPane.valignment="BOTTOM">
+                        <GridPane.margin>
+                            <Insets left="10.0" right="5.0" />
+                        </GridPane.margin></Separator>
+                </children>
+
+            </GridPane>
+        </children></AnchorPane>

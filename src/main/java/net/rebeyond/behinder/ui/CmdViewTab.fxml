@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import java.net.URL?>
+<AnchorPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="net.rebeyond.behinder.ui.controller.CmdViewController"
+            prefHeight="400.0" prefWidth="600.0">
+
+        <children>
+            <TextArea fx:id="cmdTextArea" onKeyPressed="#onCMDKeyPressed" prefHeight="200.0" prefWidth="200.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #00ff00; " AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+        </children>
+        <stylesheets>
+            <URL value="@ui.css" />
+        </stylesheets>
+    </AnchorPane>
