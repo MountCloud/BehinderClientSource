@@ -48,13 +48,13 @@ public class CmdViewController
         final int lineCount = this.cmdTextArea.getParagraphs().size();
         final String lastLine = ((CharSequence)this.cmdTextArea.getParagraphs().get(lineCount - 1)).toString();
         if (keyCode == KeyCode.ENTER) {
-            this.statusLabel.setText("[!]\u6b63\u5728\u6267\u884c\u547d\u4ee4\uff0c\u8bf7\u7a0d\u540e\u2026\u2026");
+            this.statusLabel.setText("[!]正在执行命令，请稍后……");
             final int cmdStart = lastLine.indexOf(">") + 1;
             final String cmd = lastLine.substring(cmdStart).trim();
             final Runnable runner = () -> {
                 try {
                     JSONObject resultObj = this.currentShellService.runCmd(cmd);
-                    String statusText = (resultObj.getString("status").equals("success") ? "[+]\u547d\u4ee4\u6267\u884c\u6210\u529f\u3002" : "[-]\u547d\u4ee4\u6267\u884c\u5931\u8d25\u3002");
+                    String statusText = (resultObj.getString("status").equals("success") ? "[+]命令执行成功。" : "[-]命令执行失败。");
                     Platform.runLater((Runnable)new Runnable() {
                         
                         @Override
@@ -69,7 +69,7 @@ public class CmdViewController
                     Platform.runLater((Runnable)new Runnable() {
                         @Override
                         public void run() {
-                            CmdViewController.this.statusLabel.setText("[-]\u64cd\u4f5c\u5931\u8d25:" + e.getMessage());
+                            CmdViewController.this.statusLabel.setText("[-]操作失败:" + e.getMessage());
                         }
                     });
                 }

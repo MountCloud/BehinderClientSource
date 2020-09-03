@@ -39,7 +39,7 @@ public class ReverseViewController
     private JSONObject shellEntity;
     private List<Thread> workList;
     private Label statusLabel;
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel) {
         this.currentShellService = shellService;
         this.shellEntity = shellService.getShellEntity();
@@ -47,7 +47,7 @@ public class ReverseViewController
         this.statusLabel = statusLabel;
         this.initReverseView();
     }
-    
+
     private void initReverseView() {
         final ToggleGroup radioGroup = new ToggleGroup();
         this.reverseTypeMeterRadio.setToggleGroup(radioGroup);
@@ -63,7 +63,7 @@ public class ReverseViewController
                     String targetPort = this.reversePortText.getText();
                     RadioButton currentTypeRadio = (RadioButton)radioGroup.getSelectedToggle();
                     if (currentTypeRadio == null) {
-                        Platform.runLater(() -> this.statusLabel.setText("\u8bf7\u5148\u9009\u62e9\u53cd\u5f39\u7c7b\u578b\u3002"));
+                        Platform.runLater(() -> this.statusLabel.setText("请先选择反弹类型。"));
                     }
                     else {
                         String type = currentTypeRadio.getUserData().toString();
@@ -72,17 +72,17 @@ public class ReverseViewController
                         if (status.equals("fail")) {
                             Platform.runLater(() -> {
                                 String msg = resultObj.getString("msg");
-                                this.statusLabel.setText("\u53cd\u5f39\u5931\u8d25:" + msg);
+                                this.statusLabel.setText("反弹失败:" + msg);
                             });
                         }
                         else {
-                            Platform.runLater(() -> this.statusLabel.setText("\u53cd\u5f39\u6210\u529f\u3002"));
+                            Platform.runLater(() -> this.statusLabel.setText("反弹成功。"));
                         }
                     }
                 }
                 catch (Exception e) {
                     e.printStackTrace();
-                    Platform.runLater(() -> this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage()));
+                    Platform.runLater(() -> this.statusLabel.setText("操作失败:" + e.getMessage()));
                 }
                 return;
             };

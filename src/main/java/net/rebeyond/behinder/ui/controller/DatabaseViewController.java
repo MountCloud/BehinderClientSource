@@ -75,7 +75,7 @@ public class DatabaseViewController
     private JSONObject shellEntity;
     private List<Thread> workList;
     private Label statusLabel;
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel) {
         this.currentShellService = shellService;
         this.shellEntity = shellService.getShellEntity();
@@ -83,7 +83,7 @@ public class DatabaseViewController
         this.statusLabel = statusLabel;
         this.initDatabaseView();
     }
-    
+
     private void initDatabaseView() {
         this.schemaTree.setOnMouseClicked(event -> {
             final TreeItem currentTreeItem = (TreeItem)this.schemaTree.getSelectionModel().getSelectedItem();
@@ -119,15 +119,15 @@ public class DatabaseViewController
                         Platform.runLater(() -> {
                             try {
                                 this.fillTable(resultText);
-                                this.statusLabel.setText("SQL\u6267\u884c\u6210\u529f\u3002");
+                                this.statusLabel.setText("SQL执行成功。");
                             }
                             catch (Exception e) {
-                                this.statusLabel.setText("SQL\u6267\u884c\u5931\u8d25:" + e.getMessage());
+                                this.statusLabel.setText("SQL执行失败:" + e.getMessage());
                             }
                         });
                     }
                     catch (Exception e2) {
-                        Platform.runLater(() -> this.statusLabel.setText("SQL\u6267\u884c\u5931\u8d25:" + e2.getMessage()));
+                        Platform.runLater(() -> this.statusLabel.setText("SQL执行失败:" + e2.getMessage()));
                     }
                     return;
                 };
@@ -142,19 +142,19 @@ public class DatabaseViewController
         this.initDatabaseType();
         this.loadContextMenu();
     }
-    
+
     private void loadContextMenu() {
         this.loadTreeContextMenu();
         this.loadTableContextMenu();
     }
-    
+
     private void loadTreeContextMenu() {
         final ContextMenu treeContextMenu = new ContextMenu();
-        final MenuItem queryHeadBtn = new MenuItem("\u67e5\u8be2\u524d10\u6761");
+        final MenuItem queryHeadBtn = new MenuItem("查询前10条");
         treeContextMenu.getItems().add(queryHeadBtn);
-        final MenuItem queryAllBtn = new MenuItem("\u67e5\u8be2\u5168\u90e8");
+        final MenuItem queryAllBtn = new MenuItem("查询全部");
         treeContextMenu.getItems().add(queryAllBtn);
-        final MenuItem exportBtn = new MenuItem("\u5bfc\u51fa\u5f53\u524d\u8868");
+        final MenuItem exportBtn = new MenuItem("导出当前表");
         treeContextMenu.getItems().add(exportBtn);
         queryHeadBtn.setOnAction(event -> {
             final TreeItem currentTreeItem = (TreeItem)this.schemaTree.getSelectionModel().getSelectedItem();
@@ -202,9 +202,9 @@ public class DatabaseViewController
             final String tableName = currentTreeItem.getValue().toString();
             final String dataBaseName = currentTreeItem.getParent().getValue().toString();
             final Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("\u786e\u8ba4");
+            alert.setTitle("确认");
             alert.setHeaderText("");
-            alert.setContentText("\u67e5\u8be2\u6240\u6709\u8bb0\u5f55\u53ef\u80fd\u8017\u65f6\u8f83\u957f\uff0c\u786e\u5b9a\u67e5\u8be2\u6240\u6709\u8bb0\u5f55\uff1f");
+            alert.setContentText("查询所有记录可能耗时较长，确定查询所有记录？");
             final Optional<ButtonType> result = (Optional<ButtonType>)alert.showAndWait();
             if (result.get() == ButtonType.OK) {
 
@@ -250,7 +250,7 @@ public class DatabaseViewController
             final String tableName = currentTreeItem.getValue().toString();
             final String dataBaseName = currentTreeItem.getParent().getValue().toString();
             final FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("\u8bf7\u9009\u62e9\u4fdd\u5b58\u8def\u5f84");
+            fileChooser.setTitle("请选择保存路径");
             fileChooser.setInitialFileName("export_table.csv");
             final File selectedFile = fileChooser.showSaveDialog(this.schemaTree.getScene().getWindow());
             final String selected = selectedFile.getAbsolutePath();
@@ -309,7 +309,7 @@ public class DatabaseViewController
                     fso.write(rows.toString().getBytes());
                     fso.flush();
                     fso.close();
-                    Platform.runLater(() -> this.statusLabel.setText("\u5bfc\u51fa\u5b8c\u6210\uff0c\u6587\u4ef6\u5df2\u4fdd\u5b58\u81f3" + selected));
+                    Platform.runLater(() -> this.statusLabel.setText("导出完成，文件已保存至" + selected));
                 }
                 catch (Exception e) {
                     Platform.runLater(() -> this.statusLabel.setText(e.getMessage()));
@@ -328,14 +328,14 @@ public class DatabaseViewController
             }
         });
     }
-    
+
     private void loadTableContextMenu() {
         final ContextMenu tableContextMenu = new ContextMenu();
-        final MenuItem copyCellBtn = new MenuItem("\u590d\u5236\u5355\u5143\u683c");
+        final MenuItem copyCellBtn = new MenuItem("复制单元格");
         tableContextMenu.getItems().add(copyCellBtn);
-        final MenuItem copyRowBtn = new MenuItem("\u590d\u5236\u6574\u884c");
+        final MenuItem copyRowBtn = new MenuItem("复制整行");
         tableContextMenu.getItems().add(copyRowBtn);
-        final MenuItem exportBtn = new MenuItem("\u5bfc\u51fa\u5168\u90e8\u67e5\u8be2\u7ed3\u679c");
+        final MenuItem exportBtn = new MenuItem("导出全部查询结果");
         tableContextMenu.getItems().add(exportBtn);
         copyCellBtn.setOnAction(event -> {
             final TablePosition position = (TablePosition)this.dataTable.getSelectionModel().getSelectedCells().get(0);
@@ -365,7 +365,7 @@ public class DatabaseViewController
         });
         exportBtn.setOnAction(event -> {
             final FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("\u8bf7\u9009\u62e9\u4fdd\u5b58\u8def\u5f84");
+            fileChooser.setTitle("请选择保存路径");
             fileChooser.setInitialFileName("export_table.csv");
             final File selectedFile = fileChooser.showSaveDialog(this.schemaTree.getScene().getWindow());
             final String selected = selectedFile.getAbsolutePath();
@@ -374,7 +374,7 @@ public class DatabaseViewController
             }
             final int rowSize = this.dataTable.getItems().size();
             final int columnSize = ((List)this.dataTable.getItems().get(0)).size();
-            this.statusLabel.setText("\u6b63\u5728\u51c6\u5907\u6570\u636e\u2026\u2026");
+            this.statusLabel.setText("正在准备数据……");
 
             final Runnable runner = () -> {
 
@@ -402,17 +402,17 @@ public class DatabaseViewController
                     }
                     sb.append("\n");
                 }
-                Platform.runLater(() -> this.statusLabel.setText("\u6b63\u5728\u5199\u5165\u6587\u4ef6\u2026\u2026" + str));
+                Platform.runLater(() -> this.statusLabel.setText("正在写入文件……" + str));
                 try {
                     fso = new FileOutputStream(str);
                     fso.write(sb.toString().getBytes());
                     fso.flush();
                     fso.close();
-                    Platform.runLater(() -> this.statusLabel.setText("\u5bfc\u51fa\u5b8c\u6210\uff0c\u6587\u4ef6\u5df2\u4fdd\u5b58\u81f3" + str));
+                    Platform.runLater(() -> this.statusLabel.setText("导出完成，文件已保存至" + str));
                 }
                 catch (Exception e) {
                     e.printStackTrace();
-                    Platform.runLater(() -> this.statusLabel.setText("\u5bfc\u51fa\u5931\u8d25:" + e.getMessage()));
+                    Platform.runLater(() -> this.statusLabel.setText("导出失败:" + e.getMessage()));
                 }
                 return;
             };
@@ -422,7 +422,7 @@ public class DatabaseViewController
         });
         this.dataTable.setContextMenu(tableContextMenu);
     }
-    
+
     private void initDatabaseType() {
         final ObservableList<String> typeList = (ObservableList<String>)FXCollections.observableArrayList("MySQL", "SQLServer", "Oracle");
         this.databaseTypeCombo.setItems((ObservableList)typeList);
@@ -437,11 +437,11 @@ public class DatabaseViewController
             }
             catch (Exception e) {
                 e.printStackTrace();
-                this.statusLabel.setText("\u8fde\u63a5\u5931\u8d25:" + e.getMessage());
+                this.statusLabel.setText("连接失败:" + e.getMessage());
             }
         });
     }
-    
+
     private String formatConnectString(final String type) {
         String result = "%s://%s:password@127.0.0.1:%s/%s";
         switch (type) {
@@ -460,7 +460,7 @@ public class DatabaseViewController
         }
         return result;
     }
-    
+
     private void showTables(final TreeItem currentTreeItem) throws Exception {
         final Map<String, String> connParams = this.parseConnURI(this.connStrText.getText());
         String sql = null;
@@ -499,7 +499,7 @@ public class DatabaseViewController
         this.workList.add(worker);
         worker.start();
     }
-    
+
     private void showColumns(final TreeItem currentTreeItem) {
         try {
             final String tableName = currentTreeItem.getValue().toString();
@@ -524,9 +524,9 @@ public class DatabaseViewController
             this.statusLabel.setText(ex.getMessage());
         }
     }
-    
+
     private void showDatabases(final String connString) throws Exception {
-        final TreeItem<String> rootItem = (TreeItem<String>)new TreeItem("\u6570\u636e\u5e93\u5217\u8868", (Node)new ImageView());
+        final TreeItem<String> rootItem = (TreeItem<String>)new TreeItem("数据库列表", (Node)new ImageView());
         rootItem.getGraphic().setUserData("root");
         this.schemaTree.setRoot((TreeItem)rootItem);
         this.schemaTree.setShowRoot(false);
@@ -576,7 +576,7 @@ public class DatabaseViewController
         this.workList.add(worker);
         worker.start();
     }
-    
+
     private Map<String, String> parseConnURI(final String url) throws Exception {
         final Map<String, String> connParams = new HashMap<String, String>();
         final URI connUrl = new URI(url);
@@ -608,10 +608,10 @@ public class DatabaseViewController
         connParams.put("coding", coding);
         return connParams;
     }
-    
+
     private void loadDriver(final String scriptType, final String databaseType) throws Exception {
         final String driverPath = "net/rebeyond/behinder/resource/driver/";
-        Platform.runLater(() -> this.statusLabel.setText("\u6b63\u5728\u4e0a\u4f20\u6570\u636e\u5e93\u9a71\u52a8\u2026\u2026"));
+        Platform.runLater(() -> this.statusLabel.setText("正在上传数据库驱动……"));
         final String os = this.currentShellService.shellEntity.getString("os").toLowerCase();
         final String remoteDir = (os.indexOf("windows") >= 0) ? "c:/windows/temp/" : "/tmp/";
         String libName = null;
@@ -637,22 +637,22 @@ public class DatabaseViewController
         final byte[] driverFileContent = Utils.getResourceData(driverPath + libName);
         final String remotePath = remoteDir + libName;
         this.currentShellService.uploadFile(remotePath, driverFileContent, true);
-        Platform.runLater(() -> this.statusLabel.setText("\u9a71\u52a8\u4e0a\u4f20\u6210\u529f\uff0c\u6b63\u5728\u52a0\u8f7d\u9a71\u52a8\u2026\u2026"));
+        Platform.runLater(() -> this.statusLabel.setText("驱动上传成功，正在加载驱动……"));
         final JSONObject loadRes = this.currentShellService.loadJar(remotePath);
         if (loadRes.getString("status").equals("fail")) {
-            throw new Exception("\u9a71\u52a8\u52a0\u8f7d\u5931\u8d25:" + loadRes.getString("msg"));
+            throw new Exception("驱动加载失败:" + loadRes.getString("msg"));
         }
         Platform.runLater(() -> {
             if (scriptType.equals("jsp")) {
-                this.statusLabel.setText("\u9a71\u52a8\u52a0\u8f7d\u6210\u529f\uff0c\u8bf7\u518d\u6b21\u70b9\u51fb\u201c\u8fde\u63a5\u201d\u3002");
+                this.statusLabel.setText("驱动加载成功，请再次点击“连接”。");
             }
-            this.statusLabel.setText("\u9a71\u52a8\u52a0\u8f7d\u6210\u529f\u3002");
+            this.statusLabel.setText("驱动加载成功。");
         });
     }
-    
+
     private String executeSQL(final Map<String, String> connParams, final String sql) throws Exception {
         Platform.runLater(() -> {
-            this.statusLabel.setText("\u6b63\u5728\u67e5\u8be2\uff0c\u8bf7\u7a0d\u540e\u2026\u2026");
+            this.statusLabel.setText("正在查询，请稍后……");
             this.sqlText.setText(sql);
             return;
         });
@@ -667,16 +667,16 @@ public class DatabaseViewController
         final String msg = resultObj.getString("msg");
         Platform.runLater(() -> {
             if (status.equals("success")) {
-                this.statusLabel.setText("\u67e5\u8be2\u5b8c\u6210\u3002");
+                this.statusLabel.setText("查询完成。");
             }
             else if (status.equals("fail") && !msg.equals("NoDriver")) {
-                this.statusLabel.setText("\u67e5\u8be2\u5931\u8d25:" + msg);
+                this.statusLabel.setText("查询失败:" + msg);
             }
             return;
         });
         return msg;
     }
-    
+
     private void fillTree(final String resultText, final TreeItem currentTreeItem) throws Exception {
         currentTreeItem.getChildren().clear();
         final JSONArray result = new JSONArray(resultText);
@@ -712,7 +712,7 @@ public class DatabaseViewController
         }
         currentTreeItem.setExpanded(true);
     }
-    
+
     private void fillTable(final String resultText) throws Exception {
         JSONArray result;
         try {
