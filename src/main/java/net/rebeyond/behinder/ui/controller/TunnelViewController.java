@@ -79,11 +79,11 @@ public class TunnelViewController
     private Label statusLabel;
     private ProxyUtils proxyUtils;
     private ServerSocket localPortMapSocket;
-    
+
     public TunnelViewController() {
         this.localList = new ArrayList<Thread>();
     }
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel) {
         this.currentShellService = shellService;
         this.shellEntity = shellService.getShellEntity();
@@ -91,7 +91,7 @@ public class TunnelViewController
         this.statusLabel = statusLabel;
         this.initTunnelView();
     }
-    
+
     private void initTunnelView() {
         final ToggleGroup portmapTypeGroup = new ToggleGroup();
         this.portmapVPSRadio.setToggleGroup(portmapTypeGroup);
@@ -108,41 +108,41 @@ public class TunnelViewController
                 if (portmapTypeGroup.getSelectedToggle() != null) {
                     final String portMapType = newToggle.getUserData().toString();
                     if (portMapType.equals("local")) {
-                        TunnelViewController.this.portMapDescLabel.setText("*\u63d0\u4f9b\u57fa\u4e8eHTTP\u96a7\u9053\u7684\u5355\u7aef\u53e3\u6620\u5c04\uff0c\u5c06\u8fdc\u7a0b\u76ee\u6807\u5185\u7f51\u7aef\u53e3\u6620\u5c04\u5230\u672c\u5730\uff0c\u9002\u7528\u4e8e\u76ee\u6807\u4e0d\u80fd\u51fa\u7f51\u7684\u60c5\u51b5\u3002");
-                        TunnelViewController.this.portMapListenIPLabel.setText("\u672c\u5730\u76d1\u542cIP\u5730\u5740\uff1a");
-                        TunnelViewController.this.portMapListenPortLabel.setText("\u672c\u5730\u76d1\u542c\u7aef\u53e3\uff1a");
+                        TunnelViewController.this.portMapDescLabel.setText("*提供基于HTTP隧道的单端口映射，将远程目标内网端口映射到本地，适用于目标不能出网的情况。");
+                        TunnelViewController.this.portMapListenIPLabel.setText("本地监听IP地址：");
+                        TunnelViewController.this.portMapListenPortLabel.setText("本地监听端口：");
                         TunnelViewController.this.portMapIPText.setText("0.0.0.0");
                     }
                     else if (portMapType.equals("remote")) {
-                        TunnelViewController.this.portMapDescLabel.setText("*\u63d0\u4f9b\u57fa\u4e8eVPS\u4e2d\u8f6c\u7684\u5355\u7aef\u53e3\u6620\u5c04\uff0c\u5c06\u8fdc\u7a0b\u76ee\u6807\u5185\u7f51\u7aef\u53e3\u6620\u5c04\u5230VPS\uff0c\u76ee\u6807\u673a\u5668\u9700\u8981\u80fd\u51fa\u7f51\u3002");
-                        TunnelViewController.this.portMapListenIPLabel.setText("VPS\u76d1\u542cIP\u5730\u5740\uff1a");
-                        TunnelViewController.this.portMapListenPortLabel.setText("VPS\u76d1\u542c\u7aef\u53e3\uff1a");
+                        TunnelViewController.this.portMapDescLabel.setText("*提供基于VPS中转的单端口映射，将远程目标内网端口映射到VPS，目标机器需要能出网。");
+                        TunnelViewController.this.portMapListenIPLabel.setText("VPS监听IP地址：");
+                        TunnelViewController.this.portMapListenPortLabel.setText("VPS监听端口：");
                         TunnelViewController.this.portMapIPText.setText("8.8.8.8");
                     }
                 }
             }
         });
-        this.portMapListenIPLabel.setText("VPS\u76d1\u542cIP\u5730\u5740\uff1a");
-        this.portMapListenPortLabel.setText("VPS\u76d1\u542c\u7aef\u53e3\uff1a");
+        this.portMapListenIPLabel.setText("VPS监听IP地址：");
+        this.portMapListenPortLabel.setText("VPS监听端口：");
         socksTypeGroup.selectedToggleProperty().addListener((ChangeListener)new ChangeListener<Toggle>() {
             public void changed(final ObservableValue<? extends Toggle> ov, final Toggle oldToggle, final Toggle newToggle) {
                 if (portmapTypeGroup.getSelectedToggle() != null) {
                     final String portMapType = newToggle.getUserData().toString();
                     if (portMapType.equals("local")) {
-                        TunnelViewController.this.socksDescLabel.setText("*\u63d0\u4f9b\u57fa\u4e8eHTTP\u96a7\u9053\u7684\u5168\u5c40socks\u4ee3\u7406\uff0c\u5c06\u8fdc\u7a0b\u76ee\u6807\u5185\u7f51\u7684socks\u4ee3\u7406\u670d\u52a1\u5f00\u5230\u672c\u5730\uff0c\u9002\u7528\u4e8e\u76ee\u6807\u4e0d\u80fd\u51fa\u7f51\u7684\u60c5\u51b5\u3002");
-                        TunnelViewController.this.socksListenIPLabel.setText("\u672c\u5730\u76d1\u542cIP\u5730\u5740\uff1a");
-                        TunnelViewController.this.socksListenPortLabel.setText("\u672c\u5730\u76d1\u542c\u7aef\u53e3\uff1a");
+                        TunnelViewController.this.socksDescLabel.setText("*提供基于HTTP隧道的全局socks代理，将远程目标内网的socks代理服务开到本地，适用于目标不能出网的情况。");
+                        TunnelViewController.this.socksListenIPLabel.setText("本地监听IP地址：");
+                        TunnelViewController.this.socksListenPortLabel.setText("本地监听端口：");
                     }
                     else if (portMapType.equals("remote")) {
-                        TunnelViewController.this.socksDescLabel.setText("*\u63d0\u4f9b\u57fa\u4e8eVPS\u4e2d\u8f6c\u7684\u5168\u5c40socks\u4ee3\u7406\uff0c\u5c06\u8fdc\u7a0b\u76ee\u6807\u5185\u7f51\u7684socks\u4ee3\u7406\u670d\u52a1\u5f00\u5230\u5916\u7f51VPS\uff0c\u76ee\u6807\u673a\u5668\u9700\u8981\u80fd\u51fa\u7f51\u3002");
-                        TunnelViewController.this.socksListenIPLabel.setText("VPS\u76d1\u542cIP\u5730\u5740\uff1a");
-                        TunnelViewController.this.socksListenPortLabel.setText("VPS\u76d1\u542c\u7aef\u53e3\uff1a");
+                        TunnelViewController.this.socksDescLabel.setText("*提供基于VPS中转的全局socks代理，将远程目标内网的socks代理服务开到外网VPS，目标机器需要能出网。");
+                        TunnelViewController.this.socksListenIPLabel.setText("VPS监听IP地址：");
+                        TunnelViewController.this.socksListenPortLabel.setText("VPS监听端口：");
                     }
                 }
             }
         });
         this.createPortMapBtn.setOnAction(event -> {
-            if (this.createPortMapBtn.getText().equals("\u5f00\u542f")) {
+            if (this.createPortMapBtn.getText().equals("开启")) {
                 final RadioButton currentTypeRadio = (RadioButton)portmapTypeGroup.getSelectedToggle();
                 if (currentTypeRadio.getUserData().toString().equals("local")) {
                     this.createLocalPortMap();
@@ -162,7 +162,7 @@ public class TunnelViewController
             }
         });
         this.createSocksBtn.setOnAction(event -> {
-            if (this.createSocksBtn.getText().equals("\u5f00\u542f")) {
+            if (this.createSocksBtn.getText().equals("开启")) {
                 final RadioButton currentTypeRadio = (RadioButton)socksTypeGroup.getSelectedToggle();
                 if (currentTypeRadio.getUserData().toString().equals("local")) {
                     this.createLocalSocks();
@@ -182,15 +182,15 @@ public class TunnelViewController
             }
         });
     }
-    
+
     private void createLocalPortMap() {
-        // 
+        //
         // This method could not be decompiled.
-        // 
+        //
         // Original Bytecode:
-        // 
+        //
         //     1: getfield        net/rebeyond/behinder/ui/controller/TunnelViewController.createPortMapBtn:Ljavafx/scene/control/Button;
-        //     4: ldc             "\u5173\u95ed"
+        //     4: ldc             "关闭"
         //     6: invokevirtual   javafx/scene/control/Button.setText:(Ljava/lang/String;)V
         //     9: aload_0         /* this */
         //    10: getfield        net/rebeyond/behinder/ui/controller/TunnelViewController.portMapTargetIPText:Ljavafx/scene/control/TextField;
@@ -206,7 +206,7 @@ public class TunnelViewController
         //    28: invokedynamic   BootstrapMethod #2, run:(Lnet/rebeyond/behinder/ui/controller/TunnelViewController;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Runnable;
         //    33: astore_3        /* creater */
         //    34: new             Ljava/lang/Thread;
-        //    37: dup            
+        //    37: dup
         //    38: aload_3         /* creater */
         //    39: invokespecial   java/lang/Thread.<init>:(Ljava/lang/Runnable;)V
         //    42: astore          worker
@@ -214,13 +214,13 @@ public class TunnelViewController
         //    45: getfield        net/rebeyond/behinder/ui/controller/TunnelViewController.workList:Ljava/util/List;
         //    48: aload           worker
         //    50: invokeinterface java/util/List.add:(Ljava/lang/Object;)Z
-        //    55: pop            
+        //    55: pop
         //    56: aload           worker
         //    58: invokevirtual   java/lang/Thread.start:()V
-        //    61: return         
-        // 
+        //    61: return
+        //
         // The error that occurred was:
-        // 
+        //
         // java.lang.IllegalStateException: Unsupported node type: com.strobel.decompiler.ast.Lambda
         //     at com.strobel.decompiler.ast.Error.unsupportedNode(Error.java:32)
         //     at com.strobel.decompiler.ast.GotoRemoval.exit(GotoRemoval.java:612)
@@ -244,12 +244,12 @@ public class TunnelViewController
         //     at com.strobel.decompiler.DecompilerDriver.decompileType(DecompilerDriver.java:330)
         //     at com.strobel.decompiler.DecompilerDriver.decompileJar(DecompilerDriver.java:251)
         //     at com.strobel.decompiler.DecompilerDriver.main(DecompilerDriver.java:126)
-        // 
+        //
         throw new IllegalStateException("An error occurred while decompiling this method.");
     }
-    
+
     private void stoplocalPortMap() {
-        this.createPortMapBtn.setText("\u5f00\u542f");
+        this.createPortMapBtn.setText("开启");
         final String targetIP = this.portMapTargetIPText.getText();
         final String targetPort = this.portMapTargetPortText.getText();
         final Runnable runner = () -> {
@@ -270,11 +270,11 @@ public class TunnelViewController
                         e.printStackTrace();
                     }
                 }
-                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[INFO]\u672c\u5730\u76d1\u542c\u7aef\u53e3\u5df2\u5173\u95ed\u3002\n"));
+                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[INFO]本地监听端口已关闭。\n"));
             }
             catch (Exception e2) {
                 e2.printStackTrace();
-                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[ERROR]\u96a7\u9053\u5173\u95ed\u5931\u8d25:" + e2.getMessage() + "\n"));
+                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + e2.getMessage() + "\n"));
             }
             return;
         };
@@ -282,16 +282,16 @@ public class TunnelViewController
         this.workList.add(worker);
         worker.start();
     }
-    
+
     private void stopRemotePortMap() {
-        this.createPortMapBtn.setText("\u5f00\u542f");
+        this.createPortMapBtn.setText("开启");
         final Runnable runner = () -> {
             try {
                 this.currentShellService.closeRemotePortMap();
-                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[INFO]\u96a7\u9053\u5df2\u5173\u95ed\uff0c\u8fdc\u7aef\u76f8\u5173\u8d44\u6e90\u5df2\u91ca\u653e\u3002\n"));
+                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[INFO]隧道已关闭，远端相关资源已释放。\n"));
             }
             catch (Exception e) {
-                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[ERROR]\u96a7\u9053\u5173\u95ed\u5931\u8d25:" + e.getMessage() + "\n"));
+                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + e.getMessage() + "\n"));
             }
             return;
         };
@@ -299,9 +299,9 @@ public class TunnelViewController
         this.workList.add(worker);
         worker.start();
     }
-    
+
     private void createRemotePortMap() {
-        this.createPortMapBtn.setText("\u5173\u95ed");
+        this.createPortMapBtn.setText("关闭");
         final String remoteTargetIP = this.portMapTargetIPText.getText();
         final String remoteTargetPort = this.portMapTargetPortText.getText();
         final String remoteIP = this.portMapIPText.getText();
@@ -309,11 +309,11 @@ public class TunnelViewController
         final Runnable runner = () -> {
             try {
                 this.currentShellService.createRemotePortMap(remoteTargetIP, remoteTargetPort, remoteIP, remotePort);
-                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[INFO]\u96a7\u9053\u5efa\u7acb\u6210\u529f\uff0c\u8bf7\u8fde\u63a5VPS\u3002\n"));
+                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[INFO]隧道建立成功，请连接VPS。\n"));
             }
             catch (Exception e) {
                 e.printStackTrace();
-                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[ERROR]\u96a7\u9053\u5efa\u7acb\u5931\u8d25:" + e.getMessage() + "\n"));
+                Platform.runLater(() -> this.tunnelLogTextarea.appendText("[ERROR]隧道建立失败:" + e.getMessage() + "\n"));
             }
             return;
         };
@@ -321,27 +321,27 @@ public class TunnelViewController
         this.workList.add(worker);
         worker.start();
     }
-    
+
     private void createLocalSocks() {
-        this.createSocksBtn.setText("\u5173\u95ed");
+        this.createSocksBtn.setText("关闭");
         (this.proxyUtils = new ProxyUtils()).start();
     }
-    
+
     private void stopLocalSocks() {
         this.proxyUtils.shutdown();
-        this.createSocksBtn.setText("\u5f00\u542f");
+        this.createSocksBtn.setText("开启");
     }
-    
+
     private void createRemoteSocks() {
-        this.createSocksBtn.setText("\u5173\u95ed");
+        this.createSocksBtn.setText("关闭");
         (this.proxyUtils = new ProxyUtils()).start();
     }
-    
+
     private void stopRemoteSocks() {
         this.proxyUtils.shutdown();
-        this.createSocksBtn.setText("\u5f00\u542f");
+        this.createSocksBtn.setText("开启");
     }
-    
+
     class ProxyUtils extends Thread
     {
         private Thread r;
@@ -349,18 +349,18 @@ public class TunnelViewController
         private Thread proxy;
         private ServerSocket serverSocket;
         private int bufSize;
-        
+
         ProxyUtils() {
             this.bufSize = 65535;
         }
-        
+
         private void log(final String type, final String log) {
             final String logLine = "[" + type + "]" + log + "\n";
             Platform.runLater(() -> TunnelViewController.this.tunnelLogTextarea.appendText(logLine));
         }
-        
+
         public void shutdown() {
-            this.log("INFO", "\u6b63\u5728\u5173\u95ed\u4ee3\u7406\u670d\u52a1");
+            this.log("INFO", "正在关闭代理服务");
             try {
                 if (this.r != null) {
                     this.r.stop();
@@ -374,12 +374,12 @@ public class TunnelViewController
                 this.serverSocket.close();
             }
             catch (IOException e) {
-                this.log("ERROR", "\u4ee3\u7406\u670d\u52a1\u5173\u95ed\u5f02\u5e38:" + e.getMessage());
+                this.log("ERROR", "代理服务关闭异常:" + e.getMessage());
             }
-            this.log("INFO", "\u4ee3\u7406\u670d\u52a1\u5df2\u505c\u6b62");
-            TunnelViewController.this.createSocksBtn.setText("\u5f00\u542f");
+            this.log("INFO", "代理服务已停止");
+            TunnelViewController.this.createSocksBtn.setText("开启");
         }
-        
+
         @Override
         public void run() {
             try {
@@ -387,31 +387,31 @@ public class TunnelViewController
                 final String socksIP = TunnelViewController.this.socksIPText.getText();
                 this.proxy = Thread.currentThread();
                 (this.serverSocket = new ServerSocket(Integer.parseInt(socksPort), 50, InetAddress.getByName(socksIP))).setReuseAddress(true);
-                this.log("INFO", "\u6b63\u5728\u76d1\u542c\u7aef\u53e3" + socksPort);
+                this.log("INFO", "正在监听端口" + socksPort);
                 while (true) {
                     final Socket socket = this.serverSocket.accept();
-                    this.log("INFO", "\u6536\u5230\u5ba2\u6237\u7aef\u8fde\u63a5\u8bf7\u6c42.");
+                    this.log("INFO", "收到客户端连接请求.");
                     new Session(socket).start();
                 }
             }
             catch (IOException e) {
-                this.log("ERROR", "\u7aef\u53e3\u76d1\u542c\u5931\u8d25\uff1a" + e.getMessage());
+                this.log("ERROR", "端口监听失败：" + e.getMessage());
             }
         }
-        
+
         private class Session extends Thread
         {
             private Socket socket;
-            
+
             public Session(final Socket socket) {
                 this.socket = socket;
             }
-            
+
             @Override
             public void run() {
                 try {
                     if (this.handleSocks(this.socket)) {
-                        ProxyUtils.this.log("INFO", "\u6b63\u5728\u901a\u4fe1...");
+                        ProxyUtils.this.log("INFO", "正在通信...");
                         ProxyUtils.this.r = new Reader();
                         ProxyUtils.this.w = new Writer();
                         ProxyUtils.this.r.start();
@@ -429,7 +429,7 @@ public class TunnelViewController
                     }
                 }
             }
-            
+
             private boolean handleSocks(final Socket socket) throws Exception {
                 final int ver = socket.getInputStream().read();
                 if (ver == 5) {
@@ -437,7 +437,7 @@ public class TunnelViewController
                 }
                 return ver == 4 && this.parseSocks4(socket);
             }
-            
+
             private boolean parseSocks5(final Socket socket) throws Exception {
                 final DataInputStream ins = new DataInputStream(socket.getInputStream());
                 final DataOutputStream os = new DataOutputStream(socket.getOutputStream());
@@ -497,17 +497,17 @@ public class TunnelViewController
                 host = InetAddress.getByName(host).getHostAddress();
                 if (TunnelViewController.this.currentShellService.openProxy(host, port + "")) {
                     os.write(CipherUtils.mergeByteArray(new byte[][] { { 5, 0, 0, 1 }, InetAddress.getByName(host).getAddress(), targetPort }));
-                    ProxyUtils.this.log("INFO", "\u96a7\u9053\u5efa\u7acb\u6210\u529f\uff0c\u8bf7\u6c42\u8fdc\u7a0b\u5730\u5740" + host + ":" + port);
+                    ProxyUtils.this.log("INFO", "隧道建立成功，请求远程地址" + host + ":" + port);
                     return true;
                 }
                 os.write(CipherUtils.mergeByteArray(new byte[][] { { 5, 0, 0, 1 }, InetAddress.getByName(host).getAddress(), targetPort }));
                 throw new Exception(String.format("[%s:%d] Remote failed", host, port));
             }
-            
+
             private boolean parseSocks4(final Socket socket) {
                 return false;
             }
-            
+
             private class Reader extends Thread
             {
                 @Override
@@ -527,13 +527,13 @@ public class TunnelViewController
                             }
                         }
                         catch (Exception e) {
-                            ProxyUtils.this.log("ERROR", "\u6570\u636e\u8bfb\u53d6\u5f02\u5e38:" + e.getMessage());
+                            ProxyUtils.this.log("ERROR", "数据读取异常:" + e.getMessage());
                             e.printStackTrace();
                         }
                     }
                 }
             }
-            
+
             private class Writer extends Thread
             {
                 @Override
@@ -554,16 +554,16 @@ public class TunnelViewController
                                 continue;
                             }
                             catch (Exception e) {
-                                ProxyUtils.this.log("ERROR", "\u6570\u636e\u5199\u5165\u5f02\u5e38:" + e.getMessage());
+                                ProxyUtils.this.log("ERROR", "数据写入异常:" + e.getMessage());
                                 e.printStackTrace();
                             }
                             try {
                                 TunnelViewController.this.currentShellService.closeProxy();
-                                ProxyUtils.this.log("INFO", "\u96a7\u9053\u5173\u95ed\u6210\u529f\u3002");
+                                ProxyUtils.this.log("INFO", "隧道关闭成功。");
                                 Session.this.socket.close();
                             }
                             catch (Exception e) {
-                                ProxyUtils.this.log("ERROR", "\u96a7\u9053\u5173\u95ed\u5931\u8d25:" + e.getMessage());
+                                ProxyUtils.this.log("ERROR", "隧道关闭失败:" + e.getMessage());
                                 e.printStackTrace();
                             }
                             return;

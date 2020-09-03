@@ -81,26 +81,26 @@ public class MainWindowController
     private UpdateInfoViewController updateInfoViewController;
     private Map<String, String> basicInfoMap;
     private List<Thread> workList;
-    
+
     public MainWindowController() {
         this.basicInfoMap = new HashMap<String, String>();
         this.workList = new ArrayList<Thread>();
     }
-    
+
     public void initialize() {
         this.initControls();
     }
-    
+
     public List<Thread> getWorkList() {
         return this.workList;
     }
-    
+
     private void initControls() {
         this.versionLabel.setText(String.format(this.versionLabel.getText(), Constants.VERSION));
         this.urlText.textProperty().addListener((observable, oldValue, newValue) -> {
             try {
-                this.statusLabel.setText("\u6b63\u5728\u83b7\u53d6\u57fa\u672c\u4fe1\u606f\uff0c\u8bf7\u7a0d\u540e\u2026\u2026");
-                this.connStatusLabel.setText("\u6b63\u5728\u8fde\u63a5");
+                this.statusLabel.setText("正在获取基本信息，请稍后……");
+                this.connStatusLabel.setText("正在连接");
                 final WebEngine webengine = this.basicInfoView.getEngine();
                 final Runnable runner = () -> {
                     try {
@@ -118,7 +118,7 @@ public class MainWindowController
                         this.basicInfoMap.put("osInfo", osInfo.replace("winnt", "windows"));
                         this.shellManager.updateOsInfo(this.shellEntity.getInt("id"), osInfo);
                         Platform.runLater((Runnable)new Runnable() {
-                            
+
                             @Override
                             public void run() {
                                 webengine.loadContent(basicInfoStr);
@@ -136,22 +136,22 @@ public class MainWindowController
                                 catch (Exception e) {
                                     e.printStackTrace();
                                 }
-                                MainWindowController.this.connStatusLabel.setText("\u5df2\u8fde\u63a5");
+                                MainWindowController.this.connStatusLabel.setText("已连接");
                                 MainWindowController.this.connStatusLabel.setTextFill((Paint)Color.BLUE);
-                                MainWindowController.this.statusLabel.setText("[OK]\u8fde\u63a5\u6210\u529f\uff0c\u57fa\u672c\u4fe1\u606f\u83b7\u53d6\u5b8c\u6210\u3002");
+                                MainWindowController.this.statusLabel.setText("[OK]连接成功，基本信息获取完成。");
                             }
                         });
                         this.currentShellService.keepAlive();
                     }
                     catch (Exception e) {
                         Platform.runLater((Runnable)new Runnable() {
-                            
+
                             @Override
                             public void run() {
                                 e.printStackTrace();
-                                MainWindowController.this.connStatusLabel.setText("\u8fde\u63a5\u5931\u8d25");
+                                MainWindowController.this.connStatusLabel.setText("连接失败");
                                 MainWindowController.this.connStatusLabel.setTextFill((Paint)Color.RED);
-                                MainWindowController.this.statusLabel.setText("[ERROR]\u8fde\u63a5\u5931\u8d25\uff1a" + e.getMessage());
+                                MainWindowController.this.statusLabel.setText("[ERROR]连接失败：" + e.getMessage());
                             }
                         });
                     }
@@ -174,25 +174,25 @@ public class MainWindowController
             }
         });
     }
-    
+
     private void initSourceCodeView() {
         this.runCodeBtn.setOnAction(event -> this.runSourceCode());
     }
-    
+
     private void runSourceCode() {
-        this.statusLabel.setText("\u6b63\u5728\u6267\u884c\u2026\u2026");
+        this.statusLabel.setText("正在执行……");
         final Runnable runner = () -> {
             try {
                 String result = this.currentShellService.eval(this.sourceCodeTextArea.getText());
                 Platform.runLater(() -> {
                     this.sourceResultArea.setText(result);
-                    this.statusLabel.setText("\u5b8c\u6210\u3002");
+                    this.statusLabel.setText("完成。");
                 });
             }
             catch (Exception e) {
                 e.printStackTrace();
                 Platform.runLater(() -> {
-                    this.statusLabel.setText("\u8fd0\u884c\u5931\u8d25:" + e.getMessage());
+                    this.statusLabel.setText("运行失败:" + e.getMessage());
                     this.sourceResultArea.setText(e.getMessage());
                 });
             }
@@ -202,11 +202,11 @@ public class MainWindowController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void doConnect() throws Exception {
         final boolean connectResult = this.currentShellService.doConnect();
     }
-    
+
     public void init(final JSONObject shellEntity, final ShellManager shellManager, final Map<String, Object> currentProxy) throws Exception {
         this.shellEntity = shellEntity;
         this.shellManager = shellManager;
@@ -216,7 +216,7 @@ public class MainWindowController
         this.urlText.setText(shellEntity.getString("url"));
         this.initTabs();
     }
-    
+
     private void initTabs() {
         if (this.shellEntity.getString("type").equals("asp")) {
             for (final Tab tab : this.mainTabPane.getTabs()) {

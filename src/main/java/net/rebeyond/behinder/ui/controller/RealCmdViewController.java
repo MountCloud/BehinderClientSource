@@ -36,7 +36,7 @@ public class RealCmdViewController
     private Label statusLabel;
     private int running;
     private int currentPos;
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel, final Map<String, String> basicInfoMap) {
         this.currentShellService = shellService;
         this.shellEntity = shellService.getShellEntity();
@@ -45,7 +45,7 @@ public class RealCmdViewController
         this.statusLabel = statusLabel;
         this.initRealCmdView();
     }
-    
+
     private void initRealCmdView() {
         final String osInfo = this.basicInfoMap.get("osInfo");
         if (osInfo.indexOf("windows") >= 0 || osInfo.indexOf("winnt") >= 0) {
@@ -55,7 +55,7 @@ public class RealCmdViewController
             this.shellPathText.setText("/bin/bash");
         }
         this.realCmdBtn.setOnAction(event -> {
-            if (this.realCmdBtn.getText().equals("\u542f\u52a8")) {
+            if (this.realCmdBtn.getText().equals("启动")) {
                 this.createRealCmd();
             }
             else {
@@ -63,10 +63,10 @@ public class RealCmdViewController
             }
         });
     }
-    
+
     @FXML
     private void createRealCmd() {
-        this.statusLabel.setText("\u6b63\u5728\u542f\u52a8\u865a\u62df\u7ec8\u7aef\u2026\u2026");
+        this.statusLabel.setText("正在启动虚拟终端……");
         final Runnable runner = () -> {
             try {
                 String bashPath = this.shellPathText.getText();
@@ -92,20 +92,20 @@ public class RealCmdViewController
                 Platform.runLater(() -> {
                     if (status.equals("success")) {
                         this.realCmdTextArea.appendText(msg);
-                        this.statusLabel.setText("\u865a\u62df\u7ec8\u7aef\u542f\u52a8\u5b8c\u6210\u3002");
+                        this.statusLabel.setText("虚拟终端启动完成。");
                         this.realCmdTextArea.requestFocus();
                         this.currentPos = this.realCmdTextArea.getLength();
-                        this.realCmdBtn.setText("\u505c\u6b62");
+                        this.realCmdBtn.setText("停止");
                         this.running = Constants.REALCMD_RUNNING;
                     }
                     else {
-                        this.statusLabel.setText("\u865a\u62df\u7ec8\u7aef\u542f\u52a8\u5931\u8d25:" + msg);
+                        this.statusLabel.setText("虚拟终端启动失败:" + msg);
                     }
                 });
             }
             catch (Exception e) {
                 e.printStackTrace();
-                Platform.runLater(() -> this.statusLabel.setText("\u865a\u62df\u7ec8\u7aef\u542f\u52a8\u5931\u8d25:" + e.getMessage()));
+                Platform.runLater(() -> this.statusLabel.setText("虚拟终端启动失败:" + e.getMessage()));
             }
             return;
         };
@@ -113,9 +113,9 @@ public class RealCmdViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void stopRealCmd() {
-        this.statusLabel.setText("\u6b63\u5728\u505c\u6b62\u865a\u62df\u7ec8\u7aef\u2026\u2026");
+        this.statusLabel.setText("正在停止虚拟终端……");
         final Runnable runner = () -> {
             try {
                 JSONObject resultObj = this.currentShellService.stopRealCMD();
@@ -123,18 +123,18 @@ public class RealCmdViewController
                 String msg = resultObj.getString("msg");
                 Platform.runLater(() -> {
                     if (status.equals("success")) {
-                        this.statusLabel.setText("\u865a\u62df\u7ec8\u7aef\u5df2\u505c\u6b62\u3002");
-                        this.realCmdBtn.setText("\u542f\u52a8");
+                        this.statusLabel.setText("虚拟终端已停止。");
+                        this.realCmdBtn.setText("启动");
                         this.running = Constants.REALCMD_STOPPED;
                     }
                     else {
-                        this.statusLabel.setText("\u865a\u62df\u7ec8\u7aef\u542f\u52a8\u5931\u8d25:" + msg);
+                        this.statusLabel.setText("虚拟终端启动失败:" + msg);
                     }
                 });
             }
             catch (Exception e) {
                 e.printStackTrace();
-                Platform.runLater(() -> this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage()));
+                Platform.runLater(() -> this.statusLabel.setText("操作失败:" + e.getMessage()));
             }
             return;
         };
@@ -142,11 +142,11 @@ public class RealCmdViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     @FXML
     private void onRealCMDKeyPressed(final KeyEvent keyEvent) {
         if (this.running != Constants.REALCMD_RUNNING) {
-            this.statusLabel.setText("\u865a\u62df\u7ec8\u7aef\u5c1a\u672a\u542f\u52a8\uff0c\u8bf7\u5148\u542f\u52a8\u865a\u62df\u7ec8\u7aef\u3002");
+            this.statusLabel.setText("虚拟终端尚未启动，请先启动虚拟终端。");
             return;
         }
         if (this.realCmdTextArea.getCaretPosition() <= this.currentPos) {
@@ -160,7 +160,7 @@ public class RealCmdViewController
             return;
         }
         final String cmd = this.realCmdTextArea.getText(this.currentPos, this.realCmdTextArea.getLength()).trim();
-        this.statusLabel.setText("\u8bf7\u7a0d\u540e\u2026\u2026");
+        this.statusLabel.setText("请稍后……");
         final Runnable runner = () -> {
 
             JSONObject resultObj;
@@ -197,7 +197,7 @@ public class RealCmdViewController
                         });
                         Thread.sleep(1000L);
                     }
-                    Platform.runLater(() -> this.statusLabel.setText("\u5b8c\u6210\u3002"));
+                    Platform.runLater(() -> this.statusLabel.setText("完成。"));
                 }
             }
             catch (Exception e) {

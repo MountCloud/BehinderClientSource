@@ -31,7 +31,7 @@ public class UpdateInfoViewController
     private Label statusLabel;
     @FXML
     private WebView updateInfoWebview;
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel) {
         this.currentShellService = shellService;
         this.shellEntity = shellService.getShellEntity();
@@ -39,7 +39,7 @@ public class UpdateInfoViewController
         this.statusLabel = statusLabel;
         this.initUpdateInfoView();
     }
-    
+
     private void initUpdateInfoView() {
         final String updateUrl = "https://www.rebeyond.net/Behinder/update.html?ver=" + Constants.VERSION;
         this.updateInfoWebview.getEngine().load(updateUrl);

@@ -91,7 +91,7 @@ public class FileManagerViewController
     private List<Thread> workList;
     Map<String, String> basicInfoMap;
     private Label statusLabel;
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel, final Map<String, String> basicInfoMap) {
         this.currentShellService = shellService;
         this.workList = workList;
@@ -104,12 +104,12 @@ public class FileManagerViewController
             e.printStackTrace();
         }
     }
-    
+
     private void initFileManagerView() throws Exception {
         this.initFileListTableColumns();
         this.initCharsetCombo();
         final String driveList = this.basicInfoMap.get("driveList");
-        final TreeItem<String> rootItem = (TreeItem<String>)new TreeItem("\u6587\u4ef6\u7cfb\u7edf", (Node)new ImageView());
+        final TreeItem<String> rootItem = (TreeItem<String>)new TreeItem("文件系统", (Node)new ImageView());
         rootItem.getGraphic().setUserData("base");
         final Image icon = new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/drive.png")));
         for (final String drive : driveList.split(";")) {
@@ -132,7 +132,7 @@ public class FileManagerViewController
             }
         });
         this.expandByPath(currentPath);
-        this.charsetCombo.setItems(FXCollections.observableArrayList((Object[])new String[] { "\u81ea\u52a8", "GBK", "UTF-8" }));
+        this.charsetCombo.setItems(FXCollections.observableArrayList((Object[])new String[] { "自动", "GBK", "UTF-8" }));
         this.cancelFileContentBtn.setOnAction(event -> this.switchPane("list"));
         this.saveFileContentBtn.setOnAction(event -> {
             final String filePath = this.filePathText.getText();
@@ -159,19 +159,19 @@ public class FileManagerViewController
         this.openPathBtn.setOnAction(event -> this.expandByPath(this.currentPathCombo.getValue().toString()));
         this.switchPane("list");
     }
-    
+
     private void initCharsetCombo() {
         this.charsetCombo.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
             final String filePath = this.filePathText.getText();
-            final String charset = newValue.toString().equals("\u81ea\u52a8") ? null : this.charsetCombo.getValue().toString();
+            final String charset = newValue.toString().equals("自动") ? null : this.charsetCombo.getValue().toString();
             this.showFile(filePath, charset);
         });
     }
-    
+
     private void uploadFile() throws Exception {
         final String currentPath = this.currentPathCombo.getValue().toString();
         final FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("\u8bf7\u9009\u62e9\u9700\u8981\u4e0a\u4f20\u7684\u6587\u4ef6");
+        fileChooser.setTitle("请选择需要上传的文件");
         final File selectdFile = fileChooser.showOpenDialog(this.fileListGridPane.getScene().getWindow());
         if (selectdFile == null) {
             return;
@@ -179,7 +179,7 @@ public class FileManagerViewController
         final String fileName = selectdFile.getName();
         final byte[] fileContent = Utils.getFileData(selectdFile.getAbsolutePath());
         final int bufSize = this.currentShellService.currentType.equals("aspx") ? 524288 : 46080;
-        this.statusLabel.setText("\u6b63\u5728\u4e0a\u4f20\u2026\u2026");
+        this.statusLabel.setText("正在上传……");
 
         final Runnable runner = () -> {
 
@@ -203,7 +203,7 @@ public class FileManagerViewController
                     msg = resultObj.getString("msg");
                     if (status.equals("fail")) {
                         String finalMsg = msg;
-                        Platform.runLater(() -> this.statusLabel.setText("\u6587\u4ef6\u4e0a\u4f20\u5931\u8d25:" + finalMsg));
+                        Platform.runLater(() -> this.statusLabel.setText("文件上传失败:" + finalMsg));
                         return;
                     }
                 }
@@ -215,7 +215,7 @@ public class FileManagerViewController
                             msg = resultObj2.getString("msg");
                             if (status.equals("fail")) {
                                 String finalMsg1 = msg;
-                                Platform.runLater(() -> this.statusLabel.setText("\u6587\u4ef6\u4e0a\u4f20\u5931\u8d25:" + finalMsg1));
+                                Platform.runLater(() -> this.statusLabel.setText("文件上传失败:" + finalMsg1));
                                 return;
                             }
                         }
@@ -227,11 +227,11 @@ public class FileManagerViewController
                             String finalStatus = status;
                             Platform.runLater(() -> {
                                 if (finalStatus.equals("fail")) {
-                                    this.statusLabel.setText("\u6587\u4ef6\u4e0a\u4f20\u5931\u8d25:" + str);
+                                    this.statusLabel.setText("文件上传失败:" + str);
                                     return;
                                 }
                                 else {
-                                    this.statusLabel.setText(String.format("\u6b63\u5728\u4e0a\u4f20\u2026\u2026%skb/%skb", (int)(size * currentBlockIndex / 1024), fileContent.length / 1024));
+                                    this.statusLabel.setText(String.format("正在上传……%skb/%skb", (int)(size * currentBlockIndex / 1024), fileContent.length / 1024));
                                     return;
                                 }
                             });
@@ -242,12 +242,12 @@ public class FileManagerViewController
                     }
                 }
                 Platform.runLater(() -> {
-                    this.statusLabel.setText("\u4e0a\u4f20\u5b8c\u6210");
+                    this.statusLabel.setText("上传完成");
                     this.expandByPath(currentPath);
                 });
             }
             catch (Exception e) {
-                Platform.runLater(() -> this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage()));
+                Platform.runLater(() -> this.statusLabel.setText("操作失败:" + e.getMessage()));
             }
             return;
         };
@@ -255,7 +255,7 @@ public class FileManagerViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void rename(final String oldFileName, final String newFileName) {
         final String currentDir = this.currentPathCombo.getValue().toString();
         final String oldFullName = currentDir + oldFileName;
@@ -276,7 +276,7 @@ public class FileManagerViewController
                 });
             }
             catch (Exception e) {
-                this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage());
+                this.statusLabel.setText("操作失败:" + e.getMessage());
             }
             return;
         };
@@ -284,14 +284,14 @@ public class FileManagerViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void saveFileContent(final String pathString) throws UnsupportedEncodingException {
         String charset = null;
         if (this.charsetCombo.getSelectionModel().getSelectedIndex() > 0) {
             charset = this.charsetCombo.getValue().toString();
         }
         final byte[] fileContent = (charset == null) ? this.fileContentTextArea.getText().getBytes() : this.fileContentTextArea.getText().getBytes(charset);
-        this.statusLabel.setText("\u6b63\u5728\u4fdd\u5b58\u2026\u2026");
+        this.statusLabel.setText("正在保存……");
 
         final Runnable runner = () -> {
             try {
@@ -300,15 +300,15 @@ public class FileManagerViewController
                 String msg = resultObj.getString("msg");
                 Platform.runLater(() -> {
                     if (status.equals("success")) {
-                        this.statusLabel.setText("\u4fdd\u5b58\u6210\u529f\u3002");
+                        this.statusLabel.setText("保存成功。");
                     }
                     else {
-                        this.statusLabel.setText("\u4fdd\u5b58\u5931\u8d25:" + msg);
+                        this.statusLabel.setText("保存失败:" + msg);
                     }
                 });
             }
             catch (Exception e) {
-                Platform.runLater(() -> this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage()));
+                Platform.runLater(() -> this.statusLabel.setText("操作失败:" + e.getMessage()));
             }
             return;
         };
@@ -316,7 +316,7 @@ public class FileManagerViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void switchPane(final String show) {
         if (show.equals("list")) {
             this.fileListGridPane.setOpacity(1.0);
@@ -330,7 +330,7 @@ public class FileManagerViewController
             this.fileContentGridPane.toFront();
         }
     }
-    
+
     private String getFullPath(final TreeItem currentTreeItem) {
         final String fileSep = "/";
         String currentPath = currentTreeItem.getValue().toString();
@@ -349,7 +349,7 @@ public class FileManagerViewController
         }
         return currentPath;
     }
-    
+
     private void initFileListTableColumns() {
         final ObservableList<TableColumn<List<StringProperty>, ?>> tcs = (ObservableList<TableColumn<List<StringProperty>, ?>>)this.fileListTableView.getColumns();
         ((TableColumn)tcs.get(0)).setCellValueFactory(data -> ((List)((TableColumn.CellDataFeatures)data).getValue()).get(0));
@@ -413,7 +413,7 @@ public class FileManagerViewController
             }
         });
     }
-    
+
     private TreeItem findTreeItemByPath(final Path path) {
         final String osInfo = this.basicInfoMap.get("osInfo");
         TreeItem currentItem = null;
@@ -456,7 +456,7 @@ public class FileManagerViewController
         this.dirTree.getSelectionModel().select(currentItem);
         return currentItem;
     }
-    
+
     private void insertTreeItems(final JSONArray rows, final TreeItem currentTreeItem) {
         currentTreeItem.getChildren().clear();
         for (int i = 0; i < rows.length(); ++i) {
@@ -480,7 +480,7 @@ public class FileManagerViewController
         currentTreeItem.setExpanded(true);
         this.dirTree.getSelectionModel().select(currentTreeItem);
     }
-    
+
     private TreeItem findTreeItem(final TreeItem treeItem, final String text) {
         final ObservableList childItemList = treeItem.getChildren();
         for (final Object childItem : childItemList) {
@@ -490,7 +490,7 @@ public class FileManagerViewController
         }
         return null;
     }
-    
+
     private void insertFileRows(final JSONArray jsonArray) {
         final ObservableList<List<StringProperty>> data = FXCollections.observableArrayList();
         for (int i = 0; i < jsonArray.length(); ++i) {
@@ -513,14 +513,14 @@ public class FileManagerViewController
         }
         this.fileListTableView.setItems((ObservableList)data);
     }
-    
+
     private void expandByPath(String pathStr) {
         final Path path = Paths.get(pathStr, new String[0]).normalize();
         pathStr = path.toString().replace("\\", "/");
         final String pathString = pathStr.endsWith("/") ? pathStr : (pathStr + "/");
         final TreeItem currentTreeItem = this.findTreeItemByPath(path);
         this.currentPathCombo.setValue(pathString);
-        this.statusLabel.setText("\u6b63\u5728\u52a0\u8f7d\u76ee\u5f55\u2026\u2026");
+        this.statusLabel.setText("正在加载目录……");
 
         final Runnable runner = () -> {
             try {
@@ -530,10 +530,10 @@ public class FileManagerViewController
                         String status = resultObj.getString("status");
                         String msg = resultObj.getString("msg");
                         if (status.equals("fail")) {
-                            this.statusLabel.setText("\u76ee\u5f55\u8bfb\u53d6\u5931\u8d25:" + msg);
+                            this.statusLabel.setText("目录读取失败:" + msg);
                         }
                         else {
-                            this.statusLabel.setText("\u76ee\u5f55\u52a0\u8f7d\u6210\u529f");
+                            this.statusLabel.setText("目录加载成功");
                             String msg2 = msg.replace("},]", "}]");
                             JSONArray objArr = new JSONArray(msg2.trim());
                             this.insertFileRows(objArr);
@@ -541,7 +541,7 @@ public class FileManagerViewController
                         }
                     }
                     catch (Exception e) {
-                        this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25\uff1a" + e.getMessage());
+                        this.statusLabel.setText("操作失败：" + e.getMessage());
                     }
                 });
             }
@@ -554,7 +554,7 @@ public class FileManagerViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void showFile(final String filePath, final String charset) {
         final Runnable runner = () -> {
             try {
@@ -563,7 +563,7 @@ public class FileManagerViewController
                 String msg = resultObj.getString("msg");
                 Platform.runLater(() -> {
                     if (status.equals("fail")) {
-                        this.statusLabel.setText("\u6587\u4ef6\u6253\u5f00\u5931\u8d25:" + msg);
+                        this.statusLabel.setText("文件打开失败:" + msg);
                     }
                     else {
                         this.fileContentTextArea.setText(msg);
@@ -572,7 +572,7 @@ public class FileManagerViewController
                 });
             }
             catch (Exception e) {
-                this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage());
+                this.statusLabel.setText("操作失败:" + e.getMessage());
                 e.printStackTrace();
             }
             return;
@@ -581,32 +581,32 @@ public class FileManagerViewController
         this.workList.add(workThrad);
         workThrad.start();
     }
-    
+
     private void loadContextMenu() {
         final ContextMenu cm = new ContextMenu();
-        final MenuItem refreshBtn = new MenuItem("\u5237\u65b0");
+        final MenuItem refreshBtn = new MenuItem("刷新");
         cm.getItems().add(refreshBtn);
-        final MenuItem openBtn = new MenuItem("\u6253\u5f00");
+        final MenuItem openBtn = new MenuItem("打开");
         cm.getItems().add(openBtn);
-        final MenuItem renameBtn = new MenuItem("\u91cd\u547d\u540d");
+        final MenuItem renameBtn = new MenuItem("重命名");
         cm.getItems().add(renameBtn);
-        final MenuItem delBtn = new MenuItem("\u5220\u9664");
+        final MenuItem delBtn = new MenuItem("删除");
         cm.getItems().add(delBtn);
         cm.getItems().add(new SeparatorMenuItem());
-        final MenuItem downloadBtn = new MenuItem("\u4e0b\u8f7d");
+        final MenuItem downloadBtn = new MenuItem("下载");
         cm.getItems().add(downloadBtn);
-        final MenuItem uploadBtn = new MenuItem("\u4e0a\u4f20");
+        final MenuItem uploadBtn = new MenuItem("上传");
         cm.getItems().add(uploadBtn);
-        final Menu createMenu = new Menu("\u65b0\u5efa");
-        final MenuItem createFileBtn = new MenuItem("\u6587\u4ef6...");
-        final MenuItem createDirectoryBtn = new MenuItem("\u6587\u4ef6\u5939");
+        final Menu createMenu = new Menu("新建");
+        final MenuItem createFileBtn = new MenuItem("文件...");
+        final MenuItem createDirectoryBtn = new MenuItem("文件夹");
         createMenu.getItems().add(createFileBtn);
         createMenu.getItems().add(createDirectoryBtn);
         cm.getItems().add(createMenu);
         cm.getItems().add(new SeparatorMenuItem());
-        final MenuItem changeTimeStampBtn = new MenuItem("\u4fee\u6539\u65f6\u95f4\u6233");
+        final MenuItem changeTimeStampBtn = new MenuItem("修改时间戳");
         cm.getItems().add(changeTimeStampBtn);
-        final MenuItem cloneTimeStampBtn = new MenuItem("\u514b\u9686\u65f6\u95f4\u6233");
+        final MenuItem cloneTimeStampBtn = new MenuItem("克隆时间戳");
         cm.getItems().add(cloneTimeStampBtn);
         this.fileListTableView.setContextMenu(cm);
         openBtn.setOnAction(event -> {
@@ -628,9 +628,9 @@ public class FileManagerViewController
             }
         });
         refreshBtn.setOnAction(event -> {
-            this.statusLabel.setText("\u6b63\u5728\u5237\u65b0\u2026\u2026");
+            this.statusLabel.setText("正在刷新……");
             this.expandByPath(this.currentPathCombo.getValue().toString());
-            this.statusLabel.setText("\u5237\u65b0\u5b8c\u6210\u3002");
+            this.statusLabel.setText("刷新完成。");
         });
         renameBtn.setOnAction(event -> {
             final int row = this.fileListTableView.getSelectionModel().getSelectedIndex();
@@ -652,7 +652,7 @@ public class FileManagerViewController
                     });
                 }
                 catch (Exception e) {
-                    Platform.runLater(() -> this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage()));
+                    Platform.runLater(() -> this.statusLabel.setText("操作失败:" + e.getMessage()));
                 }
                 return;
             };
@@ -670,27 +670,27 @@ public class FileManagerViewController
         });
         downloadBtn.setOnAction(event -> this.downloadFile());
     }
-    
+
     private void downloadFile() {
         final String fileName = ((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0).toString();
         final String fileFullPath = this.currentPathCombo.getValue().toString() + fileName;
         final FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("\u8bf7\u9009\u62e9\u4fdd\u5b58\u8def\u5f84");
+        fileChooser.setTitle("请选择保存路径");
         fileChooser.setInitialFileName(fileName);
         final File selectedFile = fileChooser.showSaveDialog(this.fileListGridPane.getScene().getWindow());
         final String localFilePath = selectedFile.getAbsolutePath();
         if (selectedFile == null || selectedFile.equals("")) {
             return;
         }
-        this.statusLabel.setText("\u6b63\u5728\u4e0b\u8f7d" + fileFullPath + "\u2026\u2026");
+        this.statusLabel.setText("正在下载" + fileFullPath + "……");
         final Runnable runner = () -> {
             try {
                 this.currentShellService.downloadFile(fileName, localFilePath);
-                String result = selectedFile.getName() + "\u4e0b\u8f7d\u5b8c\u6210,\u6587\u4ef6\u5927\u5c0f:" + selectedFile.length();
+                String result = selectedFile.getName() + "下载完成,文件大小:" + selectedFile.length();
                 Platform.runLater(() -> this.statusLabel.setText(result));
             }
             catch (Exception e) {
-                Platform.runLater(() -> this.statusLabel.setText("\u64cd\u4f5c\u5931\u8d25:" + e.getMessage()));
+                Platform.runLater(() -> this.statusLabel.setText("操作失败:" + e.getMessage()));
                 e.printStackTrace();
             }
             return;

@@ -66,7 +66,7 @@ public class PluginViewController
     private ShellService currentShellService;
     private List<Thread> workList;
     private Label statusLabel;
-    
+
     public void init(final ShellService shellService, final List<Thread> workList, final Label statusLabel, final ShellManager shellManager) {
         this.currentShellService = shellService;
         this.shellEntity = shellService.getShellEntity();
@@ -75,7 +75,7 @@ public class PluginViewController
         this.shellManager = shellManager;
         this.initPluginView();
     }
-    
+
     private void initPluginView() {
         this.initPluginInstall();
         final PluginTools pluginTools = new PluginTools(this.currentShellService, this.pluginWebView, this.statusLabel, this.workList);
@@ -94,7 +94,7 @@ public class PluginViewController
         }
         this.pluginDetailGridPane.setOpacity(0.0);
     }
-    
+
     private void loadPluginDetail(final JSONObject pluginObj) {
         this.pluginNameLabel.setText(String.format(this.pluginNameLabel.getText(), pluginObj.getString("name"), pluginObj.getString("version")));
         this.pluginAuthorLabel.setText(String.format(this.pluginAuthorLabel.getText(), pluginObj.getString("author")));
@@ -106,11 +106,11 @@ public class PluginViewController
             this.qrcodeImageView.setImage(new Image(qrcodeFilePath));
         }
         catch (Exception e) {
-            this.statusLabel.setText("\u63d2\u4ef6\u5f00\u53d1\u8005\u8d5e\u8d4f\u4e8c\u7ef4\u7801\u52a0\u8f7d\u5931\u8d25");
+            this.statusLabel.setText("插件开发者赞赏二维码加载失败");
             e.printStackTrace();
         }
     }
-    
+
     private void loadPlugins() throws Exception {
         final String scriptType = this.shellEntity.getString("type");
         final JSONArray pluginList = this.shellManager.listPlugin(scriptType);
@@ -119,13 +119,13 @@ public class PluginViewController
             this.addPluginBox(pluginObj);
         }
     }
-    
+
     private boolean checkPluginExist(final JSONObject pluginObj) throws Exception {
         final String pluginName = pluginObj.getString("name");
         final String scriptType = pluginObj.getString("scriptType");
         return this.shellManager.findPluginByName(scriptType, pluginName) != null;
     }
-    
+
     private void showErrorMessage(final String title, final String msg) {
         final Alert alert = new Alert(Alert.AlertType.ERROR);
         final Window window = alert.getDialogPane().getScene().getWindow();
@@ -135,7 +135,7 @@ public class PluginViewController
         alert.setContentText(msg);
         alert.show();
     }
-    
+
     private void addPluginBox(final JSONObject pluginObj) throws Exception {
         final String pluginName = pluginObj.getString("name");
         final String pluginCommnet = pluginObj.getString("comment");
@@ -196,26 +196,26 @@ public class PluginViewController
         flowPane.getChildren().add(box);
         ((TitledPane)this.pluginFlowPane.getPanes().get(type)).setExpanded(true);
     }
-    
+
     private void initPluginInstall() {
         this.installLocalBtn.setOnAction(event -> {
             final FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("\u8bf7\u9009\u62e9\u9700\u8981\u5b89\u88c5\u7684\u63d2\u4ef6\u5305");
+            fileChooser.setTitle("请选择需要安装的插件包");
             fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter[] { new FileChooser.ExtensionFilter("All ZIP Files", new String[] { "*.zip" }) });
             final File pluginFile = fileChooser.showOpenDialog(this.pluginFlowPane.getScene().getWindow());
             try {
                 final JSONObject pluginEntity = Utils.parsePluginZip(pluginFile.getAbsolutePath());
                 if (this.checkPluginExist(pluginEntity)) {
-                    this.showErrorMessage("\u9519\u8bef", "\u5b89\u88c5\u5931\u8d25\uff0c\u63d2\u4ef6\u5df2\u5b58\u5728");
+                    this.showErrorMessage("错误", "安装失败，插件已存在");
                     return;
                 }
                 this.addPluginBox(pluginEntity);
                 this.shellManager.addPlugin(pluginEntity.getString("name"), pluginEntity.getString("version"), pluginEntity.getString("entryFile"), pluginEntity.getString("scriptType"), pluginEntity.getString("type"), pluginEntity.getInt("isGetShell"), pluginEntity.getString("icon"), pluginEntity.getString("author"), pluginEntity.getString("link"), pluginEntity.getString("qrcode"), pluginEntity.getString("comment"));
-                this.statusLabel.setText("\u63d2\u4ef6\u5b89\u88c5\u6210\u529f\u3002");
+                this.statusLabel.setText("插件安装成功。");
             }
             catch (Exception e) {
                 e.printStackTrace();
-                this.statusLabel.setText("\u63d2\u4ef6\u5b89\u88c5\u5931\u8d25:" + e.getMessage());
+                this.statusLabel.setText("插件安装失败:" + e.getMessage());
             }
         });
     }

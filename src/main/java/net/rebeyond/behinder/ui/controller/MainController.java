@@ -97,18 +97,18 @@ public class MainController
     private TreeView catagoryTreeView;
     private ShellManager shellManager;
     public static Map<String, Object> currentProxy;
-    
+
     public MainController() {
         try {
             this.shellManager = new ShellManager();
         }
         catch (Exception e) {
             System.err.println(e.getMessage());
-            this.showErrorMessage("\u9519\u8bef", "\u6570\u636e\u5e93\u6587\u4ef6\u4e22\u5931");
+            this.showErrorMessage("错误", "数据库文件丢失");
             System.exit(0);
         }
     }
-    
+
     public void initialize() {
         try {
             this.initCatagoryList();
@@ -121,11 +121,11 @@ public class MainController
             e.printStackTrace();
         }
     }
-    
+
     private void initBottomBar() {
         this.versionLabel.setText(String.format(this.versionLabel.getText(), Constants.VERSION));
     }
-    
+
     private void loadProxy() throws Exception {
         final JSONObject proxyObj = this.shellManager.findProxy("default");
         final int status = proxyObj.getInt("status");
@@ -146,18 +146,18 @@ public class MainController
                 final Proxy proxy = new Proxy(Proxy.Type.SOCKS, proxyAddr);
                 MainController.currentProxy.put("proxy", proxy);
             }
-            this.proxyStatusLabel.setText("\u4ee3\u7406\u751f\u6548\u4e2d");
+            this.proxyStatusLabel.setText("代理生效中");
         }
     }
-    
+
     private void initToolbar() {
         this.proxySetupBtn.setOnAction(event -> {
             final Alert inputDialog = new Alert(Alert.AlertType.NONE);
             final Window window = inputDialog.getDialogPane().getScene().getWindow();
             window.setOnCloseRequest(e -> window.hide());
             final ToggleGroup statusGroup = new ToggleGroup();
-            final RadioButton enableRadio = new RadioButton("\u542f\u7528");
-            final RadioButton disableRadio = new RadioButton("\u7981\u7528");
+            final RadioButton enableRadio = new RadioButton("启用");
+            final RadioButton disableRadio = new RadioButton("禁用");
             enableRadio.setToggleGroup(statusGroup);
             disableRadio.setToggleGroup(statusGroup);
             final HBox statusHbox = new HBox();
@@ -167,20 +167,20 @@ public class MainController
             final GridPane proxyGridPane = new GridPane();
             proxyGridPane.setVgap(15.0);
             proxyGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
-            final Label typeLabel = new Label("\u7c7b\u578b\uff1a");
+            final Label typeLabel = new Label("类型：");
             final ComboBox typeCombo = new ComboBox();
             typeCombo.setItems(FXCollections.observableArrayList((Object[])new String[] { "HTTP", "SOCKS" }));
             typeCombo.getSelectionModel().select(0);
-            final Label IPLabel = new Label("IP\u5730\u5740\uff1a");
+            final Label IPLabel = new Label("IP地址：");
             final TextField IPText = new TextField();
-            final Label PortLabel = new Label("\u7aef\u53e3\uff1a");
+            final Label PortLabel = new Label("端口：");
             final TextField PortText = new TextField();
-            final Label userNameLabel = new Label("\u7528\u6237\u540d\uff1a");
+            final Label userNameLabel = new Label("用户名：");
             final TextField userNameText = new TextField();
-            final Label passwordLabel = new Label("\u5bc6\u7801\uff1a");
+            final Label passwordLabel = new Label("密码：");
             final TextField passwordText = new TextField();
-            final Button cancelBtn = new Button("\u53d6\u6d88");
-            final Button saveBtn = new Button("\u4fdd\u5b58");
+            final Button cancelBtn = new Button("取消");
+            final Button saveBtn = new Button("保存");
             try {
                 final JSONObject proxyObj = this.shellManager.findProxy("default");
                 if (proxyObj != null) {
@@ -209,7 +209,7 @@ public class MainController
                 }
             }
             catch (Exception e) {
-                this.statusLabel.setText("\u4ee3\u7406\u670d\u52a1\u5668\u914d\u7f6e\u52a0\u8f7d\u5931\u8d25\u3002");
+                this.statusLabel.setText("代理服务器配置加载失败。");
                 e.printStackTrace();
             }
             saveBtn.setOnAction(e -> {
@@ -235,7 +235,7 @@ public class MainController
                     final String proxyUser = userNameText.getText().trim();
                     final String proxyPassword = passwordText.getText();
                     Authenticator.setDefault(new Authenticator() {
-                        
+
                         public PasswordAuthentication getPasswordAuthentication() {
                             return new PasswordAuthentication(proxyUser, proxyPassword.toCharArray());
                         }
@@ -256,7 +256,7 @@ public class MainController
                     final Proxy proxy = new Proxy(Proxy.Type.SOCKS, proxyAddr);
                     MainController.currentProxy.put("proxy", proxy);
                 }
-                this.proxyStatusLabel.setText("\u4ee3\u7406\u751f\u6548\u4e2d");
+                this.proxyStatusLabel.setText("代理生效中");
                 inputDialog.getDialogPane().getScene().getWindow().hide();
             });
             cancelBtn.setOnAction(e -> inputDialog.getDialogPane().getScene().getWindow().hide());
@@ -282,18 +282,18 @@ public class MainController
             inputDialog.showAndWait();
         });
     }
-    
+
     private void initCatagoryList() throws Exception {
         this.initCatagoryTree();
         this.initCatagoryMenu();
     }
-    
+
     private void initShellList() throws Exception {
         this.initShellTable();
         this.loadShellList();
         this.loadContextMenu();
     }
-    
+
     private void initShellTable() throws Exception {
         final ObservableList<TableColumn<List<StringProperty>, ?>> tcs = (ObservableList<TableColumn<List<StringProperty>, ?>>)this.shellListTable.getColumns();
         for (int i = 0; i < tcs.size(); ++i) {
@@ -312,35 +312,35 @@ public class MainController
             return row;
         });
     }
-    
+
     private boolean checkUrl(final String urlString) {
         try {
             final URL url = new URL(urlString.trim());
             return true;
         }
         catch (Exception e) {
-            this.showErrorMessage("\u9519\u8bef", "URL\u683c\u5f0f\u9519\u8bef");
+            this.showErrorMessage("错误", "URL格式错误");
             return false;
         }
     }
-    
+
     private boolean checkPassword(final String password) {
         if (password.length() > 255) {
-            this.showErrorMessage("\u9519\u8bef", "\u5bc6\u7801\u957f\u5ea6\u4e0d\u5e94\u5927\u4e8e255\u4e2a\u5b57\u7b26");
+            this.showErrorMessage("错误", "密码长度不应大于255个字符");
             return false;
         }
         if (password.length() < 1) {
-            this.showErrorMessage("\u9519\u8bef", "\u5bc6\u7801\u4e0d\u80fd\u4e3a\u7a7a\uff0c\u8bf7\u8f93\u5165\u5bc6\u7801");
+            this.showErrorMessage("错误", "密码不能为空，请输入密码");
             return false;
         }
         return true;
     }
-    
+
     private void showShellDialog(final int shellID) throws Exception {
         final Alert alert = new Alert(Alert.AlertType.NONE);
         final Window window = alert.getDialogPane().getScene().getWindow();
         window.setOnCloseRequest(e -> window.hide());
-        alert.setTitle("\u65b0\u589eShell");
+        alert.setTitle("新增Shell");
         final Stage stage = (Stage)alert.getDialogPane().getScene().getWindow();
         stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
         alert.setHeaderText("");
@@ -380,23 +380,23 @@ public class MainController
                 }
             }
         });
-        final Button saveBtn = new Button("\u4fdd\u5b58");
-        final Button cancelBtn = new Button("\u53d6\u6d88");
+        final Button saveBtn = new Button("保存");
+        final Button cancelBtn = new Button("取消");
         final GridPane vpsInfoPane = new GridPane();
         GridPane.setMargin((Node)vpsInfoPane, new Insets(20.0, 0.0, 0.0, 0.0));
         vpsInfoPane.setVgap(10.0);
         vpsInfoPane.setMaxWidth(Double.MAX_VALUE);
-        vpsInfoPane.add((Node)new Label("URL\uff1a"), 0, 0);
+        vpsInfoPane.add((Node)new Label("URL："), 0, 0);
         vpsInfoPane.add((Node)urlText, 1, 0);
-        vpsInfoPane.add((Node)new Label("\u5bc6\u7801\uff1a"), 0, 1);
+        vpsInfoPane.add((Node)new Label("密码："), 0, 1);
         vpsInfoPane.add((Node)passText, 1, 1);
-        vpsInfoPane.add((Node)new Label("\u811a\u672c\u7c7b\u578b\uff1a"), 0, 2);
+        vpsInfoPane.add((Node)new Label("脚本类型："), 0, 2);
         vpsInfoPane.add((Node)shellType, 1, 2);
-        vpsInfoPane.add((Node)new Label("\u5206\u7c7b\uff1a"), 0, 3);
+        vpsInfoPane.add((Node)new Label("分类："), 0, 3);
         vpsInfoPane.add((Node)shellCatagory, 1, 3);
-        vpsInfoPane.add((Node)new Label("\u81ea\u5b9a\u4e49\u8bf7\u6c42\u5934\uff1a"), 0, 4);
+        vpsInfoPane.add((Node)new Label("自定义请求头："), 0, 4);
         vpsInfoPane.add((Node)header, 1, 4);
-        vpsInfoPane.add((Node)new Label("\u5907\u6ce8\uff1a"), 0, 5);
+        vpsInfoPane.add((Node)new Label("备注："), 0, 5);
         vpsInfoPane.add((Node)commnet, 1, 5);
         final HBox buttonBox = new HBox();
         buttonBox.setSpacing(20.0);
@@ -435,7 +435,7 @@ public class MainController
             }
             catch (Exception e2) {
                 e2.printStackTrace();
-                this.showErrorMessage("\u4fdd\u5b58\u5931\u8d25", e2.getMessage());
+                this.showErrorMessage("保存失败", e2.getMessage());
             }
             finally {
                 alert.getDialogPane().getScene().getWindow().hide();
@@ -444,7 +444,7 @@ public class MainController
         cancelBtn.setOnAction(e -> alert.getDialogPane().getScene().getWindow().hide());
         alert.showAndWait();
     }
-    
+
     private void openShell(final String url, final String shellID) {
         try {
             final FXMLLoader loader = new FXMLLoader(this.getClass().getResource("/net/rebeyond/behinder/ui/MainWindow.fxml"));
@@ -467,22 +467,22 @@ public class MainController
             e.printStackTrace();
         }
     }
-    
+
     private void loadContextMenu() {
         final ContextMenu cm = new ContextMenu();
-        final MenuItem openBtn = new MenuItem("\u6253\u5f00");
+        final MenuItem openBtn = new MenuItem("打开");
         cm.getItems().add(openBtn);
-        final MenuItem addBtn = new MenuItem("\u65b0\u589e");
+        final MenuItem addBtn = new MenuItem("新增");
         cm.getItems().add(addBtn);
-        final MenuItem editBtn = new MenuItem("\u7f16\u8f91");
+        final MenuItem editBtn = new MenuItem("编辑");
         cm.getItems().add(editBtn);
-        final MenuItem delBtn = new MenuItem("\u5220\u9664");
+        final MenuItem delBtn = new MenuItem("删除");
         cm.getItems().add(delBtn);
-        final MenuItem copyBtn = new MenuItem("\u590d\u5236URL");
+        final MenuItem copyBtn = new MenuItem("复制URL");
         cm.getItems().add(copyBtn);
         final SeparatorMenuItem separatorBtn = new SeparatorMenuItem();
         cm.getItems().add(separatorBtn);
-        final MenuItem refreshBtn = new MenuItem("\u5237\u65b0");
+        final MenuItem refreshBtn = new MenuItem("刷新");
         cm.getItems().add(refreshBtn);
         this.shellListTable.setContextMenu(cm);
         openBtn.setOnAction(event -> {
@@ -514,7 +514,7 @@ public class MainController
                 this.showShellDialog(-1);
             }
             catch (Exception e) {
-                this.showErrorMessage("\u9519\u8bef", "\u65b0\u589e\u5931\u8d25\uff1a" + e.getMessage());
+                this.showErrorMessage("错误", "新增失败：" + e.getMessage());
                 e.printStackTrace();
             }
         });
@@ -524,14 +524,14 @@ public class MainController
                 this.showShellDialog(Integer.parseInt(shellID));
             }
             catch (Exception e) {
-                this.showErrorMessage("\u9519\u8bef", "\u7f16\u8f91\u5931\u8d25\uff1a" + e.getMessage());
+                this.showErrorMessage("错误", "编辑失败：" + e.getMessage());
                 e.printStackTrace();
             }
         });
         delBtn.setOnAction(event -> {
             final Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setHeaderText("");
-            alert.setContentText("\u8bf7\u786e\u8ba4\u662f\u5426\u5220\u9664\uff1f");
+            alert.setContentText("请确认是否删除？");
             final Optional<ButtonType> result = (Optional<ButtonType>)alert.showAndWait();
             if (result.get() == ButtonType.OK) {
                 final String shellID = ((SimpleStringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(6)).getValue();
@@ -557,13 +557,13 @@ public class MainController
             }
         });
     }
-    
+
     private void loadShellList() throws Exception {
         this.shellListTable.getItems().clear();
         final JSONArray shellList = this.shellManager.listShell();
         this.fillShellRows(shellList);
     }
-    
+
     private void fillShellRows(final JSONArray jsonArray) {
         final ObservableList<List<StringProperty>> data = FXCollections.observableArrayList();
         for (int i = 0; i < jsonArray.length(); ++i) {
@@ -593,14 +593,14 @@ public class MainController
         }
         this.shellListTable.setItems((ObservableList)data);
     }
-    
+
     private void copyString(final String str) {
         final Clipboard clipboard = Clipboard.getSystemClipboard();
         final ClipboardContent content = new ClipboardContent();
         content.putString(str);
         clipboard.setContent((Map)content);
     }
-    
+
     private void showErrorMessage(final String title, final String msg) {
         final Alert alert = new Alert(Alert.AlertType.ERROR);
         final Window window = alert.getDialogPane().getScene().getWindow();
@@ -610,21 +610,21 @@ public class MainController
         alert.setContentText(msg);
         alert.show();
     }
-    
+
     private void initCatagoryMenu() {
         final ContextMenu treeContextMenu = new ContextMenu();
-        final MenuItem addCatagoryBtn = new MenuItem("\u65b0\u589e");
+        final MenuItem addCatagoryBtn = new MenuItem("新增");
         treeContextMenu.getItems().add(addCatagoryBtn);
-        final MenuItem delCatagoryBtn = new MenuItem("\u5220\u9664");
+        final MenuItem delCatagoryBtn = new MenuItem("删除");
         treeContextMenu.getItems().add(delCatagoryBtn);
         addCatagoryBtn.setOnAction(event -> {
             final Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("\u65b0\u589e\u5206\u7c7b");
+            alert.setTitle("新增分类");
             alert.setHeaderText("");
             final GridPane panel = new GridPane();
-            final Label cataGoryNameLable = new Label("\u8bf7\u8f93\u5165\u5206\u7c7b\u540d\u79f0\uff1a");
+            final Label cataGoryNameLable = new Label("请输入分类名称：");
             final TextField cataGoryNameTxt = new TextField();
-            final Label cataGoryCommentLable = new Label("\u8bf7\u8f93\u5165\u5206\u7c7b\u63cf\u8ff0\uff1a");
+            final Label cataGoryCommentLable = new Label("请输入分类描述：");
             final TextField cataGoryCommentTxt = new TextField();
             panel.add((Node)cataGoryNameLable, 0, 0);
             panel.add((Node)cataGoryNameTxt, 1, 0);
@@ -636,12 +636,12 @@ public class MainController
             if (result.get() == ButtonType.OK) {
                 try {
                     if (this.shellManager.addCatagory(cataGoryNameTxt.getText(), cataGoryCommentTxt.getText()) > 0) {
-                        this.statusLabel.setText("\u5206\u7c7b\u65b0\u589e\u5b8c\u6210");
+                        this.statusLabel.setText("分类新增完成");
                         this.initCatagoryTree();
                     }
                 }
                 catch (Exception e) {
-                    this.statusLabel.setText("\u5206\u7c7b\u65b0\u589e\u5931\u8d25\uff1a" + e.getMessage());
+                    this.statusLabel.setText("分类新增失败：" + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -652,18 +652,18 @@ public class MainController
             }
             final Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setHeaderText("");
-            alert.setContentText("\u8bf7\u786e\u8ba4\u662f\u5426\u5220\u9664\uff1f\u4ec5\u5220\u9664\u5206\u7c7b\u4fe1\u606f\uff0c\u4e0d\u4f1a\u5220\u9664\u8be5\u5206\u7c7b\u4e0b\u7684\u7f51\u7ad9\u3002");
+            alert.setContentText("请确认是否删除？仅删除分类信息，不会删除该分类下的网站。");
             final Optional<ButtonType> result = (Optional<ButtonType>)alert.showAndWait();
             if (result.get() == ButtonType.OK) {
                 try {
                     final String cataGoryName = ((TreeItem)this.catagoryTreeView.getSelectionModel().getSelectedItem()).getValue().toString();
                     if (this.shellManager.deleteCatagory(cataGoryName) > 0) {
-                        this.statusLabel.setText("\u5206\u7c7b\u5220\u9664\u5b8c\u6210");
+                        this.statusLabel.setText("分类删除完成");
                         this.initCatagoryTree();
                     }
                 }
                 catch (Exception e) {
-                    this.statusLabel.setText("\u5206\u7c7b\u5220\u9664\u5931\u8d25\uff1a" + e.getMessage());
+                    this.statusLabel.setText("分类删除失败：" + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -693,10 +693,10 @@ public class MainController
             }
         });
     }
-    
+
     private void initCatagoryTree() throws Exception {
         final JSONArray catagoryList = this.shellManager.listCatagory();
-        final TreeItem<String> rootItem = (TreeItem<String>)new TreeItem("\u5206\u7c7b\u5217\u8868", (Node)new ImageView());
+        final TreeItem<String> rootItem = (TreeItem<String>)new TreeItem("分类列表", (Node)new ImageView());
         for (int i = 0; i < catagoryList.length(); ++i) {
             final JSONObject catagoryObj = catagoryList.getJSONObject(i);
             final TreeItem<String> treeItem = (TreeItem<String>)new TreeItem(catagoryObj.getString("name"));
@@ -706,7 +706,7 @@ public class MainController
         this.catagoryTreeView.setRoot((TreeItem)rootItem);
         this.catagoryTreeView.getSelectionModel().select(rootItem);
     }
-    
+
     static {
         MainController.currentProxy = new HashMap<String, Object>();
     }
