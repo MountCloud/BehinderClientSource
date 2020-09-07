@@ -342,12 +342,13 @@ public class MainController
         window.setOnCloseRequest(e -> window.hide());
         alert.setTitle("新增Shell");
         final Stage stage = (Stage)alert.getDialogPane().getScene().getWindow();
-        stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+        stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.png"))));
         alert.setHeaderText("");
         final TextField urlText = new TextField();
         final TextField passText = new TextField();
+        final TextField encodeText = new TextField();
         final ComboBox shellType = new ComboBox();
-        final ObservableList<String> typeList = FXCollections.observableArrayList("jsp", "php", "aspx", "asp" );
+        final ObservableList<String> typeList = FXCollections.observableArrayList("jsp-zcms","jsp", "php", "aspx", "asp" );
         shellType.setItems((ObservableList)typeList);
         final ComboBox shellCatagory = new ComboBox();
         try {
@@ -390,14 +391,16 @@ public class MainController
         vpsInfoPane.add((Node)urlText, 1, 0);
         vpsInfoPane.add((Node)new Label("密码："), 0, 1);
         vpsInfoPane.add((Node)passText, 1, 1);
-        vpsInfoPane.add((Node)new Label("脚本类型："), 0, 2);
-        vpsInfoPane.add((Node)shellType, 1, 2);
-        vpsInfoPane.add((Node)new Label("分类："), 0, 3);
-        vpsInfoPane.add((Node)shellCatagory, 1, 3);
-        vpsInfoPane.add((Node)new Label("自定义请求头："), 0, 4);
-        vpsInfoPane.add((Node)header, 1, 4);
-        vpsInfoPane.add((Node)new Label("备注："), 0, 5);
-        vpsInfoPane.add((Node)commnet, 1, 5);
+        vpsInfoPane.add((Node)new Label("密码因子："), 0, 2);
+        vpsInfoPane.add((Node)encodeText, 1, 2);
+        vpsInfoPane.add((Node)new Label("脚本类型："), 0, 3);
+        vpsInfoPane.add((Node)shellType, 1, 3);
+        vpsInfoPane.add((Node)new Label("分类："), 0, 4);
+        vpsInfoPane.add((Node)shellCatagory, 1, 4);
+        vpsInfoPane.add((Node)new Label("自定义请求头："), 0, 5);
+        vpsInfoPane.add((Node)header, 1, 5);
+        vpsInfoPane.add((Node)new Label("备注："), 0, 6);
+        vpsInfoPane.add((Node)commnet, 1, 6);
         final HBox buttonBox = new HBox();
         buttonBox.setSpacing(20.0);
         buttonBox.getChildren().addAll((Node)cancelBtn, (Node)saveBtn);
@@ -409,6 +412,7 @@ public class MainController
             final JSONObject shellObj = this.shellManager.findShell(shellID);
             urlText.setText(shellObj.getString("url"));
             passText.setText(shellObj.getString("password"));
+            encodeText.setText(shellObj.getString("encode"));
             shellType.setValue(shellObj.getString("type"));
             shellCatagory.setValue(shellObj.getString("catagory"));
             header.setText(shellObj.getString("headers"));
@@ -424,12 +428,19 @@ public class MainController
             final String catagory = shellCatagory.getValue().toString();
             final String comment = commnet.getText();
             final String headers = header.getText();
+            final String encode = encodeText.getText();
+            if(type.equals("jsp-zcms")){
+                if(encode==null||encode.trim().length()==0){
+                    this.showErrorMessage("保存失败", "类型为：jsp-zcms时密码因子必填");
+                    return;
+                }
+            }
             try {
                 if (shellID == -1) {
-                    this.shellManager.addShell(url, password, type, catagory, comment, headers);
+                    this.shellManager.addShell(url, password, type, catagory, comment, headers,encode);
                 }
                 else {
-                    this.shellManager.updateShell(shellID, url, password, type, catagory, comment, headers);
+                    this.shellManager.updateShell(shellID, url, password, type, catagory, comment, headers,encode);
                 }
                 this.loadShellList();
             }
@@ -453,7 +464,7 @@ public class MainController
             mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, MainController.currentProxy);
             final Stage stage = new Stage();
             stage.setTitle(url);
-            stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+            stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.png"))));
             stage.setUserData(url);
             stage.setScene(new Scene(mainWindow));
             stage.setOnCloseRequest(e -> {
@@ -495,7 +506,7 @@ public class MainController
                 mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, MainController.currentProxy);
                 final Stage stage = new Stage();
                 stage.setTitle(url);
-                stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+                stage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.png"))));
                 stage.setUserData(url);
                 stage.setScene(new Scene(mainWindow));
                 stage.setOnCloseRequest(e -> {

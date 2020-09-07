@@ -54,9 +54,9 @@
          <children>
             <Label fx:id="proxyStatusLabel" />
             <Separator maxHeight="20.0" orientation="VERTICAL" prefHeight="10.0" />
-            <Label fx:id="versionLabel" text="冰蝎 %s" />
+            <Label fx:id="versionLabel" text="这不是冰蝎 %s" />
             <Separator maxHeight="20.0" orientation="VERTICAL" prefHeight="10.0" />
-            <Label fx:id="authorLabel" text="By rebeyond" />
+            <Label fx:id="authorLabel" text="By rebeyond&amp;mountcloud" />
          </children>
          <padding>
             <Insets right="10.0" />

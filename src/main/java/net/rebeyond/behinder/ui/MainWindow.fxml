@@ -159,12 +159,12 @@
             <HBox alignment="CENTER_RIGHT" fillHeight="false" prefWidth="200.0" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.valignment="BOTTOM">
                <children>
                   <Separator orientation="VERTICAL" prefHeight="20.0" />
-                  <Label fx:id="versionLabel" text="冰蝎 %s">
+                  <Label fx:id="versionLabel" text="这不是冰蝎 %s">
                      <padding>
                         <Insets right="5.0" />
                      </padding></Label>
                   <Separator orientation="VERTICAL" prefHeight="20.0" />
-                  <Label fx:id="authorLabel" text="By rebeyond">
+                  <Label fx:id="authorLabel" text="By rebeyond&amp;mountcloud">
                      <padding>
                         <Insets right="10.0" />
                      </padding></Label>

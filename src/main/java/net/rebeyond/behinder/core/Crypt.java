@@ -24,7 +24,7 @@ public class Crypt
     
     public static byte[] Decrypt(final byte[] bs, final String key, final int encryptType, final String type) throws Exception {
         byte[] result = null;
-        if (type.equals("jsp")) {
+        if (type.equals("jsp")||type.equals("jsp-zcms")) {
             result = DecryptForJava(bs, key);
         }
         else if (type.equals("php")) {

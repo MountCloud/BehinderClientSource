@@ -355,14 +355,15 @@ public class FileManagerViewController
         ((TableColumn)tcs.get(0)).setCellValueFactory(data -> ((List)((TableColumn.CellDataFeatures)data).getValue()).get(0));
         ((TableColumn)tcs.get(1)).setCellValueFactory(data -> ((List)((TableColumn.CellDataFeatures)data).getValue()).get(1));
         ((TableColumn)tcs.get(2)).setCellValueFactory(data -> ((List)((TableColumn.CellDataFeatures)data).getValue()).get(2));
+        ((TableColumn)tcs.get(3)).setCellValueFactory(data -> ((List)((TableColumn.CellDataFeatures)data).getValue()).get(3));
         this.fileListTableView.setRowFactory(tv -> {
             final TableRow<List<StringProperty>> row = (TableRow<List<StringProperty>>)new TableRow();
             row.setOnMouseClicked(event -> {
                 event.consume();
                 if (event.getClickCount() == 2 && !row.isEmpty()) {
                     String path = this.currentPathCombo.getValue().toString();
-                    final String name = ((List)row.getItem()).get(0).toString();
-                    final String type = ((List)row.getItem()).get(3).toString();
+                    final String name = ((StringProperty)((List)row.getItem()).get(0)).getValue();
+                    final String type = ((StringProperty)((List)row.getItem()).get(2)).getValue();
                     if (!path.endsWith("/")) {
                         path += "/";
                     }
@@ -503,8 +504,8 @@ public class FileManagerViewController
                 final List<StringProperty> row = new ArrayList<StringProperty>();
                 row.add(0, (StringProperty)new SimpleStringProperty(name));
                 row.add(1, (StringProperty)new SimpleStringProperty(size));
-                row.add(2, (StringProperty)new SimpleStringProperty(lastModified));
-                row.add(3, (StringProperty)new SimpleStringProperty(type));
+                row.add(2, (StringProperty)new SimpleStringProperty(type));
+                row.add(3, (StringProperty)new SimpleStringProperty(lastModified));
                 data.add(row);
             }
             catch (Exception e) {
@@ -610,8 +611,8 @@ public class FileManagerViewController
         cm.getItems().add(cloneTimeStampBtn);
         this.fileListTableView.setContextMenu(cm);
         openBtn.setOnAction(event -> {
-            final String type = ((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(3).toString();
-            final String name = ((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0).toString();
+            final String type = ((SimpleStringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(3)).getValue();
+            final String name = ((SimpleStringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
             String pathString = this.currentPathCombo.getValue().toString();
             pathString = Paths.get(pathString, new String[0]).normalize().toString();
             if (!pathString.endsWith("/")) {
@@ -637,7 +638,7 @@ public class FileManagerViewController
             this.fileListTableView.edit(row, this.fileNameCol);
         });
         delBtn.setOnAction(event -> {
-            final String name = ((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0).toString();
+            final String name =  ((SimpleStringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
             final String fileFullPath = this.currentPathCombo.getValue().toString() + name;
             final Runnable runner = () -> {
                 try {
@@ -672,7 +673,7 @@ public class FileManagerViewController
     }
 
     private void downloadFile() {
-        final String fileName = ((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0).toString();
+        final String fileName = ((SimpleStringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
         final String fileFullPath = this.currentPathCombo.getValue().toString() + fileName;
         final FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("请选择保存路径");
@@ -685,7 +686,7 @@ public class FileManagerViewController
         this.statusLabel.setText("正在下载" + fileFullPath + "……");
         final Runnable runner = () -> {
             try {
-                this.currentShellService.downloadFile(fileName, localFilePath);
+                this.currentShellService.downloadFile(fileFullPath, localFilePath);
                 String result = selectedFile.getName() + "下载完成,文件大小:" + selectedFile.length();
                 Platform.runLater(() -> this.statusLabel.setText(result));
             }

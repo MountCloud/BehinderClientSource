@@ -40,6 +40,10 @@ public class PortMap implements Runnable
         this.Session = page.getSession();
         this.Response = (HttpServletResponse)page.getResponse();
         this.Request = (HttpServletRequest)page.getRequest();
+        //兼容zcms
+        if(Session.getAttribute("payload")!=null){
+            Session.removeAttribute("payload");
+        }
         try {
             this.portMap(page);
         }

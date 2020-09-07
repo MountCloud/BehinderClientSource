@@ -136,14 +136,14 @@ public class ShellManager
         return (result.length() == 0) ? null : result.getJSONObject(0);
     }
 
-    public int addShell(final String url, final String password, final String type, final String catagory, final String comment, final String headers) throws Exception {
+    public int addShell(final String url, final String password, final String type, final String catagory, final String comment, final String headers,final String encode) throws Exception {
         PreparedStatement statement = ShellManager.connection.prepareStatement("select count(*) from shells where url=?");
         statement.setString(1, url);
         final int num = statement.executeQuery().getInt(1);
         if (num > 0) {
             throw new Exception("该URL已存在");
         }
-        statement = ShellManager.connection.prepareStatement("insert into shells(url,ip,password,type,catagory,os,comment,headers,addtime,updatetime,accesstime) values (?,?,?,?,?,?,?,?,?,?,?)");
+        statement = ShellManager.connection.prepareStatement("insert into shells(url,ip,password,type,catagory,os,comment,headers,addtime,updatetime,accesstime,encode) values (?,?,?,?,?,?,?,?,?,?,?,?)");
         statement.setString(1, url);
         statement.setString(2, InetAddress.getByName(new URL(url).getHost()).getHostAddress());
         statement.setString(3, password);
@@ -156,6 +156,7 @@ public class ShellManager
         statement.setTimestamp(9, now);
         statement.setTimestamp(10, now);
         statement.setTimestamp(11, now);
+        statement.setString(12, encode);
         return statement.executeUpdate();
     }
 
@@ -227,8 +228,8 @@ public class ShellManager
         return statement.executeUpdate();
     }
 
-    public int updateShell(final int shellID, final String url, final String password, final String type, final String catagory, final String comment, final String headers) throws Exception {
-        final PreparedStatement statement = ShellManager.connection.prepareStatement("update shells set url=?,ip=?,password=?,type=?,catagory=?,comment=?,headers=?,updatetime=? where id=?");
+    public int updateShell(final int shellID, final String url, final String password, final String type, final String catagory, final String comment, final String headers,final String encode) throws Exception {
+        final PreparedStatement statement = ShellManager.connection.prepareStatement("update shells set url=?,ip=?,password=?,type=?,catagory=?,comment=?,headers=?,updatetime=?,encode=? where id=?");
         statement.setString(1, url);
         statement.setString(2, InetAddress.getByName(new URL(url).getHost()).getHostAddress());
         statement.setString(3, password);
@@ -238,7 +239,8 @@ public class ShellManager
         statement.setString(7, headers);
         final Timestamp now = new Timestamp(System.currentTimeMillis());
         statement.setTimestamp(8, now);
-        statement.setInt(9, shellID);
+        statement.setString(9, encode);
+        statement.setInt(10, shellID);
         return statement.executeUpdate();
     }
 

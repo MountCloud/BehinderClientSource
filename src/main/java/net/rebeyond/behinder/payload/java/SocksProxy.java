@@ -29,6 +29,12 @@ public class SocksProxy
     @Override
     public boolean equals(final Object obj) {
         final PageContext page = (PageContext)obj;
+
+        HttpSession session = page.getSession();
+        //兼容zcms
+        if(session.getAttribute("payload")!=null){
+            session.removeAttribute("payload");
+        }
         try {
             this.proxy(page);
         }

