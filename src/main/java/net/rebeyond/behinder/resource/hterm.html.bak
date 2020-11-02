@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TerminalFX</title>
+    <!--<style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #terminal {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+    </style>-->
+</head>
+<body>
+
+
+
+<div id="terminal">cd1112ddc</div>
+<!--<script src="hterm_all_2.js"></script>-->
+
+<script>
+
+	window.onload = async function() {
+		alert(333);
+		try{
+			//window.t = new hterm.Terminal("myterm");
+			//alert(000);
+			hterm.defaultStorage = new lib.Storage.Memory();
+			await lib.init();
+			window.t = new hterm.Terminal("myterm");
+			t.getPrefs().set("font-size", 12);
+			t.getPrefs().set("foreground-color", "#00ff00");
+			t.onTerminalReady = function() {
+			  // Create a new terminal IO object and give it the foreground.
+			  // (The default IO object just prints warning messages about unhandled
+			  // things to the the JS console.)
+			  const io = t.io.push();
+
+			  io.onVTKeystroke = (str) => {
+			    // Do something useful with str here.
+			    // For example, Secure Shell forwards the string onto the NaCl plugin.
+				  window.app.receive(str);
+			  };
+
+			  io.sendString = io.onVTKeystroke;
+
+			  io.onTerminalResize = (columns, rows) => {
+			    // React to size changes here.
+			    // Secure Shell pokes at NaCl, which eventually results in
+			    // some ioctls on the host.
+			  };
+
+			  // You can call io.push() to foreground a fresh io context, which can
+			  // be uses to give control of the terminal to something else.  When that
+			  // thing is complete, should call io.pop() to restore control to the
+			  // previous io object.
+			};
+			t.decorate(document.querySelector('#terminal'));
+			t.installKeyboard();
+			//t.io.print('Print a string without a newli2222ne');
+		}
+	  	catch (error)
+		{
+			alert(error);
+		}
+	  //setupHterm();
+	  
+	};
+//lib.init(startTerminal);
+    /*document.addEventListener("DOMContentLoaded", function (event) {
+        lib.init(startTerminal);
+    });*/
+
+</script>
+
+</body>
+</html>

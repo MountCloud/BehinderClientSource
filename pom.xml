@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.mountcloud</groupId>
-  <artifactId>NotIsBehinder</artifactId>
+  <artifactId>Behinder</artifactId>
   <version>3.0-beta-5</version>
 
   <name>NotIsBehinder</name>
@@ -110,11 +110,13 @@
       <artifactId>javafx-web</artifactId>
       <version>11</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/asm/asm-all -->
     <dependency>
-      <groupId>org.objectweb.asm</groupId>
-      <artifactId>com.springsource.org.objectweb.asm</artifactId>
-      <version>3.2.0</version>
+      <groupId>asm</groupId>
+      <artifactId>asm-all</artifactId>
+      <version>3.2</version>
     </dependency>
+
   </dependencies>
 
   <build>

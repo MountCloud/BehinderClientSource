@@ -1,34 +1,30 @@
-// 
-// Decompiled by Procyon v0.5.36
-// 
-
 package net.rebeyond.behinder.ui;
 
-import javafx.scene.Scene;
-import java.io.InputStream;
-import javafx.scene.image.Image;
-import java.io.ByteArrayInputStream;
-import java.net.URL;
-
-import net.rebeyond.behinder.utils.Utils;
-import net.rebeyond.behinder.core.Constants;
+import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import javafx.application.Application;
+import net.rebeyond.behinder.core.Constants;
+import net.rebeyond.behinder.utils.Utils;
 
-public class Main extends Application
-{
-    public void start(final Stage primaryStage) throws Exception {
-        URL url = this.getClass().getResource("Main.fxml");
-        final Parent root = (Parent)FXMLLoader.load(url);
-        primaryStage.setTitle(String.format("\u51b0\u874e%s\u52a8\u6001\u4e8c\u8fdb\u5236\u52a0\u5bc6Web\u8fdc\u7a0b\u7ba1\u7406\u5ba2\u6237\u7aef", Constants.VERSION));
-        primaryStage.getIcons().add(new Image((InputStream)new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
-        primaryStage.setScene(new Scene(root, 1100.0, 600.0));
+import java.io.ByteArrayInputStream;
+
+public class Main extends Application {
+
+
+    @Override
+    public void start(Stage primaryStage) throws Exception{
+        Parent root = FXMLLoader.load(getClass().getResource("Main.fxml"));
+        primaryStage.setTitle(String.format("冰蝎%s动态二进制加密Web远程管理客户端", Constants.VERSION));
+        primaryStage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+        primaryStage.setScene(new Scene(root, 1100, 600));
         primaryStage.show();
     }
-    
-    public static void main(final String[] args) {
-        launch(new String[0]);
+
+
+    public static void main(String[] args) {
+        launch();
     }
 }
