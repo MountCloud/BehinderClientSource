@@ -353,7 +353,8 @@ public class FileManagerViewController {
    private void initFileListTableColumns() {
       ObservableList tcs = this.fileListTableView.getColumns();
       ((TableColumn)tcs.get(0)).setCellValueFactory((data) -> {
-         return (ObservableValue)((List)((TableColumn.CellDataFeatures)data).getValue()).get(0);
+         ObservableValue ov = (ObservableValue)((List)((TableColumn.CellDataFeatures)data).getValue()).get(0);
+         return ov;
       });
       ((TableColumn)tcs.get(1)).setCellValueFactory((data) -> {
          return (ObservableValue)((List)((TableColumn.CellDataFeatures)data).getValue()).get(1);
@@ -389,9 +390,11 @@ public class FileManagerViewController {
          });
          return row;
       });
+
       this.fileNameCol.setCellFactory((column) -> {
-         return new TableCell() {
-            public void updateItem(String item, boolean empty) {
+         TableCell tableCell = new TableCell() {
+            @Override
+            protected void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                if (item == null | empty) {
                   this.setGraphic((Node)null);
@@ -422,11 +425,13 @@ public class FileManagerViewController {
                      }
                   }
 
-                  this.setText(item);
+                  String itemStr = item.toString();
+                  this.setText(itemStr);
                }
 
             }
          };
+         return tableCell;
       });
    }
 

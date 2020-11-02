@@ -129,6 +129,11 @@
           <include>**/*.jpg</include>
           <include>**/*.png</include>
           <include>**/*.css</include>
+          <include>**/*.dll</include>
+          <include>**/*.jar</include>
+          <include>**/*.js</include>
+          <include>**/*.html</include>
+          <include>**/*.gif</include>
         </includes>
         <filtering>true</filtering>
       </resource>
