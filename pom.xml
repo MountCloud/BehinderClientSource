@@ -134,6 +134,8 @@
           <include>**/*.js</include>
           <include>**/*.html</include>
           <include>**/*.gif</include>
+          <include>**/*.asp</include>
+          <include>**/*.php</include>
         </includes>
         <filtering>true</filtering>
       </resource>
