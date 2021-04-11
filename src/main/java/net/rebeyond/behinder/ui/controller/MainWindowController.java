@@ -75,6 +75,8 @@ public class MainWindowController {
    private UpdateInfoViewController updateInfoViewController;
    @FXML
    private UserCodeViewController userCodeViewController;
+   @FXML
+   private MemoViewController memoViewController;
    private Map basicInfoMap = new HashMap();
    private List workList = new ArrayList();
 
@@ -92,6 +94,11 @@ public class MainWindowController {
             MainWindowController.this.statusLabel.setTooltip(new Tooltip(t1));
          }
       });
+//      this.statusLabel.textProperty().addListener(new ChangeListener() {
+//         public void changed(ObservableValue ov, String t, String t1) {
+//            MainWindowController.this.statusLabel.setTooltip(new Tooltip(t1));
+//         }
+//      });
       this.versionLabel.setText(String.format(this.versionLabel.getText(), Constants.VERSION));
       this.urlText.textProperty().addListener((observable, oldValue, newValue) -> {
          try {
@@ -108,10 +115,13 @@ public class MainWindowController {
                   String driveList = (new String(Base64.decode(basicInfoObj.getString("driveList")), "UTF-8")).replace(":\\", ":/");
                   String currentPath = new String(Base64.decode(basicInfoObj.getString("currentPath")), "UTF-8");
                   String osInfo = (new String(Base64.decode(basicInfoObj.getString("osInfo")), "UTF-8")).toLowerCase();
+                  String arch = (new String(Base64.decode(basicInfoObj.getString("arch")), "UTF-8")).toLowerCase();
                   this.basicInfoMap.put("basicInfo", basicInfoStr);
                   this.basicInfoMap.put("driveList", driveList);
-                  this.basicInfoMap.put("currentPath", currentPath);
+                  this.basicInfoMap.put("currentPath", Utils.formatPath(currentPath));
+                  this.basicInfoMap.put("workPath", Utils.formatPath(currentPath));
                   this.basicInfoMap.put("osInfo", osInfo.replace("winnt", "windows"));
+                  this.basicInfoMap.put("arch", arch);
                   this.shellManager.updateOsInfo(this.shellEntity.getInt("id"), osInfo);
                   Platform.runLater(new Runnable() {
                      public void run() {
@@ -122,13 +132,13 @@ public class MainWindowController {
                            MainWindowController.this.realCmdViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel, MainWindowController.this.basicInfoMap);
                            MainWindowController.this.pluginViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel, MainWindowController.this.shellManager);
                            MainWindowController.this.fileManagerViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel, MainWindowController.this.basicInfoMap);
-                           MainWindowController.this.reverseViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel);
+                           MainWindowController.this.reverseViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel, MainWindowController.this.basicInfoMap);
                            MainWindowController.this.databaseViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel);
                            MainWindowController.this.tunnelViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel);
                            MainWindowController.this.updateInfoViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel);
                            MainWindowController.this.userCodeViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel);
+                           MainWindowController.this.memoViewController.init(MainWindowController.this.currentShellService, MainWindowController.this.workList, MainWindowController.this.statusLabel, MainWindowController.this.shellManager);
                         } catch (Exception var2) {
-                           var2.printStackTrace();
                         }
 
                         MainWindowController.this.connStatusLabel.setText("已连接");
@@ -136,14 +146,20 @@ public class MainWindowController {
                         MainWindowController.this.statusLabel.setText("[OK]连接成功，基本信息获取完成。");
                      }
                   });
+                  this.shellManager.setShellStatus(this.shellEntity.getInt("id"), Constants.SHELL_STATUS_ALIVE);
                   this.currentShellService.keepAlive();
-               } catch (final Exception var9) {
+               } catch (final Exception var10) {
                   Platform.runLater(new Runnable() {
                      public void run() {
-                        var9.printStackTrace();
                         MainWindowController.this.connStatusLabel.setText("连接失败");
                         MainWindowController.this.connStatusLabel.setTextFill(Color.RED);
-                        MainWindowController.this.statusLabel.setText("[ERROR]连接失败：" + var9.getMessage());
+                        MainWindowController.this.statusLabel.setText("[ERROR]连接失败：" + var10.getClass().getName() + ":" + var10.getMessage());
+
+                        try {
+                           MainWindowController.this.shellManager.setShellStatus(MainWindowController.this.shellEntity.getInt("id"), Constants.SHELL_STATUS_DEAD);
+                        } catch (Exception var2) {
+                        }
+
                      }
                   });
                }
@@ -153,7 +169,6 @@ public class MainWindowController {
             this.workList.add(workThrad);
             workThrad.start();
          } catch (Exception var7) {
-            var7.printStackTrace();
          }
 
       });

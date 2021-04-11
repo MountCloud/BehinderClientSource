@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.Socket;
 import java.net.URI;
@@ -50,6 +51,9 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.stage.Window;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManager;
@@ -66,6 +70,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.JavaFileManager.Location;
 import javax.tools.JavaFileObject.Kind;
+import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.Crypt;
 import net.rebeyond.behinder.core.Params;
 import net.rebeyond.behinder.ui.controller.MainController;
@@ -90,7 +95,6 @@ public class Utils {
    }
 
    public static Map getKeyAndCookie(String getUrl, String password, Map requestHeaders) throws Exception {
-      disableSslVerification();
       Map result = new HashMap();
       StringBuffer sb = new StringBuffer();
       InputStreamReader isr = null;
@@ -206,7 +210,7 @@ public class Utils {
                }
 
                if (end - start == 16) {
-                  result.put("cookie", (String)KeyAndCookie.get("cookie"));
+                  result.put("cookie", KeyAndCookie.get("cookie"));
                   result.put("beginIndex", start + "");
                   result.put("endIndex", temp.length - end + "");
                   String finalKey = new String(Arrays.copyOfRange(rawKey_2.getBytes(), start, end));
@@ -332,7 +336,7 @@ public class Utils {
 
    public static Map requestAndParse(String urlPath, Map header, byte[] data, int beginIndex, int endIndex) throws Exception {
       Map resultObj = sendPostRequestBinary(urlPath, header, data);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       if ((beginIndex != 0 || endIndex != 0) && resData.length - endIndex >= beginIndex) {
          resData = Arrays.copyOfRange(resData, beginIndex, resData.length - endIndex);
       }
@@ -353,7 +357,8 @@ public class Utils {
          conn = (HttpURLConnection)url.openConnection();
       }
 
-      conn.setRequestProperty("Content-Type", "application/octet-stream");
+      conn.setConnectTimeout(15000);
+      conn.setUseCaches(true);
       conn.setRequestMethod("POST");
       int length;
       if (header != null) {
@@ -370,7 +375,6 @@ public class Utils {
 
       conn.setDoOutput(true);
       conn.setDoInput(true);
-      conn.setUseCaches(false);
       OutputStream outwritestream = conn.getOutputStream();
       outwritestream.write(data);
       outwritestream.flush();
@@ -548,6 +552,11 @@ public class Utils {
       return result;
    }
 
+   public static String getFileType(String fileName) {
+      int extIndex = fileName.lastIndexOf(".");
+      return extIndex >= 0 ? fileName.substring(extIndex + 1).toLowerCase() : "";
+   }
+
    public static byte[] getData(String key, int encryptType, String className, Map params, String type, byte[] extraData) throws Exception {
       byte[] bincls;
       byte[] encrypedBincls;
@@ -678,6 +687,11 @@ public class Utils {
       return currentPath;
    }
 
+   public static String getSelfJarPath() throws Exception {
+      String currentPath = Utils.class.getProtectionDomain().getCodeSource().getLocation().getPath().toString();
+      return currentPath;
+   }
+
    public static JSONObject parsePluginZip(String zipFilePath) throws Exception {
       String pluginRootPath = getSelfPath() + "/Plugins";
       String pluginName = "";
@@ -768,7 +782,7 @@ public class Utils {
 
    }
 
-   private static void disableSslVerification() {
+   public static void disableSslVerification() {
       try {
          TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
             public X509Certificate[] getAcceptedIssuers() {
@@ -878,6 +892,135 @@ public class Utils {
       return -1;
    }
 
+   public static String formatPath(String path) {
+      if (path.indexOf("\\") > 0) {
+         path = path.replaceAll("\\\\", "/");
+      }
+
+      if (path.endsWith(":")) {
+         path = path + "/";
+      }
+
+      if (!path.endsWith("/")) {
+         path = path + "/";
+      }
+
+      if (isWindowsPath(path)) {
+         path = path.substring(0, 1).toUpperCase() + path.substring(1);
+      }
+
+      return path;
+   }
+
+   public static boolean isWindowsPath(String path) {
+      return path.length() > 1 && path.substring(0, 2).matches("^[a-zA-Z]:");
+   }
+
+   public static String getRootPath(String path) {
+      String rootPath = "/";
+      if (isWindowsPath(path)) {
+         rootPath = formatPath(path.substring(0, 2));
+      }
+
+      return rootPath;
+   }
+
+   public static boolean isWindows(Map basicInfoMap) {
+      String osInfo = (String)basicInfoMap.get("osInfo");
+      return osInfo.indexOf("windows") >= 0 || osInfo.indexOf("winnt") >= 0;
+   }
+
+   public static int getOSType(String osInfo) {
+      int osType = -1;
+      if (osInfo.indexOf("windows") < 0 && osInfo.indexOf("winnt") < 0) {
+         if (osInfo.indexOf("linux") >= 0) {
+            osType = Constants.OS_TYPE_LINUX;
+         } else if (osInfo.indexOf("mac") >= 0) {
+            osType = Constants.OS_TYPE_MAC;
+         }
+      } else {
+         osType = Constants.OS_TYPE_WINDOWS;
+      }
+
+      return osType;
+   }
+
+   public static void showErrorMessage(String title, String msg) {
+      Alert alert = new Alert(AlertType.ERROR);
+      Window window = alert.getDialogPane().getScene().getWindow();
+      window.setOnCloseRequest((event) -> {
+         window.hide();
+      });
+      alert.setTitle(title);
+      alert.setHeaderText("");
+      alert.setContentText(msg);
+      alert.show();
+   }
+
+   public static void showInfoMessage(String title, String msg) {
+      Alert alert = new Alert(AlertType.INFORMATION);
+      Window window = alert.getDialogPane().getScene().getWindow();
+      window.setOnCloseRequest((event) -> {
+         window.hide();
+      });
+      alert.setTitle(title);
+      alert.setHeaderText("");
+      alert.setContentText(msg);
+      alert.show();
+   }
+
+   public static String getOrDefault(JSONObject obj, String key, Class type) {
+      String result = "";
+      if (obj.has(key)) {
+         result = obj.get(key).toString();
+      } else if (type == String.class) {
+         result = "";
+      } else if (type == Integer.TYPE) {
+         result = "0";
+      }
+
+      return result;
+   }
+
+   public static String getBaseUrl(String urlStr) {
+      String result = urlStr;
+
+      try {
+         URL url = new URL(urlStr);
+         int port = url.getPort();
+         if (port == -1) {
+            result = url.getProtocol() + "://" + url.getHost();
+         } else {
+            result = url.getProtocol() + "://" + url.getHost() + ":" + url.getPort();
+         }
+      } catch (MalformedURLException var4) {
+         var4.printStackTrace();
+      }
+
+      return result;
+   }
+
+   public static class MyJavaFileManager extends ForwardingJavaFileManager {
+      protected MyJavaFileManager(JavaFileManager fileManager) {
+         super(fileManager);
+      }
+
+      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
+         JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
+         if (javaFileObject == null) {
+            super.getJavaFileForInput(location, className, kind);
+         }
+
+         return javaFileObject;
+      }
+
+      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
+         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
+         Utils.fileObjects.put(qualifiedClassName, javaFileObject);
+         return javaFileObject;
+      }
+   }
+
    private static class MySSLSocketFactory extends SSLSocketFactory {
       private SSLSocketFactory sf;
       private String[] enabledCiphers;
@@ -928,27 +1071,6 @@ public class Utils {
       // $FF: synthetic method
       MySSLSocketFactory(SSLSocketFactory x0, String[] x1, Object x2) {
          this(x0, x1);
-      }
-   }
-
-   public static class MyJavaFileManager extends ForwardingJavaFileManager {
-      protected MyJavaFileManager(JavaFileManager fileManager) {
-         super(fileManager);
-      }
-
-      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
-         JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
-         if (javaFileObject == null) {
-            super.getJavaFileForInput(location, className, kind);
-         }
-
-         return javaFileObject;
-      }
-
-      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
-         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
-         Utils.fileObjects.put(qualifiedClassName, javaFileObject);
-         return javaFileObject;
       }
    }
 

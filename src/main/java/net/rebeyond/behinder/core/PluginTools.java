@@ -53,7 +53,6 @@ public class PluginTools {
                this.statusLabel.setText(msg);
             });
          } catch (Exception var7) {
-            var7.printStackTrace();
             Platform.runLater(() -> {
                this.statusLabel.setText("插件运行失败");
             });
@@ -80,7 +79,6 @@ public class PluginTools {
             String msg = resultObj.getString("msg");
             callBack.onPluginSubmit(status, msg);
          } catch (Exception var8) {
-            var8.printStackTrace();
             callBack.onPluginSubmit("fail", var8.getMessage());
          }
 
@@ -125,7 +123,6 @@ public class PluginTools {
 
             });
          } catch (Exception var8) {
-            var8.printStackTrace();
             Platform.runLater(() -> {
                this.statusLabel.setText("结果刷新失败:" + var8.getMessage());
             });

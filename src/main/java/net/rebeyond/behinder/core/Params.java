@@ -3,8 +3,12 @@ package net.rebeyond.behinder.core;
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.rebeyond.behinder.utils.ReplacingInputStream;
 import net.rebeyond.behinder.utils.Utils;
 import org.objectweb.asm.ClassAdapter;
@@ -62,7 +66,7 @@ public class Params {
          String paramValue;
          for(Iterator var6 = params.keySet().iterator(); var6.hasNext(); paramsStr = paramsStr + paramName + ":" + paramValue + ",") {
             paramName = (String)var6.next();
-            paramValue = Base64.encode(((String)params.get(paramName)).toString().getBytes());
+            paramValue = Base64.encode(((String)params.get(paramName)).toString().getBytes("UTF-8"));
          }
 
          paramsStr = paramsStr.substring(0, paramsStr.length() - 1);
@@ -117,17 +121,40 @@ public class Params {
       bis.close();
       code.append(bos.toString());
       String paraList = "";
+      Iterator var9 = getPhpParams(code.toString()).iterator();
 
-      String paraName;
-      for(Iterator var9 = params.keySet().iterator(); var9.hasNext(); paraList = paraList + ",$" + paraName) {
-         paraName = (String)var9.next();
-         String paraValue = (String)params.get(paraName);
-         code.append(String.format("$%s=\"%s\";", paraName, paraValue));
+      while(var9.hasNext()) {
+         String paraName = (String)var9.next();
+         if (params.keySet().contains(paraName)) {
+            String paraValue = (String)params.get(paraName);
+            code.append(String.format("$%s=\"%s\";", paraName, paraValue));
+            paraList = paraList + ",$" + paraName;
+         } else {
+            code.append(String.format("$%s=\"%s\";", paraName, ""));
+            paraList = paraList + ",$" + paraName;
+         }
       }
 
       paraList = paraList.replaceFirst(",", "");
       code.append("\r\nmain(" + paraList + ");");
       return code.toString().getBytes();
+   }
+
+   public static List getPhpParams(String phpPayload) {
+      List paramList = new ArrayList();
+      Pattern mainPattern = Pattern.compile("main\\s*\\([^\\)]*\\)");
+      Matcher mainMatch = mainPattern.matcher(phpPayload);
+      if (mainMatch.find()) {
+         String mainStr = mainMatch.group(0);
+         Pattern paramPattern = Pattern.compile("\\$([a-zA-Z]*)");
+         Matcher paramMatch = paramPattern.matcher(mainStr);
+
+         while(paramMatch.find()) {
+            paramList.add(paramMatch.group(1));
+         }
+      }
+
+      return paramList;
    }
 
    public static byte[] getParamedAsp(String clsName, Map params) throws Exception {

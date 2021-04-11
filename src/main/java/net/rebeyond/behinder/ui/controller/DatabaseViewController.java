@@ -5,9 +5,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,7 +14,6 @@ import java.util.regex.Pattern;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -34,6 +31,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
@@ -183,7 +181,7 @@ public class DatabaseViewController {
          TreeItem currentTreeItem = (TreeItem)this.schemaTree.getSelectionModel().getSelectedItem();
          String tableName = currentTreeItem.getValue().toString();
          String dataBaseName = currentTreeItem.getParent().getValue().toString();
-         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+         Alert alert = new Alert(AlertType.CONFIRMATION);
          alert.setTitle("确认");
          alert.setHeaderText("");
          alert.setContentText("查询所有记录可能耗时较长，确定查询所有记录？");
@@ -397,7 +395,7 @@ public class DatabaseViewController {
    }
 
    private void initDatabaseType() {
-      ObservableList typeList = FXCollections.observableArrayList("MySQL", "SQLServer", "Oracle");
+      ObservableList typeList = FXCollections.observableArrayList(new String[]{"MySQL", "SQLServer", "Oracle"});
       this.databaseTypeCombo.setItems(typeList);
       this.databaseTypeCombo.setOnAction((event) -> {
          String type = this.databaseTypeCombo.getValue().toString();
@@ -462,10 +460,10 @@ public class DatabaseViewController {
          sql = "select table_name,num_rows from user_tables";
       }
 
-      final String finalSql = sql;
+      final String sqlFinal = sql;
       Runnable runner = () -> {
          try {
-            String resultText = this.executeSQL(connParams, finalSql);
+            String resultText = this.executeSQL(connParams, sqlFinal);
             Platform.runLater(() -> {
                try {
                   this.fillTable(resultText);
@@ -525,8 +523,7 @@ public class DatabaseViewController {
       } else if (databaseType.equals("oracle")) {
          sql = "select sys_context('userenv','db_name') as db_name from dual";
       }
-
-      final String finalSql = sql;
+      final String sqlFinal = sql;
       Runnable runner = () -> {
          try {
             if (shellType.equals("aspx")) {
@@ -534,7 +531,7 @@ public class DatabaseViewController {
                this.loadDriver("aspx", "oracle");
             }
 
-            String resultText = this.executeSQL(connParams, finalSql);
+            String resultText = this.executeSQL(connParams, sqlFinal);
             if (resultText.equals("NoDriver")) {
                this.loadDriver(shellType, (String)connParams.get("type"));
                return;
@@ -731,19 +728,19 @@ public class DatabaseViewController {
          JSONArray fieldArray = result.getJSONArray(0);
          int rows = result.length() - 1;
          ObservableList tableViewColumns = FXCollections.observableArrayList();
-         Iterator var6 = fieldArray.iterator();
 
-         while(var6.hasNext()) {
-            Object field = var6.next();
-            String fieldName = ((JSONObject)field).get("name").toString();
+         for(int i = 0; i < fieldArray.length(); ++i) {
+            JSONObject field = fieldArray.getJSONObject(i);
+            String fieldName = field.get("name").toString();
             TableColumn col = new TableColumn(fieldName);
             tableViewColumns.add(col);
             col.setCellValueFactory((datax) -> {
-               return (ObservableValue)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(0);
+               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(0);
+               //return (StringProperty)((List)datax.getValue()).get(i);
             });
          }
 
-         this.dataTable.getColumns().setAll((Collection)tableViewColumns);
+         this.dataTable.getColumns().setAll(tableViewColumns);
          ObservableList data = FXCollections.observableArrayList();
 
          for(int i = 1; i < rows; ++i) {

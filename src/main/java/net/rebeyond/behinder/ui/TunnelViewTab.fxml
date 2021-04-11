@@ -11,9 +11,11 @@
                     <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                 </columnConstraints>
                 <rowConstraints>
-                    <RowConstraints minHeight="10.0" percentHeight="30.00" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" percentHeight="25.00" prefHeight="50.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" percentHeight="45.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="25.0" prefHeight="50.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="15.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="30.0" prefHeight="30.0" vgrow="SOMETIMES" />
+
                 </rowConstraints>
                 <children>
                     <TitledPane collapsible="false" contentDisplay="RIGHT" maxHeight="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" text="端口映射" GridPane.rowIndex="0">
@@ -32,7 +34,7 @@
                                             <RowConstraints minHeight="10.0" percentHeight="25.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                             <RowConstraints minHeight="10.0" percentHeight="27.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                              <RowConstraints />
+
                                         </rowConstraints>
                                         <children>
                                             <Label text="穿透方式：" GridPane.halignment="RIGHT" GridPane.rowIndex="0" />
@@ -65,7 +67,7 @@
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                         </GridPane.margin></TitledPane>
 
-                    <TitledPane maxHeight="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" text="运行日志" GridPane.rowIndex="2">
+                    <TitledPane maxHeight="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" text="运行日志" GridPane.rowIndex="3">
                         <content>
                             <TextArea fx:id="tunnelLogTextarea" />
                         </content>
@@ -94,16 +96,55 @@
                                             <Label text="穿透方式：" GridPane.halignment="RIGHT" GridPane.rowIndex="0" />
                                             <HBox alignment="CENTER_LEFT" spacing="10.0" GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.valignment="CENTER">
                                                 <children>
-                                                    <RadioButton fx:id="socksVPSRadio" disable="true" mnemonicParsing="false" text="VPS中转" />
-                                                    <RadioButton fx:id="socksHTTPRadio" disable="true" mnemonicParsing="false" selected="true" text="HTTP隧道" />
+                                                    <RadioButton fx:id="socksVPSRadio" mnemonicParsing="false" selected="true" text="VPS中转" />
+                                                    <RadioButton fx:id="socksHTTPRadio" mnemonicParsing="false"  text="HTTP隧道" />
                                                 </children>
                                             </HBox>
                                             <Label fx:id="socksListenIPLabel" text="本地监听IP地址：" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
-                                            <TextField fx:id="socksIPText" text="0.0.0.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                            <TextField fx:id="socksIPText" text="119.113.45.174" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                                             <Label fx:id="socksListenPortLabel" text="本地监听端口：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
-                                            <TextField fx:id="socksPortText" text="10086" GridPane.columnIndex="3" GridPane.rowIndex="1" />
+                                            <TextField fx:id="socksPortText" text="2222" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                                             <Button fx:id="createSocksBtn" mnemonicParsing="false" text="开启" GridPane.columnIndex="4" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
-                                            <Label prefWidth="650.0" text="*提供基于HTTP隧道的全局socks代理，将远程目标内网的socks代理服务开到本地，适用于目标不能出网的情况。" textFill="GREEN" GridPane.columnSpan="5" GridPane.rowIndex="2" GridPane.valignment="BASELINE">
+                                            <Label fx:id="socksDescLabel" prefWidth="650.0" text="*提供基于HTTP隧道的全局socks代理，将远程目标内网的socks代理服务开到本地，适用于目标不能出网的情况。" textFill="GREEN" GridPane.columnSpan="5" GridPane.rowIndex="2" GridPane.valignment="BASELINE">
+                                                <GridPane.margin>
+                                                    <Insets left="20.0" top="5.0" />
+                                                </GridPane.margin>
+                                            </Label>
+                                        </children>
+                                    </GridPane>
+                                </children>
+                            </AnchorPane>
+                        </content>
+                        <GridPane.margin>
+                            <Insets left="5.0" right="5.0" top="5.0" />
+                        </GridPane.margin>
+                    </TitledPane>
+                    <TitledPane animated="false" collapsible="false" text="反向DMZ" GridPane.rowIndex="2">
+                        <content>
+                            <AnchorPane>
+                                <children>
+                                    <GridPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                        <columnConstraints>
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" />
+                                        </columnConstraints>
+                                        <rowConstraints>
+      
+                                            <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                              <RowConstraints />
+
+                                        </rowConstraints>
+                                        <children>
+
+                                            <Label fx:id="reversePortMapIPLabel" text="监听IP地址：" GridPane.halignment="RIGHT" GridPane.rowIndex="0" />
+                                            <TextField fx:id="reversePortMapIPText" text="8.8.8.8" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                            <Label fx:id="reversePortMapPortLabel" text="监听端口：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="0" />
+                                            <TextField fx:id="reversePortMapPortText" text="2222" GridPane.columnIndex="3" GridPane.rowIndex="0" />
+                                            <Button fx:id="createReversePortMapBtn" mnemonicParsing="false" text="开启" GridPane.columnIndex="4" GridPane.halignment="CENTER" GridPane.rowIndex="0" />
+                                            <Label fx:id="reversePortMapDescLabel" prefWidth="650.0" text="*当目标内网不出网时，可将本地或VPS监听的端口映射进目标内网，可用于目标不出网环境的反弹上线。" textFill="GREEN" GridPane.columnSpan="5" GridPane.rowIndex="1" GridPane.valignment="BASELINE">
                                                 <GridPane.margin>
                                                     <Insets left="20.0" top="5.0" />
                                                 </GridPane.margin>

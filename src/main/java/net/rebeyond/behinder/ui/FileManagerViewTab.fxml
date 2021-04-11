@@ -67,8 +67,8 @@
                                 <columns>
                                     <TableColumn fx:id="fileNameCol" maxWidth="1.7976931348623157E308" prefWidth="200" text="名称" />
                                     <TableColumn fx:id="fileSizeCol" text="大小" />
-            
                                     <TableColumn fx:id="fileTimeCol" prefWidth="150" text="修改时间" />
+                                    <TableColumn fx:id="filePermCol" prefWidth="150" text="权限" />
                                 </columns>
                                 <GridPane.margin>
                                     <Insets right="5.0" />

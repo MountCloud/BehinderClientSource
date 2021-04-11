@@ -32,7 +32,7 @@
                             <ComboBox fx:id="databaseTypeCombo" prefWidth="150.0" promptText="请选择……" GridPane.columnIndex="1" GridPane.halignment="CENTER" />
                             <Label text="数据库类型：" GridPane.halignment="RIGHT" />
                             <Label text="连接字符串：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" />
-                            <TextField fx:id="connStrText" GridPane.columnIndex="3" />
+                            <TextField fx:id="connStrText" promptText="连接密码中如有特殊字符可将密码进行URL编码" GridPane.columnIndex="3" />
                             <Button fx:id="connectBtn" mnemonicParsing="false" text="连接" GridPane.columnIndex="4" GridPane.halignment="CENTER" />
                         </children>
                     </GridPane>

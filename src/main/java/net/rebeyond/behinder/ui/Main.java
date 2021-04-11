@@ -19,12 +19,20 @@ public class Main extends Application {
         Parent root = FXMLLoader.load(getClass().getResource("Main.fxml"));
         primaryStage.setTitle(String.format("冰蝎%s动态二进制加密Web远程管理客户端", Constants.VERSION));
         primaryStage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
-        primaryStage.setScene(new Scene(root, 1100, 600));
+        primaryStage.setScene(new Scene(root, 1200, 600));
         primaryStage.show();
+        //System.out.println("dis start");
+        Utils.disableSslVerification();
+        //System.out.println("dis end");
     }
 
-
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        System.exit(0);
+    }
     public static void main(String[] args) {
+
         launch();
     }
 }

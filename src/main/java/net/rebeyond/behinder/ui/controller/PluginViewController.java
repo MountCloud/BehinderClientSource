@@ -2,7 +2,7 @@ package net.rebeyond.behinder.ui.controller;
 
 import java.io.File;
 import java.util.List;
-import javafx.concurrent.Worker;
+import javafx.concurrent.Worker.State;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -12,6 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
@@ -22,6 +23,7 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import javafx.stage.FileChooser.ExtensionFilter;
 import net.rebeyond.behinder.core.PluginTools;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
@@ -71,7 +73,7 @@ public class PluginViewController {
       PluginTools pluginTools = new PluginTools(this.currentShellService, this.pluginWebView, this.statusLabel, this.workList);
       WebEngine webEngine = this.pluginWebView.getEngine();
       webEngine.getLoadWorker().stateProperty().addListener((ov, oldState, newState) -> {
-         if (newState == Worker.State.SUCCEEDED) {
+         if (newState == State.SUCCEEDED) {
             JSObject win = (JSObject)webEngine.executeScript("window");
             win.setMember("PluginTools", pluginTools);
          }
@@ -81,7 +83,6 @@ public class PluginViewController {
       try {
          this.loadPlugins();
       } catch (Exception var4) {
-         var4.printStackTrace();
       }
 
       this.pluginDetailGridPane.setOpacity(0.0D);
@@ -99,7 +100,6 @@ public class PluginViewController {
          this.qrcodeImageView.setImage(new Image(qrcodeFilePath));
       } catch (Exception var4) {
          this.statusLabel.setText("插件开发者赞赏二维码加载失败");
-         var4.printStackTrace();
       }
 
    }
@@ -122,7 +122,7 @@ public class PluginViewController {
    }
 
    private void showErrorMessage(String title, String msg) {
-      Alert alert = new Alert(Alert.AlertType.ERROR);
+      Alert alert = new Alert(AlertType.ERROR);
       Window window = alert.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((event) -> {
          window.hide();
@@ -197,7 +197,6 @@ public class PluginViewController {
             this.pluginDetailGridPane.setOpacity(1.0D);
             this.loadPluginDetail(pluginObj);
          } catch (Exception var5) {
-            var5.printStackTrace();
          }
 
       });
@@ -217,7 +216,7 @@ public class PluginViewController {
       this.installLocalBtn.setOnAction((event) -> {
          FileChooser fileChooser = new FileChooser();
          fileChooser.setTitle("请选择需要安装的插件包");
-         fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter("All ZIP Files", new String[]{"*.zip"}));
+         fileChooser.getExtensionFilters().addAll(new ExtensionFilter[]{new ExtensionFilter("All ZIP Files", new String[]{"*.zip"})});
          File pluginFile = fileChooser.showOpenDialog(this.pluginFlowPane.getScene().getWindow());
 
          try {

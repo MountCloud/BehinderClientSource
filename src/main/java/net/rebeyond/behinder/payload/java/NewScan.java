@@ -62,7 +62,6 @@ public class NewScan implements Runnable {
 
          sessionObj.put("running", "false");
       } catch (Exception var15) {
-         var15.printStackTrace();
       }
 
    }

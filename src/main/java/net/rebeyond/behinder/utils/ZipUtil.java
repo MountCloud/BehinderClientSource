@@ -20,7 +20,6 @@ public class ZipUtil {
       try {
          unZipFiles("/Users/rebeyond/newScan.zip", "/Users/rebeyond/newScan");
       } catch (Exception var2) {
-         var2.printStackTrace();
       }
 
    }
