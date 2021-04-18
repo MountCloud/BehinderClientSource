@@ -1,9 +1,9 @@
 # 冰蝎客户端源码
 首先致敬作者rebeyond：https://github.com/rebeyond/Behinder/releases
 
-# 更新内容
+# 本git更新内容【非官方内容】
 ```
-2021-04-19 逆向V3.0 Beta9
+2021-04-19 逆向V3.0 Beta9 打包去掉javafx依赖，所以使用jre或者jdk8运行，jre或者jdk11运行需要安装javafx
 2021-04-11 逆向V3.0 Beta7 并且修复原版虚拟终端无法输入命令问题
 ```
 
