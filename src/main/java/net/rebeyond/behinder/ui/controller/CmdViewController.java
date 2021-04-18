@@ -48,8 +48,8 @@ public class CmdViewController {
    }
 
    private void initHistory() {
-      String[] presetCmdWindows = new String[]{"ipconfig", "whoami", "ver", "net user", "net localgroup administrators"};
-      String[] presetCmdLinux = new String[]{"ipconfig", "id", "uname -a", "ps aux"};
+      String[] presetCmdWindows = new String[]{"ipconfig", "netstat -an", "whoami", "ver", "net user", "net localgroup administrators"};
+      String[] presetCmdLinux = new String[]{"ifconfig", "id", "uname -a", "ps aux", "netstat -an"};
       if (this.getCurrentOSType() == Constants.OS_TYPE_WINDOWS) {
          this.history.addAll(Arrays.asList(presetCmdWindows));
       } else {

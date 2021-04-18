@@ -185,6 +185,10 @@ public class ServerDetector {
       return sd._tomcat;
    }
 
+   public static boolean isJakarta() {
+      return _detect("/javax/servlet/http/HttpServlet.class");
+   }
+
    public static boolean isWebLogic() {
       ServerDetector sd = _instance;
       if (sd._webLogic == null) {

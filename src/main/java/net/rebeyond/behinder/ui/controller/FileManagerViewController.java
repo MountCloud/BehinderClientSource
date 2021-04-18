@@ -49,11 +49,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
-import javafx.util.Callback;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
-import net.rebeyond.behinder.utils.StringUtils;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -226,7 +224,7 @@ public class FileManagerViewController {
                         resultObjx = this.currentShellService.appendFile(currentPath + fileName, (byte[])blocks.get(i));
                         statusx = resultObjx.getString("status");
                         msgx = resultObjx.getString("msg");
-                        final Integer finali = i;
+                        final int finali = i;
                         Platform.runLater(() -> {
                            if (statusx.equals("fail")) {
                               this.statusLabel.setText("文件上传失败:" + msgx);
@@ -358,19 +356,8 @@ public class FileManagerViewController {
 
    private void initFileListTableColumns() {
       ObservableList tcs = this.fileListTableView.getColumns();
-//      ((TableColumn)tcs.get(0)).setCellValueFactory(new Callback<TableColumn.CellDataFeatures, ObservableValue>() {
-//         @Override
-//         public ObservableValue call(TableColumn.CellDataFeatures data) {
-//            List dlist = (List)(data.getValue());
-//            StringProperty sp = (StringProperty) dlist.get(0);
-//            return sp;
-//         }
-//      });
       ((TableColumn)tcs.get(0)).setCellValueFactory((data) -> {
-         List dlist = ((List)((TableColumn.CellDataFeatures)data).getValue());
-         StringProperty sp = (StringProperty) dlist.get(0);
-         return sp;
-         //return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(0);
+         return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(0);
          //return (StringProperty)((List)data.getValue()).get(0);
       });
       ((TableColumn)tcs.get(1)).setCellValueFactory((data) -> {
@@ -378,7 +365,7 @@ public class FileManagerViewController {
          //return (StringProperty)((List)data.getValue()).get(1);
       });
       ((TableColumn)tcs.get(1)).setComparator((o1, o2) -> {
-         return Long.compare(Long.parseLong(o1.toString()), Long.parseLong(o2.toString()));
+         return Long.compare(Long.parseLong(String.valueOf(o1)), Long.parseLong(String.valueOf(o2)));
       });
       ((TableColumn)tcs.get(2)).setCellValueFactory((data) -> {
          return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(2);
@@ -414,17 +401,16 @@ public class FileManagerViewController {
          });
          return row;
       });
-
       this.fileNameCol.setCellFactory((column) -> {
          return new TableCell() {
-
             @Override
-            protected void updateItem(Object item, boolean empty) {
-               super.updateItem(item, empty);
-               if (item == null | empty) {
+            protected void updateItem(Object itemObj, boolean empty) {
+               super.updateItem(itemObj, empty);
+               if (itemObj == null | empty) {
                   this.setGraphic((Node)null);
                   this.setText((String)null);
                } else {
+                  String item = itemObj.toString();
                   String type = null;
 
                   try {
@@ -460,7 +446,7 @@ public class FileManagerViewController {
                      }
                   }
 
-                  this.setText(StringUtils.toStringEmpty(item));
+                  this.setText(item);
                }
 
             }
@@ -469,10 +455,15 @@ public class FileManagerViewController {
       this.filePermCol.setCellFactory((column) -> {
          return new TableCell() {
             @Override
-            protected void updateItem(Object item, boolean empty) {
-               super.updateItem(item, empty);
-               this.setText(StringUtils.toStringEmpty(item));
-               this.setAlignment(Pos.CENTER);
+            protected void updateItem(Object itemObj, boolean empty) {
+               super.updateItem(itemObj, empty);
+               if(itemObj!=null){
+                  String item = itemObj.toString();
+                  this.setText(item);
+                  this.setAlignment(Pos.CENTER);
+               }else{
+                  this.setText((String)null);
+               }
             }
          };
       });

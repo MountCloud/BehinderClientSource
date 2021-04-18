@@ -60,9 +60,6 @@ public class RealCmdViewController {
          this.statusLabel.setText("虚拟终端已停止，请先启动虚拟终端.");
       } else {
          this.commandQueue.offer(input);
-//         Thread var3;
-//         for(Iterator var2 = this.cmdWorkList.iterator(); var2.hasNext(); var3 = (Thread)var2.next()) {
-//         }
       }
    }
 
@@ -266,7 +263,7 @@ public class RealCmdViewController {
 
                }
             }).start();
-            Thread.sleep(1000L);
+            Thread.sleep(2000L);
             this.running = Constants.REALCMD_RUNNING;
             JSONObject resultObj = this.currentShellService.readRealCMD();
             String status = resultObj.getString("status");
@@ -285,6 +282,7 @@ public class RealCmdViewController {
 
             });
          } catch (Exception var5) {
+            var5.printStackTrace();
             Platform.runLater(() -> {
                this.statusLabel.setText("虚拟终端启动失败:" + var5.getMessage());
             });

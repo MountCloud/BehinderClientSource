@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -90,15 +91,11 @@ public class MainWindowController {
 
    private void initControls() {
       this.statusLabel.textProperty().addListener(new ChangeListener<String>() {
+
          public void changed(ObservableValue ov, String t, String t1) {
             MainWindowController.this.statusLabel.setTooltip(new Tooltip(t1));
          }
       });
-//      this.statusLabel.textProperty().addListener(new ChangeListener() {
-//         public void changed(ObservableValue ov, String t, String t1) {
-//            MainWindowController.this.statusLabel.setTooltip(new Tooltip(t1));
-//         }
-//      });
       this.versionLabel.setText(String.format(this.versionLabel.getText(), Constants.VERSION));
       this.urlText.textProperty().addListener((observable, oldValue, newValue) -> {
          try {
@@ -147,13 +144,35 @@ public class MainWindowController {
                      }
                   });
                   this.shellManager.setShellStatus(this.shellEntity.getInt("id"), Constants.SHELL_STATUS_ALIVE);
-                  this.currentShellService.keepAlive();
-               } catch (final Exception var10) {
+                  Runnable worker = new Runnable() {
+                     public void run() {
+                        while(true) {
+                           try {
+                              Thread.sleep((long)(((new Random()).nextInt(5) + 5) * 60 * 1000));
+                              int randomStringLength = (new SecureRandom()).nextInt(3000);
+                              MainWindowController.this.currentShellService.echo(Utils.getRandomString(randomStringLength));
+                           } catch (Exception var2) {
+                              if (var2 instanceof InterruptedException) {
+                                 return;
+                              }
+
+                              Platform.runLater(() -> {
+                                 Utils.showErrorMessage("提示", "由于您长时间未操作，当前连接会话已超时，请重新打开该网站。");
+                              });
+                              return;
+                           }
+                        }
+                     }
+                  };
+                  Thread keepAliveWorker = new Thread(worker);
+                  keepAliveWorker.start();
+                  this.workList.add(keepAliveWorker);
+               } catch (final Exception var12) {
                   Platform.runLater(new Runnable() {
                      public void run() {
                         MainWindowController.this.connStatusLabel.setText("连接失败");
                         MainWindowController.this.connStatusLabel.setTextFill(Color.RED);
-                        MainWindowController.this.statusLabel.setText("[ERROR]连接失败：" + var10.getClass().getName() + ":" + var10.getMessage());
+                        MainWindowController.this.statusLabel.setText("[ERROR]连接失败：" + var12.getClass().getName() + ":" + var12.getMessage());
 
                         try {
                            MainWindowController.this.shellManager.setShellStatus(MainWindowController.this.shellEntity.getInt("id"), Constants.SHELL_STATUS_DEAD);

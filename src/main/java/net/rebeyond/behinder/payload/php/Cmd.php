@@ -9,7 +9,7 @@ function getSafeStr($str){
         return iconv('gbk','utf-8//IGNORE',$str);
     }
 }
-function main($cmd)
+function main($cmd,$path)
 {
     @set_time_limit(0);
     @ignore_user_abort(1);

