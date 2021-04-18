@@ -4,8 +4,6 @@ package org.mountcloud;
  * Behinder
  * org.mountcloud
  * DESC
- *
- * @author 张海山 <zhanghaishan@360.cn>
  * @date 2021/4/11
  */
 public class Test {
