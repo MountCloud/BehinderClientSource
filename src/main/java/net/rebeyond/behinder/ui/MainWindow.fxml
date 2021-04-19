@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.kodedu.terminalfx.*?>
+
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
@@ -95,13 +95,9 @@
 
                 </content>
             </Tab>
-            <Tab fx:id="memoTab" text="备忘录">
+            <Tab fx:id="memoViewTab" text="备忘录">
                 <content>
-                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
-                            <children>
-                                <TextArea fx:id="memoTextArea" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="5.0" AnchorPane.topAnchor="5.0" />
-                            </children>
-                    </AnchorPane>
+                    <fx:include fx:id="memoView" source="MemoViewTab.fxml" />
                 </content>
             </Tab>
             <Tab fx:id="updateInfoTab" text="更新信息">

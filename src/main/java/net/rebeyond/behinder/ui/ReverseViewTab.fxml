@@ -17,8 +17,8 @@
 
                 </columnConstraints>
                 <rowConstraints>
-                    <RowConstraints minHeight="10.0" percentHeight="15.00" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" percentHeight="85.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="18.00" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" percentHeight="82.00" prefHeight="30.0" vgrow="SOMETIMES" />
                 </rowConstraints>
                 <children>
                     <TitledPane animated="false" collapsible="false" text="连接信息" GridPane.columnSpan="6">
@@ -36,21 +36,29 @@
                                         </columnConstraints>
                                         <rowConstraints>
                                             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-
+                                            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                         </rowConstraints>
                                         <children>
                                             <Label text="IP地址：" GridPane.halignment="RIGHT" />
-                                            <TextField fx:id="reverseIPText" GridPane.columnIndex="1" />
+                                            <TextField fx:id="reverseIPText" GridPane.columnIndex="1" text="127.0.0.1"/>
                                             <Label layoutX="10.0" layoutY="28.0" text="端口：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" />
-                                            <TextField fx:id="reversePortText" layoutX="10.0" layoutY="23.0" GridPane.columnIndex="3" />
+                                            <TextField fx:id="reversePortText" layoutX="10.0" layoutY="23.0" GridPane.columnIndex="3" text="9090"/>
                                             <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnIndex="4">
                                                 <children>
                                                     <RadioButton fx:id="reverseTypeMeterRadio" mnemonicParsing="false" text="Metepreter" />
                                                     <RadioButton fx:id="reverseTypeShellRadio" mnemonicParsing="false" text="Shell" />
-                                                    <RadioButton fx:id="reverseTypeColbatRadio" disable="true" mnemonicParsing="false" text="Cobalt Strike" />
+                                                    <RadioButton fx:id="reverseTypeColbatRadio" mnemonicParsing="false" text="Cobalt Strike" />
                                                 </children>
                                             </HBox>
                                             <Button fx:id="reverseButton" mnemonicParsing="false" text="给我连" GridPane.columnIndex="5" GridPane.halignment="CENTER" />
+                                            <CheckBox fx:id="isolatedCheckBox" alignment="CENTER" mnemonicParsing="false" text="目标不出网" GridPane.columnSpan="2" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.valignment="BOTTOM">
+                                            </CheckBox>
+                                            <Label fx:id="reverseDescLabel" alignment="BOTTOM_LEFT" prefWidth="650.0" text="*当目标内网不能出网时，冰蝎提供将反弹连连接转发至本地或远程VPS的能力。" textFill="GREEN" GridPane.columnIndex="2" GridPane.columnSpan="3" GridPane.rowIndex="1" GridPane.valignment="BOTTOM">
+                                                <GridPane.margin>
+                                                    <Insets left="20.0" top="5.0" />
+                                                </GridPane.margin>
+                                            </Label>
+
                                         </children>
                                     </GridPane>
                                 </children></AnchorPane>
@@ -61,7 +69,7 @@
                     </TitledPane>
                     <TitledPane animated="false" collapsible="false" maxHeight="1.7976931348623157E308" text="提示" GridPane.columnSpan="6" GridPane.rowIndex="1">
                         <content>
-                            <TextArea fx:id="reverseHelpTextArea" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #00ff00; " layoutX="99.0" layoutY="-89.0" prefHeight="200.0" prefWidth="200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                            <TextArea fx:id="reverseHelpTextArea" layoutX="99.0" layoutY="-89.0" prefHeight="200.0" prefWidth="200.0" style="-fx-control-inner-background:#000000; -fx-font-family: Consolas; -fx-highlight-fill: #00ff00; -fx-highlight-text-fill: #000000; -fx-text-fill: #00ff00; " AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
 
                         </content>
                         <GridPane.margin>

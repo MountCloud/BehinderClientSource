@@ -5,26 +5,23 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class NewScan implements Runnable {
    public static String ipList;
    public static String portList;
    public static String taskID;
-   private HttpSession Session;
-   private ServletRequest Request;
-   private ServletResponse response;
+   private Object Session;
+   private Object Request;
+   private Object response;
 
    public NewScan() {
    }
 
-   public NewScan(HttpSession session) {
+   public NewScan(Object session) {
       this.Session = session;
    }
 
-   public void execute(ServletRequest request, ServletResponse response, HttpSession session) throws Exception {
+   public void execute(Object request, Object response, Object session) throws Exception {
       (new Thread(new NewScan(session))).start();
    }
 
@@ -56,13 +53,12 @@ public class NewScan implements Runnable {
                }
 
                sessionObj.put("result", this.buildJson(scanResult, false));
-               this.Session.setAttribute(taskID, sessionObj);
+               this.sessionSetAttribute(this.Session, taskID, sessionObj);
             }
          }
 
          sessionObj.put("running", "false");
       } catch (Exception var15) {
-         var15.printStackTrace();
       }
 
    }
@@ -104,5 +100,13 @@ public class NewScan implements Runnable {
 
       sb.append("}");
       return sb.toString();
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
    }
 }

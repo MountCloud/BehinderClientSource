@@ -18,10 +18,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.Socket;
 import java.net.URI;
@@ -47,9 +49,14 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.stage.Window;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.KeyManager;
@@ -66,6 +73,7 @@ import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.JavaFileManager.Location;
 import javax.tools.JavaFileObject.Kind;
+import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.Crypt;
 import net.rebeyond.behinder.core.Params;
 import net.rebeyond.behinder.ui.controller.MainController;
@@ -90,7 +98,6 @@ public class Utils {
    }
 
    public static Map getKeyAndCookie(String getUrl, String password, Map requestHeaders) throws Exception {
-      disableSslVerification();
       Map result = new HashMap();
       StringBuffer sb = new StringBuffer();
       InputStreamReader isr = null;
@@ -206,7 +213,7 @@ public class Utils {
                }
 
                if (end - start == 16) {
-                  result.put("cookie", (String)KeyAndCookie.get("cookie"));
+                  result.put("cookie", KeyAndCookie.get("cookie"));
                   result.put("beginIndex", start + "");
                   result.put("endIndex", temp.length - end + "");
                   String finalKey = new String(Arrays.copyOfRange(rawKey_2.getBytes(), start, end));
@@ -332,7 +339,7 @@ public class Utils {
 
    public static Map requestAndParse(String urlPath, Map header, byte[] data, int beginIndex, int endIndex) throws Exception {
       Map resultObj = sendPostRequestBinary(urlPath, header, data);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       if ((beginIndex != 0 || endIndex != 0) && resData.length - endIndex >= beginIndex) {
          resData = Arrays.copyOfRange(resData, beginIndex, resData.length - endIndex);
       }
@@ -353,7 +360,8 @@ public class Utils {
          conn = (HttpURLConnection)url.openConnection();
       }
 
-      conn.setRequestProperty("Content-Type", "application/octet-stream");
+      conn.setConnectTimeout(15000);
+      conn.setUseCaches(true);
       conn.setRequestMethod("POST");
       int length;
       if (header != null) {
@@ -370,30 +378,52 @@ public class Utils {
 
       conn.setDoOutput(true);
       conn.setDoInput(true);
-      conn.setUseCaches(false);
       OutputStream outwritestream = conn.getOutputStream();
       outwritestream.write(data);
       outwritestream.flush();
       outwritestream.close();
-      DataInputStream din;
-      byte[] buffer;
-      boolean var18;
       if (conn.getResponseCode() == 200) {
-         din = new DataInputStream(conn.getInputStream());
-         buffer = new byte[1024];
-         var18 = false;
+         String encoding = conn.getContentEncoding();
+         DataInputStream din;
+         byte[] buffer;
+         boolean var24;
+         if (encoding != null) {
+            if (encoding != null && encoding.equals("gzip")) {
+               din = null;
+               GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
+               din = new DataInputStream(gZIPInputStream);
+               buffer = new byte[1024];
+               boolean var12 = false;
 
-         while((length = din.read(buffer)) != -1) {
-            bos.write(buffer, 0, length);
+               while((length = din.read(buffer)) != -1) {
+                  bos.write(buffer, 0, length);
+               }
+            } else {
+               din = new DataInputStream(conn.getInputStream());
+               buffer = new byte[1024];
+               var24 = false;
+
+               while((length = din.read(buffer)) != -1) {
+                  bos.write(buffer, 0, length);
+               }
+            }
+         } else {
+            din = new DataInputStream(conn.getInputStream());
+            buffer = new byte[1024];
+            var24 = false;
+
+            while((length = din.read(buffer)) != -1) {
+               bos.write(buffer, 0, length);
+            }
          }
 
          byte[] resData = bos.toByteArray();
          result.put("data", resData);
          Map responseHeader = new HashMap();
-         Iterator var20 = conn.getHeaderFields().keySet().iterator();
+         Iterator var28 = conn.getHeaderFields().keySet().iterator();
 
-         while(var20.hasNext()) {
-            String key = (String)var20.next();
+         while(var28.hasNext()) {
+            String key = (String)var28.next();
             responseHeader.put(key, conn.getHeaderField(key));
          }
 
@@ -401,9 +431,9 @@ public class Utils {
          result.put("header", responseHeader);
          return result;
       } else {
-         din = new DataInputStream(conn.getErrorStream());
-         buffer = new byte[1024];
-         var18 = false;
+         DataInputStream din = new DataInputStream(conn.getErrorStream());
+         byte[] buffer = new byte[1024];
+         boolean var21 = false;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -485,7 +515,7 @@ public class Utils {
 
    public static byte[] getEvalData(String key, int encryptType, String type, byte[] payload) throws Exception {
       byte[] result = null;
-      byte[] encrypedBincls = null;
+      byte[] encrypedBincls;
       if (type.equals("jsp")) {
          encrypedBincls = Crypt.Encrypt(payload, key);
          String basedEncryBincls = Base64.encode(encrypedBincls);
@@ -546,6 +576,11 @@ public class Utils {
       }
 
       return result;
+   }
+
+   public static String getFileType(String fileName) {
+      int extIndex = fileName.lastIndexOf(".");
+      return extIndex >= 0 ? fileName.substring(extIndex + 1).toLowerCase() : "";
    }
 
    public static byte[] getData(String key, int encryptType, String className, Map params, String type, byte[] extraData) throws Exception {
@@ -678,6 +713,11 @@ public class Utils {
       return currentPath;
    }
 
+   public static String getSelfJarPath() throws Exception {
+      String currentPath = Utils.class.getProtectionDomain().getCodeSource().getLocation().getPath().toString();
+      return currentPath;
+   }
+
    public static JSONObject parsePluginZip(String zipFilePath) throws Exception {
       String pluginRootPath = getSelfPath() + "/Plugins";
       String pluginName = "";
@@ -768,7 +808,7 @@ public class Utils {
 
    }
 
-   private static void disableSslVerification() {
+   public static void disableSslVerification() {
       try {
          TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
             public X509Certificate[] getAcceptedIssuers() {
@@ -847,6 +887,19 @@ public class Utils {
       return sb.toString();
    }
 
+   public static String getRandomAlpha(int length) {
+      String str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      Random random = new Random();
+      StringBuffer sb = new StringBuffer();
+
+      for(int i = 0; i < length; ++i) {
+         int number = random.nextInt(52);
+         sb.append(str.charAt(number));
+      }
+
+      return sb.toString();
+   }
+
    public static String getWhatever() {
       int randStringLength = (new SecureRandom()).nextInt(3000);
       String randString = getRandomString(randStringLength);
@@ -876,6 +929,155 @@ public class Utils {
       }
 
       return -1;
+   }
+
+   public static String formatPath(String path) {
+      if (path.indexOf("\\") > 0) {
+         path = path.replaceAll("\\\\", "/");
+      }
+
+      if (path.endsWith(":")) {
+         path = path + "/";
+      }
+
+      if (!path.endsWith("/")) {
+         path = path + "/";
+      }
+
+      if (isWindowsPath(path)) {
+         path = path.substring(0, 1).toUpperCase() + path.substring(1);
+      }
+
+      return path;
+   }
+
+   public static boolean isWindowsPath(String path) {
+      return path.length() > 1 && path.substring(0, 2).matches("^[a-zA-Z]:");
+   }
+
+   public static String getRootPath(String path) {
+      String rootPath = "/";
+      if (isWindowsPath(path)) {
+         rootPath = formatPath(path.substring(0, 2));
+      }
+
+      return rootPath;
+   }
+
+   public static boolean isWindows(Map basicInfoMap) {
+      String osInfo = (String)basicInfoMap.get("osInfo");
+      return osInfo.indexOf("windows") >= 0 || osInfo.indexOf("winnt") >= 0;
+   }
+
+   public static int getOSType(String osInfo) {
+      int osType = -1;
+      if (osInfo.indexOf("windows") < 0 && osInfo.indexOf("winnt") < 0) {
+         if (osInfo.indexOf("linux") >= 0) {
+            osType = Constants.OS_TYPE_LINUX;
+         } else if (osInfo.indexOf("mac") >= 0) {
+            osType = Constants.OS_TYPE_MAC;
+         }
+      } else {
+         osType = Constants.OS_TYPE_WINDOWS;
+      }
+
+      return osType;
+   }
+
+   public static void showErrorMessage(String title, String msg) {
+      Alert alert = new Alert(AlertType.ERROR);
+      Window window = alert.getDialogPane().getScene().getWindow();
+      window.setOnCloseRequest((event) -> {
+         window.hide();
+      });
+      alert.setTitle(title);
+      alert.setHeaderText("");
+      alert.setContentText(msg);
+      alert.show();
+   }
+
+   public static void showInfoMessage(String title, String msg) {
+      Alert alert = new Alert(AlertType.INFORMATION);
+      Window window = alert.getDialogPane().getScene().getWindow();
+      window.setOnCloseRequest((event) -> {
+         window.hide();
+      });
+      alert.setTitle(title);
+      alert.setHeaderText("");
+      alert.setContentText(msg);
+      alert.show();
+   }
+
+   public static String getOrDefault(JSONObject obj, String key, Class type) {
+      String result = "";
+      if (obj.has(key)) {
+         result = obj.get(key).toString();
+      } else if (type == String.class) {
+         result = "";
+      } else if (type == Integer.TYPE) {
+         result = "0";
+      }
+
+      return result;
+   }
+
+   public static String getBaseUrl(String urlStr) {
+      String result = urlStr;
+
+      try {
+         URL url = new URL(urlStr);
+         int port = url.getPort();
+         if (port == -1) {
+            result = url.getProtocol() + "://" + url.getHost();
+         } else {
+            result = url.getProtocol() + "://" + url.getHost() + ":" + url.getPort();
+         }
+      } catch (MalformedURLException var4) {
+         var4.printStackTrace();
+      }
+
+      return result;
+   }
+
+   public static byte[] replaceBytes(byte[] src, byte[] find, byte[] replace) {
+      String replaced = cutBrackets(Arrays.toString(src)).replace(cutBrackets(Arrays.toString(find)), cutBrackets(Arrays.toString(replace)));
+      return (byte[])Arrays.stream(replaced.split(", ")).map(Byte::valueOf).collect(toByteArray());
+   }
+
+   private static String cutBrackets(String s) {
+      return s.substring(1, s.length() - 1);
+   }
+
+   private static Collector<Byte, ?, byte[]> toByteArray() {
+      return Collector.of(ByteArrayOutputStream::new, ByteArrayOutputStream::write, (baos1, baos2) -> {
+         try {
+            baos2.writeTo(baos1);
+            return baos1;
+         } catch (IOException var3) {
+            throw new UncheckedIOException(var3);
+         }
+      }, ByteArrayOutputStream::toByteArray);
+   }
+
+   public static class MyJavaFileManager extends ForwardingJavaFileManager {
+      protected MyJavaFileManager(JavaFileManager fileManager) {
+         super(fileManager);
+      }
+
+      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
+         JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
+         if (javaFileObject == null) {
+            super.getJavaFileForInput(location, className, kind);
+         }
+
+         return javaFileObject;
+      }
+
+      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
+         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
+         Utils.fileObjects.put(qualifiedClassName, javaFileObject);
+         return javaFileObject;
+      }
    }
 
    private static class MySSLSocketFactory extends SSLSocketFactory {
@@ -928,27 +1130,6 @@ public class Utils {
       // $FF: synthetic method
       MySSLSocketFactory(SSLSocketFactory x0, String[] x1, Object x2) {
          this(x0, x1);
-      }
-   }
-
-   public static class MyJavaFileManager extends ForwardingJavaFileManager {
-      protected MyJavaFileManager(JavaFileManager fileManager) {
-         super(fileManager);
-      }
-
-      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
-         JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
-         if (javaFileObject == null) {
-            super.getJavaFileForInput(location, className, kind);
-         }
-
-         return javaFileObject;
-      }
-
-      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
-         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
-         Utils.fileObjects.put(qualifiedClassName, javaFileObject);
-         return javaFileObject;
       }
    }
 

