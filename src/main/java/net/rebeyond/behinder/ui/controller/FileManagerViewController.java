@@ -224,12 +224,12 @@ public class FileManagerViewController {
                         resultObjx = this.currentShellService.appendFile(currentPath + fileName, (byte[])blocks.get(i));
                         statusx = resultObjx.getString("status");
                         msgx = resultObjx.getString("msg");
-                        final int finali = i;
+                        final int finalI = i;
                         Platform.runLater(() -> {
                            if (statusx.equals("fail")) {
                               this.statusLabel.setText("文件上传失败:" + msgx);
                            } else {
-                              this.statusLabel.setText(String.format("正在上传……%skb/%skb", bufSize * finali / 1024, fileContent.length / 1024));
+                              this.statusLabel.setText(String.format("正在上传……%skb/%skb", bufSize * finalI / 1024, fileContent.length / 1024));
                            }
                         });
                         if (statusx.equals("fail")) {
@@ -365,7 +365,7 @@ public class FileManagerViewController {
          //return (StringProperty)((List)data.getValue()).get(1);
       });
       ((TableColumn)tcs.get(1)).setComparator((o1, o2) -> {
-         return Long.compare(Long.parseLong(String.valueOf(o1)), Long.parseLong(String.valueOf(o2)));
+         return Long.compare(Long.parseLong(o1.toString()), Long.parseLong(o2.toString()));
       });
       ((TableColumn)tcs.get(2)).setCellValueFactory((data) -> {
          return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(2);
@@ -404,13 +404,12 @@ public class FileManagerViewController {
       this.fileNameCol.setCellFactory((column) -> {
          return new TableCell() {
             @Override
-            protected void updateItem(Object itemObj, boolean empty) {
-               super.updateItem(itemObj, empty);
-               if (itemObj == null | empty) {
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(item, empty);
+               if (item == null | empty) {
                   this.setGraphic((Node)null);
                   this.setText((String)null);
                } else {
-                  String item = itemObj.toString();
                   String type = null;
 
                   try {
@@ -446,7 +445,7 @@ public class FileManagerViewController {
                      }
                   }
 
-                  this.setText(item);
+                  this.setText((String)item);
                }
 
             }
@@ -455,15 +454,10 @@ public class FileManagerViewController {
       this.filePermCol.setCellFactory((column) -> {
          return new TableCell() {
             @Override
-            protected void updateItem(Object itemObj, boolean empty) {
-               super.updateItem(itemObj, empty);
-               if(itemObj!=null){
-                  String item = itemObj.toString();
-                  this.setText(item);
-                  this.setAlignment(Pos.CENTER);
-               }else{
-                  this.setText((String)null);
-               }
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(item, empty);
+               this.setText((String)item);
+               this.setAlignment(Pos.CENTER);
             }
          };
       });

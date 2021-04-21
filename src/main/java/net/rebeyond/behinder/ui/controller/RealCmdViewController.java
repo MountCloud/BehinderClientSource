@@ -79,33 +79,44 @@ public class RealCmdViewController {
 
    private void initWorkers() {
       Runnable cmdWriter = () -> {
+         StringBuilder windowsCommondBuf = new StringBuilder();
+
          while(true) {
             while(true) {
-               try {
-                  String commandToExecute = (String)this.commandQueue.poll(10000L, TimeUnit.MILLISECONDS);
-                  if (commandToExecute != null) {
-                     String osInfo = (String)this.basicInfoMap.get("osInfo");
-                     if (osInfo.indexOf("windows") < 0 && osInfo.indexOf("winnt") < 0) {
-                        if (commandToExecute.charAt(commandToExecute.length() - 1) == '\r' || commandToExecute.charAt(commandToExecute.length() - 1) == '\n') {
-                           commandToExecute = commandToExecute.replace('\n', '\r');
-                        }
-                     } else if (commandToExecute.charAt(commandToExecute.length() - 1) != '\r' && commandToExecute.charAt(commandToExecute.length() - 1) != '\n') {
-                        final String finalCommandToExecute = commandToExecute;
-                        Platform.runLater(() -> {
-                           this.write(finalCommandToExecute);
-                        });
-                     } else {
-                        commandToExecute = commandToExecute.replace((new StringBuilder()).append('\r'), "" + '\r' + '\n');
-                        final String finalCommandToExecute = commandToExecute;
-                        Platform.runLater(() -> {
-                           this.write(finalCommandToExecute);
-                        });
-                     }
+               while(true) {
+                  try {
+                     String commandToExecute = (String)this.commandQueue.poll(10000L, TimeUnit.MILLISECONDS);
+                     if (commandToExecute != null) {
+                        String osInfo = (String)this.basicInfoMap.get("osInfo");
+                        if (osInfo.indexOf("windows") < 0 && osInfo.indexOf("winnt") < 0) {
+                           if (commandToExecute.charAt(commandToExecute.length() - 1) == '\r' || commandToExecute.charAt(commandToExecute.length() - 1) == '\n') {
+                              commandToExecute = commandToExecute.replace('\n', '\r');
+                           }
+                        } else {
+                           if (commandToExecute.charAt(commandToExecute.length() - 1) != '\r' && commandToExecute.charAt(commandToExecute.length() - 1) != '\n') {
+                              windowsCommondBuf.append(commandToExecute);
+                              final String finalCommandToExecute = commandToExecute;
+                              Platform.runLater(() -> {
+                                 this.write(finalCommandToExecute);
+                              });
+                              continue;
+                           }
 
-                     this.currentShellService.writeRealCMD(commandToExecute);
-                     this.immediatelyRead = true;
+                           commandToExecute = commandToExecute.replace((new StringBuilder()).append('\r'), "" + '\r' + '\n');
+                           windowsCommondBuf.append(commandToExecute);
+                           final String finalCommandToExecute = commandToExecute;
+                           Platform.runLater(() -> {
+                              this.write(finalCommandToExecute);
+                           });
+                           commandToExecute = windowsCommondBuf.toString();
+                           windowsCommondBuf.setLength(0);
+                        }
+
+                        this.currentShellService.writeRealCMD(commandToExecute);
+                        this.immediatelyRead = true;
+                     }
+                  } catch (Exception var5) {
                   }
-               } catch (Exception var4) {
                }
             }
          }
@@ -239,6 +250,17 @@ public class RealCmdViewController {
    }
 
    private void write(String text) {
+      try {
+         JSObject window = (JSObject)this.mywebview.getEngine().executeScript("window");
+         JSObject terminal = (JSObject)window.getMember("t");
+         JSObject htermIO = (JSObject)terminal.getMember("io");
+         htermIO.call("print", new Object[]{text});
+      } catch (Exception var5) {
+      }
+
+   }
+
+   private void delete(String text) {
       try {
          JSObject window = (JSObject)this.mywebview.getEngine().executeScript("window");
          JSObject terminal = (JSObject)window.getMember("t");

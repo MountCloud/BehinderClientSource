@@ -263,7 +263,7 @@ public class MainController {
                } catch (Exception var13) {
                }
 
-               String type = null;
+               String type;
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
                   type = passwordText.getText();
@@ -543,8 +543,8 @@ public class MainController {
       this.idCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
             @Override
-            protected void updateItem(Object itemObj, boolean empty) {
-               super.updateItem(itemObj, empty);
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(item, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
                if (!empty) {
@@ -560,12 +560,11 @@ public class MainController {
       this.statusCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
             @Override
-            protected void updateItem(Object itemObj, boolean empty) {
-               super.updateItem(itemObj, empty);
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(item, empty);
                if (empty) {
                   this.setGraphic((Node)null);
-               } else if(itemObj!=null){
-                  String item = itemObj.toString();
+               } else {
                   Object rowItem = this.getTableRow().getItem();
                   if (rowItem == null) {
                      this.setGraphic((Node)null);
@@ -592,7 +591,7 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        this.setText(item);
+                        this.setText((String)item);
                      }
 
                   }

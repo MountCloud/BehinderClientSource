@@ -179,10 +179,8 @@ public class Test {
         public static void main(String [] args) throws Throwable {
 
 
-
-            //String[] s=new String[]{"aaa","bbb","ccc"};
-            List s=new ArrayList();
-
+            System.setProperty("jdk.attach.allowAttachSelf","true");
+            //System.out.println(System.getProperty("jdk.attach.allowAttachSelf"));
 
         }
 

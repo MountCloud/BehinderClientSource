@@ -49,11 +49,14 @@ public class ShellService {
 
    private void initHeaders() {
       this.currentHeaders.put("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9");
+      this.currentHeaders.put("Accept-Encoding", "gzip, deflate, br");
       this.currentHeaders.put("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7");
       if (this.currentType.equals("php")) {
          this.currentHeaders.put("Content-type", "application/x-www-form-urlencoded");
       } else if (this.currentType.equals("aspx")) {
-         this.currentHeaders.put("Content-type", "application/octet-stream");
+         this.currentHeaders.put("Content-Type", "application/octet-stream");
+      } else if (this.currentType.equals("jsp")) {
+         this.currentHeaders.put("Content-Type", "application/octet-stream");
       }
 
       this.currentHeaders.put("User-Agent", this.getCurrentUserAgent());
@@ -228,7 +231,6 @@ public class ShellService {
             }
          }
       } catch (Exception var12) {
-         var12.printStackTrace();
          System.out.println("The pre-shared key handshake fails and enters the dynamic key negotiation process.");
          Map keyAndCookie = Utils.getKeyAndCookie(this.currentUrl, this.currentPassword, this.currentHeaders);
          content = (String)keyAndCookie.get("cookie");
@@ -686,11 +688,12 @@ public class ShellService {
    }
 
    public void downloadFile(String remotePath, String localPath) throws Exception {
+      byte[] fileContent = null;
       Map params = new LinkedHashMap();
       params.put("mode", "download");
       params.put("path", remotePath);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
-      byte[] fileContent = (byte[])((byte[])Utils.sendPostRequestBinary(this.currentUrl, this.currentHeaders, data).get("data"));
+      fileContent = (byte[])((byte[])Utils.sendPostRequestBinary(this.currentUrl, this.currentHeaders, data).get("data"));
       FileOutputStream fso = new FileOutputStream(localPath);
       fso.write(fileContent);
       fso.flush();
@@ -1048,7 +1051,6 @@ public class ShellService {
       if (((String)resHeader.get("status")).equals("200")) {
          resData = (byte[])((byte[])result.get("data"));
          if (resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
-            System.out.println(new String(resData));
             resData = null;
          } else {
             if (resHeader.containsKey("server") && ((String)resHeader.get("server")).indexOf("Apache-Coyote/1.1") > 0) {
