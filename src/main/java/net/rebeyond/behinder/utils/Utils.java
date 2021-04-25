@@ -986,6 +986,26 @@ public class Utils {
       return rootPath;
    }
 
+   public static String getContextPath(String url) {
+      String result = "/";
+
+      try {
+         URI u = new URI(url);
+         String path = u.normalize().getPath();
+         if (path.startsWith("/")) {
+            path = path.substring(1);
+         }
+
+         int pos = path.indexOf("/");
+         if (pos > 0) {
+            result = "/" + path.substring(0, pos + 1);
+         }
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
    public static boolean isWindows(Map basicInfoMap) {
       String osInfo = (String)basicInfoMap.get("osInfo");
       return osInfo.indexOf("windows") >= 0 || osInfo.indexOf("winnt") >= 0;

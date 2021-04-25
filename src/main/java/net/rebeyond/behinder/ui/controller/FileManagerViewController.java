@@ -365,7 +365,7 @@ public class FileManagerViewController {
          //return (StringProperty)((List)data.getValue()).get(1);
       });
       ((TableColumn)tcs.get(1)).setComparator((o1, o2) -> {
-         return Long.compare(Long.parseLong(o1.toString()), Long.parseLong(o2.toString()));
+         return Long.compare(Long.parseLong(String.valueOf(o1)), Long.parseLong(String.valueOf(o2)));
       });
       ((TableColumn)tcs.get(2)).setCellValueFactory((data) -> {
          return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(2);
@@ -403,6 +403,7 @@ public class FileManagerViewController {
       });
       this.fileNameCol.setCellFactory((column) -> {
          return new TableCell() {
+
             @Override
             protected void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);

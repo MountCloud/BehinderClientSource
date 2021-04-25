@@ -201,9 +201,9 @@ public class ReverseViewController {
                            resultObj = this.currentShellService.connectBack(type, actualTargetIP, targetPort);
                            String status = resultObj.getString("status");
                            if (status.equals("fail")) {
-                              final JSONObject finalResultObj = resultObj;
+                              final JSONObject finalResultObject = resultObj;
                               Platform.runLater(() -> {
-                                 String msg = finalResultObj.getString("msg");
+                                 String msg = finalResultObject.getString("msg");
                                  this.statusLabel.setText("反弹失败:" + msg);
                               });
                            } else {
@@ -219,9 +219,9 @@ public class ReverseViewController {
 
                      statusx = resultObj.getString("status");
                      if (statusx.equals("fail")) {
-                        final JSONObject finalResultObj = resultObj;
+                        final JSONObject finalResultObject = resultObj;
                         Platform.runLater(() -> {
-                           String msg = finalResultObj.getString("msg");
+                           String msg = finalResultObject.getString("msg");
                            this.statusLabel.setText("反弹失败:" + msg);
                         });
                      } else {

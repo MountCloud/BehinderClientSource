@@ -171,7 +171,7 @@ public class PortMap implements Runnable {
    }
 
    public void run() {
-      int bytesRead;
+      int bytesRead = 0;
       if (this.type.equals("create")) {
          this.sessionSetAttribute(this.httpSession, "remoteRunning", true);
 

