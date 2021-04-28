@@ -104,7 +104,7 @@ public class NewScan implements Runnable {
 
    private void sessionSetAttribute(Object session, String key, Object value) {
       try {
-         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+         session.getClass().getMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
       } catch (Exception var5) {
       }
 

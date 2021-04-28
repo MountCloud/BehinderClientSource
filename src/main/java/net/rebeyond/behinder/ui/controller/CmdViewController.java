@@ -154,6 +154,7 @@ public class CmdViewController {
          }
 
          this.addHistory(cmd);
+
          final String finalCdPath = cdPath;
          Runnable runner = () -> {
             try {

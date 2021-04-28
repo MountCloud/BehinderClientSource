@@ -1,5 +1,7 @@
 package net.rebeyond.behinder.ui.controller;
 
+import java.net.URI;
+import java.net.URLEncoder;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -38,27 +40,39 @@ public class UpdateInfoViewController {
    }
 
    private void initUpdateInfoView() {
-      String updateUrl = "https://www.rebeyond.net/Behinder/update.html?ver=" + Constants.VERSION;
-      this.updateInfoWebview.getEngine().load(updateUrl);
+      this.checkUpdate();
    }
 
    private void checkUpdate() {
       Runnable runner = () -> {
          try {
-            String updateInfoText = Utils.sendGetRequest("https://www.rebeyond.net/Behinder/update.html?ver=" + Constants.VERSION, "");
+            String updateInfoText = Utils.sendGetRequest("https://www.rebeyond.net/Behinder/update.htm?ver=" + URLEncoder.encode(Constants.VERSION, "utf-8"), "");
             JSONObject updateInfoObj = new JSONObject(updateInfoText);
             if (updateInfoObj.getString("needUpdate").equals("true")) {
                String latestVersion = updateInfoObj.getString("latestVersion");
                Platform.runLater(() -> {
-                  this.statusLabel.setText("发现新版本：" + latestVersion);
-               });
-            } else {
-               Platform.runLater(() -> {
-                  this.updateInfoWebview.getEngine().loadContent(updateInfoObj.getString("body"));
+                  this.statusLabel.setText("发现新版本：" + latestVersion + "，点击下载");
+                  this.statusLabel.setOnMouseClicked((event) -> {
+                     if (this.statusLabel.getText().startsWith("发现新版本：")) {
+                        try {
+                           Utils.openWebpage(new URI("https://github.com/rebeyond/Behinder/releases"));
+                        } catch (Exception var3) {
+                           var3.printStackTrace();
+                        }
+                     }
+
+                  });
                });
             }
+
+            Platform.runLater(() -> {
+               this.updateInfoWebview.getEngine().loadContent(updateInfoObj.getString("body"));
+            });
          } catch (Exception var4) {
-            this.statusLabel.setText("检查更新出错。");
+            var4.printStackTrace();
+            Platform.runLater(() -> {
+               this.statusLabel.setText("检查更新出错。");
+            });
          }
 
       };

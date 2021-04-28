@@ -1,7 +1,9 @@
 package net.rebeyond.behinder.utils;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
+import java.awt.Desktop;
 import java.awt.Toolkit;
+import java.awt.Desktop.Action;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.StringSelection;
@@ -98,6 +100,11 @@ public class Utils {
    }
 
    public static Map getKeyAndCookie(String getUrl, String password, Map requestHeaders) throws Exception {
+      Map getHeaders = new HashMap();
+      getHeaders.putAll(requestHeaders);
+      getHeaders.remove("Content-Type");
+      getHeaders.remove("Referer");
+      requestHeaders = getHeaders;
       Map result = new HashMap();
       StringBuffer sb = new StringBuffer();
       InputStreamReader isr = null;
@@ -126,11 +133,11 @@ public class Utils {
          urlConnection = (HttpURLConnection)url.openConnection();
       }
 
-      Iterator var23 = requestHeaders.keySet().iterator();
+      Iterator var25 = getHeaders.keySet().iterator();
 
       String errorMsg;
-      while(var23.hasNext()) {
-         errorMsg = (String)var23.next();
+      while(var25.hasNext()) {
+         errorMsg = (String)var25.next();
          ((HttpURLConnection)urlConnection).setRequestProperty(errorMsg, (String)requestHeaders.get(errorMsg));
       }
 
@@ -361,7 +368,7 @@ public class Utils {
       }
 
       conn.setConnectTimeout(15000);
-      conn.setUseCaches(true);
+      conn.setUseCaches(false);
       conn.setRequestMethod("POST");
       int length;
       if (header != null) {
@@ -378,6 +385,7 @@ public class Utils {
 
       conn.setDoOutput(true);
       conn.setDoInput(true);
+      conn.setUseCaches(false);
       OutputStream outwritestream = conn.getOutputStream();
       outwritestream.write(data);
       outwritestream.flush();
@@ -511,6 +519,20 @@ public class Utils {
 
          throw new Exception("请求返回异常" + sb.toString());
       }
+   }
+
+   public static boolean openWebpage(URI uri) {
+      Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+      if (desktop != null && desktop.isSupported(Action.BROWSE)) {
+         try {
+            desktop.browse(uri);
+            return true;
+         } catch (Exception var3) {
+            var3.printStackTrace();
+         }
+      }
+
+      return false;
    }
 
    public static byte[] getEvalData(String key, int encryptType, String type, byte[] payload) throws Exception {
@@ -962,6 +984,26 @@ public class Utils {
       }
 
       return rootPath;
+   }
+
+   public static String getContextPath(String url) {
+      String result = "/";
+
+      try {
+         URI u = new URI(url);
+         String path = u.normalize().getPath();
+         if (path.startsWith("/")) {
+            path = path.substring(1);
+         }
+
+         int pos = path.indexOf("/");
+         if (pos > 0) {
+            result = "/" + path.substring(0, pos + 1);
+         }
+      } catch (Exception var5) {
+      }
+
+      return result;
    }
 
    public static boolean isWindows(Map basicInfoMap) {

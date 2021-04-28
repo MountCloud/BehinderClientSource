@@ -735,9 +735,9 @@ public class DatabaseViewController {
             String fieldName = field.get("name").toString();
             TableColumn col = new TableColumn(fieldName);
             tableViewColumns.add(col);
-            final int tempi = i;
+            final int finali = i;
             col.setCellValueFactory((datax) -> {
-               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(tempi);
+               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(finali);
                //return (StringProperty)((List)datax.getValue()).get(i);
             });
          }
