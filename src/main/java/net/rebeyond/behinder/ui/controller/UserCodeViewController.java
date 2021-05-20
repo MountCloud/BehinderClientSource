@@ -9,9 +9,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.DataFormat;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.web.WebView;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
+import net.rebeyond.behinder.utils.Utils;
 import netscape.javascript.JSObject;
 import org.json.JSONObject;
 
@@ -52,11 +57,26 @@ public class UserCodeViewController {
       final String aspCodeDemo = "response.write(\"hello world\")";
       final String currentType = this.shellEntity.getString("type");
       this.sourceCodeWebview.getEngine().load(this.getClass().getResource("/net/rebeyond/behinder/resource/codeEditor/editor_" + currentType + ".html").toExternalForm());
+      this.sourceCodeWebview.getEngine().setOnAlert((event) -> {
+         Utils.setClipboardString((String)event.getData());
+      });
       this.sourceCodeWebview.getEngine().getLoadWorker().stateProperty().addListener(new ChangeListener<State>() {
          public void changed(ObservableValue ov, State oldState, State newState) {
             if (newState == State.SUCCEEDED) {
                JSObject window = (JSObject)UserCodeViewController.this.sourceCodeWebview.getEngine().executeScript("window");
                UserCodeViewController.this.editor = (JSObject)window.getMember("editor");
+               UserCodeViewController.this.sourceCodeWebview.getEngine().executeScript("editor.on('copy',function(x){alert(x.text);return x.text;});");
+               UserCodeViewController.this.sourceCodeWebview.getEngine().executeScript("editor.on('cut',function(x){alert(x.text);return x.text});");
+               UserCodeViewController.this.sourceCodeWebview.addEventHandler(KeyEvent.KEY_PRESSED, (keyEvent) -> {
+                  if (keyEvent.isShortcutDown() && keyEvent.getCode() == KeyCode.V) {
+                     Clipboard clipboard = Clipboard.getSystemClipboard();
+                     String content = (String)clipboard.getContent(DataFormat.PLAIN_TEXT);
+                     if (content != null) {
+                        UserCodeViewController.this.editor.call("onPaste", new Object[]{content});
+                     }
+                  }
+
+               });
                String var5 = currentType;
                byte var6 = -1;
                switch(var5.hashCode()) {
@@ -86,7 +106,7 @@ public class UserCodeViewController {
                   UserCodeViewController.this.editor.call("setValue", new Object[]{javaCodeDemo});
                   break;
                case 1:
-                  UserCodeViewController.this.editor.call("setValue", new Object[]{phpCodeDemo});
+                  UserCodeViewController.this.editor.call("setValue", new Object[]{"<?php\n" + phpCodeDemo + "\n?>"});
                   break;
                case 2:
                   UserCodeViewController.this.editor.call("setValue", new Object[]{aspxCodeDemo});
@@ -113,16 +133,30 @@ public class UserCodeViewController {
       String sourceCode = this.editor.call("getValue", new Object[0]).toString();
       Runnable runner = () -> {
          try {
-            String result = this.currentShellService.eval(sourceCode);
+            String finalSourceCode = sourceCode.trim();
+            if (this.shellEntity.getString("type").equals("php")) {
+               finalSourceCode = sourceCode.trim();
+               if (finalSourceCode.startsWith("<?php")) {
+                  finalSourceCode = finalSourceCode.substring(5);
+               } else if (finalSourceCode.startsWith("<?")) {
+                  finalSourceCode = finalSourceCode.substring(2);
+               }
+
+               if (finalSourceCode.endsWith("?>")) {
+                  finalSourceCode = finalSourceCode.substring(0, finalSourceCode.length() - 2);
+               }
+            }
+
+            String result = this.currentShellService.eval(finalSourceCode);
             Platform.runLater(() -> {
                this.sourceResultArea.setText(result);
                this.statusLabel.setText("完成。");
             });
-         } catch (Exception var3) {
-            var3.printStackTrace();
+         } catch (Exception var4) {
+            var4.printStackTrace();
             Platform.runLater(() -> {
-               this.statusLabel.setText("运行失败:" + var3.getMessage());
-               this.sourceResultArea.setText(var3.getMessage());
+               this.statusLabel.setText("运行失败:" + var4.getMessage());
+               this.sourceResultArea.setText(var4.getMessage());
             });
          }
 
