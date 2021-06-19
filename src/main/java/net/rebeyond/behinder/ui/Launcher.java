@@ -17,7 +17,7 @@ public class Launcher {
          try {
             String selfPath = Utils.getSelfPath();
             String javafxPath = selfPath + File.separator + "lib";
-            String cmd = "java --module-path \"" + javafxPath + "\" --add-modules=javafx.controls --add-modules=javafx.fxml --add-modules=javafx.base --add-modules=javafx.graphics --add-modules=javafx.web -jar";
+            String cmd = "\"" + System.getProperty("java.home") + File.separator + "bin" + File.separator + "java\" --module-path \"" + javafxPath + "\" --add-modules=javafx.controls --add-modules=javafx.fxml --add-modules=javafx.base --add-modules=javafx.graphics --add-modules=javafx.web -jar";
             cmd = cmd + " " + Utils.getSelfJarPath();
             Process p = null;
             if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0) {

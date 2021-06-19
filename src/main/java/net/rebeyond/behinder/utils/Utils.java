@@ -370,7 +370,7 @@ public class Utils {
       conn.setConnectTimeout(15000);
       conn.setUseCaches(false);
       conn.setRequestMethod("POST");
-      int length;
+      int length = 0;
       if (header != null) {
          Object[] keys = header.keySet().toArray();
          Arrays.sort(keys);
@@ -737,6 +737,10 @@ public class Utils {
 
    public static String getSelfJarPath() throws Exception {
       String currentPath = Utils.class.getProtectionDomain().getCodeSource().getLocation().getPath().toString();
+      if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0 && currentPath.startsWith("/")) {
+         currentPath = currentPath.substring(1);
+      }
+
       return currentPath;
    }
 

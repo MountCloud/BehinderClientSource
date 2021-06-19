@@ -737,8 +737,8 @@ public class DatabaseViewController {
             tableViewColumns.add(col);
             final int finali = i;
             col.setCellValueFactory((datax) -> {
-               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(finali);
                //return (StringProperty)((List)datax.getValue()).get(i);
+               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(finali);
             });
          }
 

@@ -100,9 +100,9 @@
                                                     <RadioButton fx:id="socksHTTPRadio" mnemonicParsing="false"  text="HTTP隧道" />
                                                 </children>
                                             </HBox>
-                                            <Label fx:id="socksListenIPLabel" text="本地监听IP地址：" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
-                                            <TextField fx:id="socksIPText" text="119.113.45.174" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                            <Label fx:id="socksListenPortLabel" text="本地监听端口：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
+                                            <Label fx:id="socksListenIPLabel" text="VPS监听IP地址：" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
+                                            <TextField fx:id="socksIPText" text="8.8.8.8" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                            <Label fx:id="socksListenPortLabel" text="VPS监听端口：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.rowIndex="1" />
                                             <TextField fx:id="socksPortText" text="2222" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                                             <Button fx:id="createSocksBtn" mnemonicParsing="false" text="开启" GridPane.columnIndex="4" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
                                             <Label fx:id="socksDescLabel" prefWidth="650.0" text="*提供基于HTTP隧道的全局socks代理，将远程目标内网的socks代理服务开到本地，适用于目标不能出网的情况。" textFill="GREEN" GridPane.columnSpan="5" GridPane.rowIndex="2" GridPane.valignment="BASELINE">

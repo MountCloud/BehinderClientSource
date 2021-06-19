@@ -83,16 +83,19 @@ public class TunnelViewController {
    private TextField reversePortMapPortText;
    private ShellService currentShellService;
    private JSONObject shellEntity;
+   private Map basicInfoMap;
    private List workList;
    private List localList = new ArrayList();
    private Label statusLabel;
    private TunnelViewController.ProxyUtils proxyUtils;
+   private TunnelViewController.ProxyTunnelWorker proxyTunnelWorker;
    private List ReversePortMapWorkerList = new ArrayList();
    private ServerSocketChannel localPortMapSocket;
 
-   public void init(ShellService shellService, List workList, Label statusLabel) {
+   public void init(ShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
       this.currentShellService = shellService;
       this.shellEntity = shellService.getShellEntity();
+      this.basicInfoMap = basicInfoMap;
       this.workList = workList;
       this.statusLabel = statusLabel;
       this.initTunnelView();
@@ -138,10 +141,12 @@ public class TunnelViewController {
                   TunnelViewController.this.socksDescLabel.setText("*提供基于HTTP隧道的全局socks代理，将远程目标内网的socks代理服务开到本地，适用于目标不能出网的情况。");
                   TunnelViewController.this.socksListenIPLabel.setText("本地监听IP地址：");
                   TunnelViewController.this.socksListenPortLabel.setText("本地监听端口：");
+                  TunnelViewController.this.socksIPText.setText("0.0.0.0");
                } else if (portMapType.equals("remote")) {
                   TunnelViewController.this.socksDescLabel.setText("*提供基于VPS中转的全局socks代理，将远程目标内网的socks代理服务开到外网VPS，目标机器需要能出网。");
                   TunnelViewController.this.socksListenIPLabel.setText("VPS监听IP地址：");
                   TunnelViewController.this.socksListenPortLabel.setText("VPS监听端口：");
+                  TunnelViewController.this.socksIPText.setText("8.8.8.8");
                }
             }
 
@@ -437,12 +442,19 @@ public class TunnelViewController {
 
    private void createLocalSocks() {
       this.createSocksBtn.setText("关闭");
-      this.proxyUtils = new TunnelViewController.ProxyUtils();
-      this.proxyUtils.start();
+      Map paramMap = new HashMap();
+      String socksIP = this.socksIPText.getText();
+      String socksPort = this.socksPortText.getText();
+      paramMap.put("socksIP", socksIP);
+      paramMap.put("socksPort", socksPort);
+      this.proxyTunnelWorker = new TunnelViewController.ProxyTunnelWorker("daemon", paramMap);
+      Thread proxyTunnelWorkerThread = new Thread(this.proxyTunnelWorker);
+      this.workList.add(proxyTunnelWorkerThread);
+      proxyTunnelWorkerThread.start();
    }
 
    private void stopLocalSocks() {
-      this.proxyUtils.shutdown();
+      this.proxyTunnelWorker.shutDown();
       this.createSocksBtn.setText("开启");
    }
 
@@ -641,6 +653,7 @@ public class TunnelViewController {
       private class Session extends Thread {
          private Socket socket;
          private String socketHash;
+         private TunnelViewController.ProxyUtils.Session me = this;
 
          public Session(Socket socket) throws NoSuchAlgorithmException {
             this.socket = socket;
@@ -716,11 +729,11 @@ public class TunnelViewController {
                   tempArray[i] = temp + "";
                }
 
-               String[] var21 = tempArray;
+               String[] var22 = tempArray;
                temp = tempArray.length;
 
                for(int var16 = 0; var16 < temp; ++var16) {
-                  String tempx = var21[var16];
+                  String tempx = var22[var16];
                   host = host + tempx + ".";
                }
 
@@ -740,9 +753,18 @@ public class TunnelViewController {
 
             int port = (targetPort[0] & 255) * 256 + (targetPort[1] & 255);
             if (cmd != 2 && cmd != 3) {
-               if (cmd == 1) {
+               if (cmd != 1) {
+                  throw new Exception("Socks5 - Unknown CMD");
+               } else {
                   host = InetAddress.getByName(host).getHostAddress();
-                  if (TunnelViewController.this.currentShellService.openProxy(host, port + "", this.socketHash)) {
+                  boolean openProxyFlag = false;
+                  if (TunnelViewController.this.shellEntity.getString("type").equals("php") && Utils.isWindows(TunnelViewController.this.basicInfoMap)) {
+                     openProxyFlag = TunnelViewController.this.currentShellService.openProxyAsyc(host, port + "", this.socketHash);
+                  } else {
+                     openProxyFlag = TunnelViewController.this.currentShellService.openProxy(host, port + "", this.socketHash);
+                  }
+
+                  if (openProxyFlag) {
                      os.write(CipherUtils.mergeByteArray(new byte[]{5, 0, 0, 1}, InetAddress.getByName(host).getAddress(), targetPort));
                      ProxyUtils.this.log("INFO", "隧道建立成功，请求远程地址" + host + ":" + port);
                      return true;
@@ -750,8 +772,6 @@ public class TunnelViewController {
                      os.write(CipherUtils.mergeByteArray(new byte[]{5, 5, 0, 1}, InetAddress.getByName(host).getAddress(), targetPort));
                      throw new Exception(String.format("[%s:%d] Remote failed", host, port));
                   }
-               } else {
-                  throw new Exception("Socks5 - Unknown CMD");
                }
             } else {
                throw new Exception("not implemented");
@@ -775,7 +795,9 @@ public class TunnelViewController {
                         int length = Session.this.socket.getInputStream().read(data);
                         if (length != -1) {
                            data = Arrays.copyOfRange(data, 0, length);
+                           System.out.println("start to write:" + data.length);
                            TunnelViewController.this.currentShellService.writeProxyData(data, Session.this.socketHash);
+                           System.out.println("write length:" + data.length);
                            continue;
                         }
                      } catch (SocketTimeoutException var4) {
@@ -811,7 +833,9 @@ public class TunnelViewController {
                while(true) {
                   if (Session.this.socket != null) {
                      try {
+                        System.out.println("start to read:");
                         byte[] data = TunnelViewController.this.currentShellService.readProxyData(Session.this.socketHash);
+                        System.out.println("read length:" + data.length);
                         if (data != null) {
                            if (data.length != 0) {
                               Session.this.socket.getOutputStream().write(data);
@@ -833,6 +857,314 @@ public class TunnelViewController {
                this();
             }
          }
+      }
+   }
+
+   class ProxyTunnelWorker implements Runnable {
+      private String threadType;
+      private Map paramMap;
+      private ServerSocket serverSocket;
+      private Map proxyTunnelWorkerListMap = new HashMap();
+
+      public ProxyTunnelWorker(String threadType, Map paramMap) {
+         this.threadType = threadType;
+         this.paramMap = paramMap;
+      }
+
+      private void log(String type, String log) {
+         String logLine = "[" + type + "]" + log + "\n";
+         Platform.runLater(() -> {
+            TunnelViewController.this.tunnelLogTextarea.appendText(logLine);
+         });
+      }
+
+      private void shutDown() {
+         this.log("INFO", "正在关闭代理服务");
+         Iterator var1 = this.proxyTunnelWorkerListMap.keySet().iterator();
+
+         while(var1.hasNext()) {
+            String socketHash = (String)var1.next();
+            List workerList = (List)this.proxyTunnelWorkerListMap.get(socketHash);
+            Iterator var4 = workerList.iterator();
+
+            while(var4.hasNext()) {
+               Thread thread = (Thread)var4.next();
+               thread.stop();
+            }
+         }
+
+         if (this.serverSocket != null && !this.serverSocket.isClosed()) {
+            try {
+               this.serverSocket.close();
+               this.log("INFO", "代理服务已停止");
+            } catch (IOException var6) {
+               var6.printStackTrace();
+            }
+         }
+
+      }
+
+      public void run() {
+         String socketHash;
+         if (this.threadType.equals("daemon")) {
+            try {
+               String socksIP = this.paramMap.get("socksIP").toString();
+               socketHash = this.paramMap.get("socksPort").toString();
+               ServerSocket serverSocket = new ServerSocket(Integer.parseInt(socketHash), 50, InetAddress.getByName(socksIP));
+               serverSocket.setReuseAddress(true);
+               this.serverSocket = serverSocket;
+               this.log("INFO", "正在监听端口" + socketHash);
+
+               while(true) {
+                  while(true) {
+                     try {
+                        Socket socket = serverSocket.accept();
+                        this.log("INFO", "收到客户端连接请求.");
+                        this.paramMap.put("socket", socket);
+                        String socketHashx = Utils.getMD5("" + socket.getInetAddress() + socket.getPort() + "");
+                        this.paramMap.put("socketHash", socketHashx);
+                        List proxyTunnelWorkList = new ArrayList();
+                        this.paramMap.put("workerList", proxyTunnelWorkList);
+                        TunnelViewController.ProxyTunnelWorker sessionWorker = TunnelViewController.this.new ProxyTunnelWorker("session", this.paramMap);
+                        Thread sessionWorkerThread = new Thread(sessionWorker);
+                        sessionWorkerThread.start();
+                        proxyTunnelWorkList.add(sessionWorkerThread);
+                        this.proxyTunnelWorkerListMap.put(socketHashx, proxyTunnelWorkList);
+                     } catch (NoSuchAlgorithmException var14) {
+                        this.log("ERROR", "会话启动失败：" + var14.getMessage());
+                     } catch (SocketException var15) {
+                        this.log("INFO", "本地监听端口已关闭.");
+                        return;
+                     }
+                  }
+               }
+            } catch (IOException var18) {
+               this.log("ERROR", "端口监听失败：" + var18.getMessage() + var18.getClass());
+            }
+         } else {
+            Socket socketx;
+            List proxyTunnelWorkListx;
+            if (this.threadType.equals("session")) {
+               socketx = (Socket)this.paramMap.get("socket");
+               socketHash = this.paramMap.get("socketHash").toString();
+               proxyTunnelWorkListx = (List)this.paramMap.get("workerList");
+
+               try {
+                  socketHash = Utils.getMD5("" + socketx.getInetAddress() + socketx.getPort() + "");
+                  if (this.handleSocks(socketx, socketHash)) {
+                     this.log("INFO", "正在通信...");
+                     this.paramMap.put("idleCount", 0);
+                     TunnelViewController.ProxyTunnelWorker readWorker = TunnelViewController.this.new ProxyTunnelWorker("read", this.paramMap);
+                     Thread readWorkerThread = new Thread(readWorker);
+                     TunnelViewController.this.workList.add(readWorkerThread);
+                     readWorkerThread.start();
+                     proxyTunnelWorkListx.add(readWorkerThread);
+                     TunnelViewController.ProxyTunnelWorker writeWorker = TunnelViewController.this.new ProxyTunnelWorker("write", this.paramMap);
+                     Thread writeWorkerThread = new Thread(writeWorker);
+                     TunnelViewController.this.workList.add(writeWorkerThread);
+                     writeWorkerThread.start();
+                     proxyTunnelWorkListx.add(writeWorkerThread);
+                  }
+               } catch (Exception var11) {
+                  try {
+                     TunnelViewController.this.currentShellService.closeProxy(socketHash);
+                  } catch (Exception var10) {
+                  }
+               }
+            } else if (this.threadType.equals("read")) {
+               socketx = (Socket)this.paramMap.get("socket");
+               socketHash = this.paramMap.get("socketHash").toString();
+               proxyTunnelWorkListx = (List)this.paramMap.get("workerList");
+               int idleCount = (Integer)this.paramMap.get("idleCount");
+
+               try {
+                  while(socketx != null) {
+                     try {
+                        byte[] data = TunnelViewController.this.currentShellService.readProxyData(socketHash);
+                        if (data == null) {
+                           this.stopSession(proxyTunnelWorkListx);
+                           return;
+                        }
+
+                        if (data.length == 0) {
+                           ++idleCount;
+                           if (idleCount > 300) {
+                              Thread.sleep(3000L);
+                           } else if (idleCount > 150) {
+                              Thread.sleep(1000L);
+                           }
+                        } else {
+                           idleCount = 0;
+                           socketx.getOutputStream().write(data);
+                           socketx.getOutputStream().flush();
+                        }
+                     } catch (Exception var16) {
+                        var16.printStackTrace();
+                        this.log("ERROR", "数据读取异常:" + var16.getMessage());
+                        this.stopSession(proxyTunnelWorkListx);
+                     }
+                  }
+
+                  this.stopSession(proxyTunnelWorkListx);
+               } catch (Exception var17) {
+                  this.stopSession(proxyTunnelWorkListx);
+               }
+            } else if (this.threadType.equals("write")) {
+               socketx = (Socket)this.paramMap.get("socket");
+               socketHash = this.paramMap.get("socketHash").toString();
+               proxyTunnelWorkListx = (List)this.paramMap.get("workerList");
+
+               label91: {
+                  while(socketx != null) {
+                     try {
+                        socketx.setSoTimeout(10000);
+                        byte[] datax = new byte['\uffff'];
+                        int length = socketx.getInputStream().read(datax);
+                        if (length == -1) {
+                           this.stopSession(proxyTunnelWorkListx);
+                           break label91;
+                        }
+
+                        this.paramMap.put("idleCount", 0);
+                        datax = Arrays.copyOfRange(datax, 0, length);
+                        TunnelViewController.this.currentShellService.writeProxyData(datax, socketHash);
+                     } catch (SocketTimeoutException var12) {
+                     } catch (Exception var13) {
+                        this.log("ERROR", "数据写入异常:" + var13.getMessage());
+                        break label91;
+                     }
+                  }
+
+                  this.stopSession(proxyTunnelWorkListx);
+               }
+
+               try {
+                  TunnelViewController.this.currentShellService.closeProxy(socketHash);
+                  socketx.close();
+                  this.stopSession(proxyTunnelWorkListx);
+               } catch (Exception var9) {
+                  this.log("ERROR", "隧道关闭失败:" + var9.getMessage());
+               }
+            }
+         }
+
+      }
+
+      private void stopSession(List proxyTunnelWorkList) {
+         Runnable runner = () -> {
+            Iterator var1 = proxyTunnelWorkList.iterator();
+
+            while(var1.hasNext()) {
+               Thread thread = (Thread)var1.next();
+               thread.stop();
+            }
+
+         };
+         (new Thread(runner)).start();
+         this.log("INFO", "会话关闭成功。");
+      }
+
+      private boolean handleSocks(Socket socket, String socketHash) throws Exception {
+         int ver = socket.getInputStream().read();
+         if (ver == 5) {
+            return this.parseSocks5(socket, socketHash);
+         } else {
+            return ver == 4 ? this.parseSocks4(socket, socketHash) : false;
+         }
+      }
+
+      private boolean parseSocks5(Socket socket, String socketHash) throws Exception {
+         DataInputStream ins = new DataInputStream(socket.getInputStream());
+         DataOutputStream os = new DataOutputStream(socket.getOutputStream());
+         int nmethods = ins.read();
+
+         for(int i = 0; i < nmethods; ++i) {
+            int var11 = ins.read();
+         }
+
+         os.write(new byte[]{5, 0});
+         int version = ins.read();
+         int cmd;
+         int rsv;
+         int atyp;
+         if (version == 2) {
+            version = ins.read();
+            cmd = ins.read();
+            rsv = ins.read();
+            atyp = ins.read();
+         } else {
+            cmd = ins.read();
+            rsv = ins.read();
+            atyp = ins.read();
+         }
+
+         byte[] targetPort = new byte[2];
+         String host = "";
+         byte[] target;
+         if (atyp == 1) {
+            target = new byte[4];
+            ins.readFully(target);
+            ins.readFully(targetPort);
+            String[] tempArray = new String[4];
+
+            int temp;
+            for(int ix = 0; ix < target.length; ++ix) {
+               temp = target[ix] & 255;
+               tempArray[ix] = temp + "";
+            }
+
+            String[] var23 = tempArray;
+            temp = tempArray.length;
+
+            for(int var17 = 0; var17 < temp; ++var17) {
+               String tempx = var23[var17];
+               host = host + tempx + ".";
+            }
+
+            host = host.substring(0, host.length() - 1);
+         } else if (atyp == 3) {
+            int targetLen = ins.read();
+            target = new byte[targetLen];
+            ins.readFully(target);
+            ins.readFully(targetPort);
+            host = new String(target);
+         } else if (atyp == 4) {
+            target = new byte[16];
+            ins.readFully(target);
+            ins.readFully(targetPort);
+            host = new String(target);
+         }
+
+         int port = (targetPort[0] & 255) * 256 + (targetPort[1] & 255);
+         if (cmd != 2 && cmd != 3) {
+            if (cmd == 1) {
+               host = InetAddress.getByName(host).getHostAddress();
+               boolean openProxyFlag = false;
+               if (TunnelViewController.this.shellEntity.getString("type").equals("php")) {
+                  openProxyFlag = TunnelViewController.this.currentShellService.openProxyAsyc(host, port + "", socketHash);
+                  Thread.sleep(2000L);
+               } else {
+                  openProxyFlag = TunnelViewController.this.currentShellService.openProxy(host, port + "", socketHash);
+               }
+
+               if (openProxyFlag) {
+                  os.write(CipherUtils.mergeByteArray(new byte[]{5, 0, 0, 1}, InetAddress.getByName(host).getAddress(), targetPort));
+                  this.log("INFO", "隧道建立成功，请求远程地址" + host + ":" + port);
+                  return true;
+               } else {
+                  os.write(CipherUtils.mergeByteArray(new byte[]{5, 5, 0, 1}, InetAddress.getByName(host).getAddress(), targetPort));
+                  throw new Exception(String.format("[%s:%d] Remote failed", host, port));
+               }
+            } else {
+               throw new Exception("Socks5 - Unknown CMD");
+            }
+         } else {
+            throw new Exception("not implemented");
+         }
+      }
+
+      private boolean parseSocks4(Socket socket, String socketHash) {
+         return false;
       }
    }
 

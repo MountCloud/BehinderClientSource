@@ -266,14 +266,12 @@ public class MainController {
                } catch (Exception var13) {
                }
 
-               String type;
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
-                  type = passwordText.getText();
-                  final String finalType = type;
+                  String type = passwordText.getText();
                   Authenticator.setDefault(new Authenticator() {
                      public PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(proxyUser, finalType.toCharArray());
+                        return new PasswordAuthentication(proxyUser, type.toCharArray());
                      }
                   });
                } else {
@@ -283,7 +281,7 @@ public class MainController {
                currentProxy.put("username", userNameText.getText());
                currentProxy.put("password", passwordText.getText());
                InetSocketAddress proxyAddr = new InetSocketAddress(IPText.getText(), Integer.parseInt(PortText.getText()));
-               type = typeCombo.getValue().toString();
+               String type = typeCombo.getValue().toString();
                Proxy proxy;
                if (type.equals("HTTP")) {
                   proxy = new Proxy(Type.HTTP, proxyAddr);
@@ -546,15 +544,14 @@ public class MainController {
       for(int i = 1; i < tcs.size(); ++i) {
          int j = i - 1;
          ((TableColumn)tcs.get(i)).setCellValueFactory((data) -> {
-            return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(j);
             //return (StringProperty)((List)data.getValue()).get(j);
+            return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(j);
          });
       }
 
       this.idCol.setCellFactory((col) -> {
-         TableCell cell = new TableCell() {
-            @Override
-            protected void updateItem(Object item, boolean empty) {
+         TableCell cell = new TableCell<Object,String>() {
+            public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
@@ -569,9 +566,8 @@ public class MainController {
          return cell;
       });
       this.statusCol.setCellFactory((col) -> {
-         TableCell cell = new TableCell() {
-            @Override
-            protected void updateItem(Object item, boolean empty) {
+         TableCell cell = new TableCell<Object,String>() {
+            public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                if (empty) {
                   this.setGraphic((Node)null);
@@ -602,7 +598,7 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        this.setText((String)item);
+                        this.setText(item);
                      }
 
                   }
@@ -851,6 +847,9 @@ public class MainController {
 
       });
       editBtn.setOnAction((event) -> {
+         if(this.shellListTable.getSelectionModel().getSelectedItem()==null){
+            return;
+         }
          String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
 
          try {
@@ -895,11 +894,6 @@ public class MainController {
          this.copyString(url);
       });
       memShellBtn.setOnAction((event) -> {
-         Object selectObj = this.shellListTable.getSelectionModel().getSelectedItem();
-         if(selectObj==null){
-            Utils.showErrorMessage("提示", "请先选择网站。");
-            return;
-         }
          String scriptType = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_TYPE)).getValue();
          String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_URL)).getValue();
          if (!scriptType.equals("jsp")) {
@@ -1188,11 +1182,11 @@ public class MainController {
                }
             }
 
+            final int finalDuplicateCount = duplicateCount;
             final int finalCount = count;
-            final int fianlDuplicateCount = duplicateCount;
             Platform.runLater(() -> {
                this.statusLabel.setText("导入完成。");
-               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), fianlDuplicateCount, finalCount));
+               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalDuplicateCount, finalCount));
 
                try {
                   this.loadShellList();

