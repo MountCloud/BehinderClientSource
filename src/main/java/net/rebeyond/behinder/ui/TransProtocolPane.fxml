@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.web.*?>
+
+<AnchorPane prefHeight="800" prefWidth="1000.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.TransProtocolPaneController">
+   <children>
+      <GridPane layoutX="158.0" layoutY="131.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <columnConstraints>
+          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        </columnConstraints>
+        <rowConstraints>
+          <RowConstraints minHeight="10.0" percentHeight="5.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+          <RowConstraints minHeight="10.0" percentHeight="5.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints />
+        </rowConstraints>
+         <children>
+            <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnSpan="2">
+               <children>
+                  <Label alignment="CENTER" text="协议名称" />
+                  <ComboBox fx:id="transProtocolCombo" editable="true" prefWidth="150.0" />
+                   <Hyperlink fx:id="deleteLink" text="删除" underline="true" />
+                  <Hyperlink fx:id="exportLink" text="分享" underline="true" />
+                  <Hyperlink fx:id="importLink" text="导入" underline="true" />
+                  <Hyperlink fx:id="resetLink" text="恢复默认" underline="true" />
+                  <Hyperlink fx:id="makeServerLink" text="生成服务端" underline="true" />
+               </children>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+               <padding>
+                  <Insets left="10.0" />
+               </padding>
+            </HBox>
+            <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnSpan="2" GridPane.rowIndex="2">
+               <children>
+                  <Button fx:id="saveBtn" mnemonicParsing="false" text="保存" />
+                  <Button fx:id="cancelBtn" mnemonicParsing="false" text="取消" />
+               </children></HBox>
+            <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" GridPane.columnSpan="2" GridPane.rowIndex="1">
+              <tabs>
+                <Tab text="本地">
+                  <content>
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <GridPane layoutX="174.0" layoutY="236.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                <columnConstraints>
+                                  <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                  <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                </columnConstraints>
+                                <rowConstraints>
+                                  <RowConstraints minHeight="10.0" percentHeight="6.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" percentHeight="6.0" prefHeight="30.0" vgrow="SOMETIMES" />
+
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" percentHeight="6.0" prefHeight="30.0" vgrow="SOMETIMES" />
+
+                                </rowConstraints>
+                                 <children>
+                                    <WebView fx:id="encodeWebview" prefHeight="200.0" prefWidth="200.0" GridPane.rowIndex="2" GridPane.rowSpan="2">
+                                       <GridPane.margin>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </GridPane.margin>
+                                    </WebView>
+                                    <WebView fx:id="decodeWebview" prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" GridPane.rowSpan="2">
+                                       <GridPane.margin>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </GridPane.margin>
+                                    </WebView>
+                                    <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnSpan="2">
+                                       <children>
+                                          <Label text="*本地加解密函数请使用Java语言编写" />
+                                       </children>
+                                       <GridPane.margin>
+                                          <Insets left="20.0" />
+                                       </GridPane.margin>
+                                    </HBox>
+                                    <Label alignment="CENTER" text="加密函数" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
+                                    <Label text="解密函数" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
+                                    <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnSpan="2" GridPane.rowIndex="4">
+                                       <children>
+                                          <TextField fx:id="clearTxt" prefWidth="250.0" />
+                                          <Button fx:id="encodeBtn" mnemonicParsing="false" text="-&gt;加密-&gt;" />
+                                          <TextField fx:id="encryptTxt" prefWidth="250.0" />
+                                          <Button fx:id="decodeBtn" mnemonicParsing="false" text="-&gt;解密-&gt;" />
+                                          <TextField fx:id="decryptTxt" prefWidth="250.0" />
+                                       </children>
+                                    </HBox>
+                                   
+                                 </children>
+                                
+                              </GridPane>
+                           </children>
+                        </AnchorPane>
+                  </content>
+                </Tab>
+                <Tab text="远程">
+                  <content>
+                    <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <GridPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                 </columnConstraints>
+                                 <rowConstraints>
+                                    <RowConstraints minHeight="10.0" percentHeight="6.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                     <RowConstraints minHeight="10.0" percentHeight="6.0" prefHeight="30.0" vgrow="SOMETIMES" />
+
+                                     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                     <RowConstraints minHeight="10.0" percentHeight="6.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                 </rowConstraints>
+                                 <children>
+                                     <Label alignment="CENTER" text="加密函数" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
+                                     <Label text="解密函数" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.rowIndex="1" />
+                                    <WebView fx:id="encodeWebviewRemote" prefHeight="200.0" prefWidth="200.0" GridPane.rowIndex="2" GridPane.rowSpan="2">
+                                       <GridPane.margin>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </GridPane.margin>
+                                    </WebView>
+                                    <WebView fx:id="decodeWebviewRemote" prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" GridPane.rowSpan="2">
+                                       <GridPane.margin>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </GridPane.margin>
+                                    </WebView>
+                                     <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnSpan="2" GridPane.rowIndex="4">
+                                         <children>
+                                             <TextField fx:id="clearRemoteTxt" prefWidth="250.0" />
+                                             <Button fx:id="encodeRemoteBtn" mnemonicParsing="false" text="-&gt;加密-&gt;" />
+                                             <TextField fx:id="encryptRemoteTxt" prefWidth="250.0" />
+                                             <Button fx:id="decodeRemoteBtn" mnemonicParsing="false" text="-&gt;解密-&gt;" />
+                                             <TextField fx:id="decryptRemoteTxt" prefWidth="250.0" />
+                                         </children>
+                                     </HBox>
+                                    <HBox alignment="CENTER_LEFT" prefHeight="100.0" prefWidth="200.0" spacing="10.0" GridPane.columnSpan="2">
+                                       <children>
+                                          <Label alignment="CENTER" text="脚本类型" />
+                                          <ComboBox fx:id="scriptTypeCombo" prefWidth="150.0" />
+                                          <Label text="验证地址">
+                                             <HBox.margin>
+                                                <Insets left="10.0" />
+                                             </HBox.margin>
+                                          </Label>
+                                          <ComboBox fx:id="shellCombo" prefWidth="600.0" />
+                                       </children>
+                                       <GridPane.margin>
+                                          <Insets left="20.0" />
+                                       </GridPane.margin>
+                                    </HBox>
+                                 </children>
+                              </GridPane>
+                           </children></AnchorPane>
+                  </content>
+                </Tab>
+              </tabs>
+            </TabPane>
+             <Separator GridPane.columnSpan="2" GridPane.rowIndex="1" GridPane.valignment="BOTTOM">
+                 <GridPane.margin>
+                     <Insets left="10.0" right="5.0" top="10.0" />
+                 </GridPane.margin></Separator>
+         </children>
+      </GridPane>
+   </children>
+</AnchorPane>

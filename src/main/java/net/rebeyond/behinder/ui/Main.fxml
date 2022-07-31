@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
+<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
 <GridPane prefHeight="700.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.MainController">
     <columnConstraints>
         <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="12.0" prefWidth="100.0" />
@@ -52,6 +53,11 @@
             <Label fx:id="importBtn" text="导入" />
             </graphic>
             </Menu>
+            <Menu mnemonicParsing="false">
+                <graphic>
+                    <Label fx:id="transProtocolBtn" text="传输协议" />
+                </graphic>
+            </Menu>
           <Menu mnemonicParsing="false">
               <graphic>
             <Label fx:id="checkAliveBtn" text="批量检测" />
@@ -71,11 +77,15 @@
          </GridPane.margin></Label>
       <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="5.0" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="2">
          <children>
-            <Label fx:id="proxyStatusLabel" />
+            <Label fx:id="proxyStatusLabel">
+                <graphic>
+                    <FontAwesomeIconView glyphName="PAPER_PLANE" glyphSize="12" glyphStyle="-fx-fill:green" visible="false"/>
+                </graphic>
+            </Label>
             <Separator maxHeight="20.0" orientation="VERTICAL" prefHeight="10.0" />
             <Label fx:id="versionLabel" text="冰蝎 %s" />
             <Separator maxHeight="20.0" orientation="VERTICAL" prefHeight="10.0" />
-            <Label fx:id="authorLabel" text="By rebeyond" />
+            <Label fx:id="authorLabel"/>
          </children>
          <padding>
             <Insets right="10.0" />

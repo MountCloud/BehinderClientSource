@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.geometry.Insets?>
+
+<?import javafx.scene.web.WebView?>
+
+
+         <GridPane fx:id="bShellGuiGridPane" prefHeight="800" prefWidth="800.0" xmlns="http://javafx.com/javafx"
+                   xmlns:fx="http://javafx.com/fxml"
+                   fx:controller="net.rebeyond.behinder.ui.controller.MainWindowController">
+            <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="500.0" />
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints maxHeight="50.00" prefHeight="50" valignment="CENTER" vgrow="NEVER" />
+                <RowConstraints vgrow="SOMETIMES" />
+                <RowConstraints maxHeight="50.00" valignment="CENTER" vgrow="NEVER" />
+            </rowConstraints>
+
+            <children>
+                <GridPane>
+                    <columnConstraints>
+                        <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints minHeight="10.0" prefHeight="50.0" vgrow="SOMETIMES" />
+                    </rowConstraints>
+                    <children>
+
+                        <Label alignment="CENTER" text="Target:">
+                            <GridPane.margin>
+                                <Insets right="10.0" />
+                            </GridPane.margin></Label>
+                        <TextField fx:id="urlText" editable="false" GridPane.columnIndex="1" />
+                    </children>
+                </GridPane>
+                <Label fx:id="connStatusLabel" GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.valignment="CENTER" GridPane.vgrow="NEVER" />
+                <TabPane fx:id="mainTabPane" prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" GridPane.columnSpan="2" GridPane.rowIndex="1">
+                    <tabs>
+                        <Tab fx:id="basicViewTab" text="基本信息">
+                            <content>
+                                <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                                    <children>
+                                        <WebView fx:id="basicInfoView" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                    </children></AnchorPane>
+                            </content>
+                        </Tab>
+                        <Tab fx:id="cmdTab" text="命令执行">
+                            <content>
+                                <fx:include fx:id="cmdView" source="CmdViewTab.fxml" />
+                            </content>
+                        </Tab>
+                        <Tab fx:id="realCmdTab" text="虚拟终端">
+                            <content>
+                                <fx:include fx:id="realCmdView" source="RealCmdViewTab.fxml" />
+                            </content>
+                        </Tab>
+                        <Tab fx:id="fileManagerTab" text="文件管理">
+                            <content>
+                                <fx:include fx:id="fileManagerView" source="FileManagerViewTab.fxml" />
+
+                            </content>
+                        </Tab>
+                        <Tab fx:id="tunnelTab" text="内网穿透">
+                            <content>
+                                <fx:include fx:id="tunnelView" source="TunnelViewTab.fxml" />
+                            </content>
+                        </Tab>
+                        <Tab fx:id="reverseTab" text="反弹shell">
+                            <content>
+                                <fx:include fx:id="reverseView" source="ReverseViewTab.fxml" />
+                            </content>
+                        </Tab>
+                        <Tab fx:id="databaseTab" text="数据库管理">
+                            <content>
+                                <fx:include fx:id="databaseView" source="DatabaseView.fxml" />
+                            </content>
+                        </Tab>
+                        <Tab fx:id="sourceCodeTab" text="自定义代码">
+                            <content>
+                                <fx:include fx:id="userCodeView" source="UserCodeViewTab.fxml" />
+                            </content>
+                        </Tab>
+
+                        <Tab fx:id="pluginViewTab" text="扩展功能">
+                            <content>
+                                <fx:include fx:id="pluginView" source="PluginViewTab.fxml" />
+
+                            </content>
+                        </Tab>
+                        <Tab fx:id="memoViewTab" text="备忘录">
+                            <content>
+                                <fx:include fx:id="memoView" source="MemoViewTab.fxml" />
+                            </content>
+                        </Tab>
+                        <Tab fx:id="updateInfoTab" text="更新信息">
+                            <content>
+                                <fx:include fx:id="updateInfoView" source="UpdateViewTab.fxml" />
+                            </content>
+                        </Tab>
+
+                    </tabs>
+                </TabPane>
+                <GridPane alignment="BOTTOM_CENTER" GridPane.columnSpan="2" GridPane.rowIndex="2">
+                    <columnConstraints>
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                    </columnConstraints>
+                    <rowConstraints>
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="NEVER" />
+                    </rowConstraints>
+                    <children>
+                        <Label fx:id="statusLabel" GridPane.valignment="CENTER">
+                            <GridPane.margin>
+                                <Insets left="10.0" />
+                            </GridPane.margin></Label>
+                        <HBox alignment="CENTER_RIGHT" fillHeight="false" prefWidth="200.0" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.valignment="BOTTOM">
+                            <children>
+
+                                <Label fx:id="authorLabel" visible="false">
+                                    <padding>
+                                        <Insets right="10.0" />
+                                    </padding></Label>
+                            </children>
+                        </HBox>
+                    </children>
+                </GridPane>
+            </children>
+            <opaqueInsets>
+                <Insets />
+            </opaqueInsets>
+        </GridPane>

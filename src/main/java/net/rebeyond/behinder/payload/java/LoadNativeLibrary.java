@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
@@ -321,8 +322,7 @@ public class LoadNativeLibrary implements Runnable {
       FileInputStream fis = new FileInputStream(new File(filePath));
       byte[] buffer = new byte[10240000];
 
-      int length;
-      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      for(int length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();
@@ -334,5 +334,18 @@ public class LoadNativeLibrary implements Runnable {
       output.write(a);
       output.write(b);
       return output.toByteArray();
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

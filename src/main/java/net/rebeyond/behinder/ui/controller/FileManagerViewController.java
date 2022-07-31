@@ -1,5 +1,7 @@
 package net.rebeyond.behinder.ui.controller;
 
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
@@ -47,12 +49,17 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import net.rebeyond.behinder.core.Constants;
-import net.rebeyond.behinder.core.ShellService;
+import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.ShellManager;
+import net.rebeyond.behinder.service.FileService;
+import net.rebeyond.behinder.service.callback.ICallBack;
 import net.rebeyond.behinder.utils.Utils;
+import netscape.javascript.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -71,9 +78,15 @@ public class FileManagerViewController {
    @FXML
    private StackPane fileManagerStackPane;
    @FXML
+   private StackPane fileContentStackPane;
+   @FXML
    private GridPane fileListGridPane;
    @FXML
    private GridPane fileContentGridPane;
+   @FXML
+   private GridPane fileContentCodeGridPane;
+   @FXML
+   private GridPane fileContentImageGridPane;
    @FXML
    private TextField filePathText;
    @FXML
@@ -83,17 +96,33 @@ public class FileManagerViewController {
    @FXML
    private TextArea fileContentTextArea;
    @FXML
+   private HBox fileContentImageViewContainer;
+   @FXML
+   private WebView fileContentWebview;
+   @FXML
+   private ImageView fileContentImageView;
+   @FXML
    private Button saveFileContentBtn;
    @FXML
    private Button cancelFileContentBtn;
-   private ShellService currentShellService;
+   @FXML
+   private Button saveFileImageContentBtn;
+   @FXML
+   private Button cancelFileImageContentBtn;
+   private IShellService currentShellService;
+   private FileService fileService;
+   private JSONObject shellEntity;
+   private JSONObject effectShellEntity;
    private List workList;
    Map basicInfoMap;
    private Label statusLabel;
+   private JSObject editor;
    private int listStage;
 
-   public void init(ShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
+   public void init(IShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
       this.currentShellService = shellService;
+      this.shellEntity = shellService.getShellEntity();
+      this.effectShellEntity = shellService.getEffectShellEntity();
       this.workList = workList;
       this.statusLabel = statusLabel;
       this.basicInfoMap = basicInfoMap;
@@ -103,6 +132,7 @@ public class FileManagerViewController {
       } catch (Exception var6) {
       }
 
+      this.fileService = new FileService(this.currentShellService, this.shellEntity, workList);
    }
 
    private void initFileManagerView() throws Exception {
@@ -111,7 +141,11 @@ public class FileManagerViewController {
       this.initCurrentPathCombo();
       this.initCharsetCombo();
       this.loadContextMenu();
+      this.initFileContentWebview();
       this.cancelFileContentBtn.setOnAction((event) -> {
+         this.switchPane("list");
+      });
+      this.cancelFileImageContentBtn.setOnAction((event) -> {
          this.switchPane("list");
       });
       this.saveFileContentBtn.setOnAction((event) -> {
@@ -171,7 +205,18 @@ public class FileManagerViewController {
    private void initCurrentPathCombo() {
       this.currentPathCombo.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
          if (this.currentPathCombo.isFocused()) {
-            this.expandByPath(newValue.toString());
+            String newPath = newValue.toString();
+            if (!newPath.endsWith("/")) {
+               newPath = newPath + "/";
+            }
+
+            this.currentPathCombo.setValue(newPath);
+            if (newPath.indexOf(":") == 1) {
+               String driveName = newPath.substring(0, 1);
+               newPath = newPath.replaceFirst(driveName, driveName.toUpperCase());
+            }
+
+            this.expandByPath(newPath);
          }
 
       });
@@ -188,65 +233,33 @@ public class FileManagerViewController {
       File selectdFile = fileChooser.showOpenDialog(this.fileListGridPane.getScene().getWindow());
       if (selectdFile != null) {
          String fileName = selectdFile.getName();
-         byte[] fileContent = Utils.getFileData(selectdFile.getAbsolutePath());
-         int bufSize = this.currentShellService.currentType.equals("aspx") ? 524288 : '됀';
-         this.statusLabel.setText("正在上传……");
          Runnable runner = () -> {
             try {
-               if (fileContent.length < bufSize) {
-                  JSONObject resultObj = this.currentShellService.uploadFile(currentPath + fileName, fileContent);
-                  String status = resultObj.getString("status");
-                  String msg = resultObj.getString("msg");
-                  if (status.equals("fail")) {
+               final String remotePath = currentPath + fileName;
+               Platform.runLater(() -> {
+                  this.statusLabel.setText("正在上传" + remotePath + "……");
+               });
+               ICallBack uploadCallBack = new ICallBack() {
+                  public void onSuccess(String status, String message) {
                      Platform.runLater(() -> {
-                        this.statusLabel.setText("文件上传失败:" + msg);
+                        FileManagerViewController.this.statusLabel.setText(String.format("(%s)正在上传%s……", message, remotePath));
                      });
-                     return;
                   }
-               } else {
-                  List blocks = Utils.splitBytes(fileContent, bufSize);
 
-                  for(int i = 0; i < blocks.size(); ++i) {
-                     JSONObject resultObjx;
-                     String statusx;
-                     String msgx;
-                     if (i == 0) {
-                        resultObjx = this.currentShellService.uploadFile(currentPath + fileName, (byte[])blocks.get(i));
-                        statusx = resultObjx.getString("status");
-                        msgx = resultObjx.getString("msg");
-                        if (statusx.equals("fail")) {
-                           Platform.runLater(() -> {
-                              this.statusLabel.setText("文件上传失败:" + msgx);
-                           });
-                           return;
-                        }
-                     } else {
-                        resultObjx = this.currentShellService.appendFile(currentPath + fileName, (byte[])blocks.get(i));
-                        statusx = resultObjx.getString("status");
-                        msgx = resultObjx.getString("msg");
-                        final int finali = i;
-                        Platform.runLater(() -> {
-                           if (statusx.equals("fail")) {
-                              this.statusLabel.setText("文件上传失败:" + msgx);
-                           } else {
-                              this.statusLabel.setText(String.format("正在上传……%skb/%skb", bufSize * finali / 1024, fileContent.length / 1024));
-                           }
-                        });
-                        if (statusx.equals("fail")) {
-                           return;
-                        }
-                     }
+                  public void onFail(String message) {
                   }
-               }
-
+               };
+               this.fileService.uploadFile(selectdFile.getAbsolutePath(), remotePath, uploadCallBack);
                Platform.runLater(() -> {
-                  this.statusLabel.setText("上传完成");
                   this.expandByPath(currentPath);
+                  boolean isAsp = this.effectShellEntity.getString("type").equals("asp");
+                  this.statusLabel.setText(remotePath + (isAsp ? "上传完成" : "上传完成，哈希校验通过"));
                });
-            } catch (Exception var11) {
+            } catch (Exception var6) {
                Platform.runLater(() -> {
-                  this.statusLabel.setText("操作失败:" + var11.getMessage());
+                  this.statusLabel.setText("上传失败:" + var6.getMessage());
                });
+               var6.printStackTrace();
             }
 
          };
@@ -289,7 +302,7 @@ public class FileManagerViewController {
          charset = this.charsetCombo.getValue().toString();
       }
 
-      String fileContentText = this.fileContentTextArea.getText();
+      String fileContentText = this.editor.call("getValue", new Object[0]).toString();
       byte[] fileContent = charset == null ? fileContentText.getBytes() : fileContentText.getBytes(charset);
       this.statusLabel.setText("正在保存……");
       Runnable runner = () -> {
@@ -321,14 +334,29 @@ public class FileManagerViewController {
 
    private void switchPane(String show) {
       if (show.equals("list")) {
-         this.fileListGridPane.setOpacity(1.0D);
-         this.fileContentGridPane.setOpacity(0.0D);
+         this.fileListGridPane.setOpacity(1.0);
+         this.fileContentGridPane.setOpacity(0.0);
          this.fileListGridPane.toFront();
       } else if (show.equals("content")) {
          this.fileListGridPane.toBack();
-         this.fileListGridPane.setOpacity(0.0D);
-         this.fileContentGridPane.setOpacity(1.0D);
+         this.fileListGridPane.setOpacity(0.0);
+         this.fileContentGridPane.setOpacity(1.0);
          this.fileContentGridPane.toFront();
+      }
+
+   }
+
+   private void switchContentPane(String show) {
+      if (show.equals("code")) {
+         this.fileContentImageGridPane.setOpacity(0.0);
+         this.fileContentCodeGridPane.setOpacity(1.0);
+         this.fileContentImageGridPane.toBack();
+         this.fileContentCodeGridPane.toFront();
+      } else if (show.equals("image")) {
+         this.fileContentCodeGridPane.setOpacity(0.0);
+         this.fileContentImageGridPane.setOpacity(1.0);
+         this.fileContentCodeGridPane.toBack();
+         this.fileContentImageGridPane.toFront();
       }
 
    }
@@ -383,16 +411,22 @@ public class FileManagerViewController {
                event.consume();
                String path = this.currentPathCombo.getValue().toString();
                String name = ((StringProperty)((List)row.getItem()).get(0)).getValue().toString();
+               String size = ((StringProperty)((List)row.getItem()).get(1)).getValue().toString();
                String type = ((StringProperty)((List)row.getItem()).get(3)).getValue().toString();
                if (!path.endsWith("/")) {
                   path = path + "/";
                }
 
                if (type.equals("file")) {
+                  if (Long.parseLong(size) > 2097152L) {
+                     Optional result = Utils.showConfirmMessage("确认", "该文件大于2M，确认打开？");
+                     if (result.get() != ButtonType.OK) {
+                        return;
+                     }
+                  }
+
                   String fileName = path + name;
                   this.filePathText.setText(fileName);
-                  this.switchPane("content");
-                  this.fileContentTextArea.clear();
                   this.showFile(fileName, (String)null);
                } else if (type.equals("directory")) {
                   this.expandByPath(path + name);
@@ -403,7 +437,7 @@ public class FileManagerViewController {
          return row;
       });
       this.fileNameCol.setCellFactory((column) -> {
-         return new TableCell<Object,String>() {
+         return new TableCell() {
             public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                if (item == null | empty) {
@@ -430,15 +464,15 @@ public class FileManagerViewController {
                         String fileType = Utils.getFileType(name);
                         Image icon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/" + fileType + ".png")));
                         ImageView iconViewx = new ImageView(icon);
-                        iconViewx.setFitHeight(16.0D);
-                        iconViewx.setFitWidth(16.0D);
+                        iconViewx.setFitHeight(16.0);
+                        iconViewx.setFitWidth(16.0);
                         this.setGraphic(iconViewx);
                      } catch (Exception var9) {
                         try {
-                           Image iconxx = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/.png")));
+                           Image iconxx = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/unknown.png")));
                            ImageView iconView = new ImageView(iconxx);
-                           iconView.setFitHeight(16.0D);
-                           iconView.setFitWidth(16.0D);
+                           iconView.setFitHeight(16.0);
+                           iconView.setFitWidth(16.0);
                            this.setGraphic(iconView);
                         } catch (Exception var8) {
                         }
@@ -452,7 +486,7 @@ public class FileManagerViewController {
          };
       });
       this.filePermCol.setCellFactory((column) -> {
-         return new TableCell<Object,String>() {
+         return new TableCell() {
             public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                this.setText(item);
@@ -526,20 +560,34 @@ public class FileManagerViewController {
       }
 
       currentTreeItem.setExpanded(true);
-      this.dirTree.getSelectionModel().select(currentTreeItem);
    }
 
    private TreeItem findTreeItem(TreeItem treeItem, String text) {
       ObservableList childItemList = treeItem.getChildren();
       Iterator var4 = childItemList.iterator();
 
-      Object childItem;
+      TreeItem childItem = null;
       do {
          if (!var4.hasNext()) {
+            if (treeItem.getParent() == null) {
+               Image icon = null;
+
+               try {
+                  icon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/drive.png")));
+               } catch (Exception var6) {
+                  var6.printStackTrace();
+               }
+
+               childItem = new TreeItem(text, new ImageView(icon));
+               childItem.getGraphic().setUserData("directory");
+               treeItem.getChildren().add(childItem);
+               return childItem;
+            }
+
             return null;
          }
 
-         childItem = var4.next();
+         childItem = (TreeItem)var4.next();
       } while(!((TreeItem)childItem).getValue().toString().equals(text));
 
       return (TreeItem)childItem;
@@ -638,26 +686,70 @@ public class FileManagerViewController {
       workThrad.start();
    }
 
+   private boolean isImage(String fileType) {
+      String[] var2 = Constants.IMAGE_EXT_ARRAY;
+      int var3 = var2.length;
+
+      for(int var4 = 0; var4 < var3; ++var4) {
+         String type = var2[var4];
+         if (fileType.equals(type)) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   private void fillFileContent(String fileType, byte[] content, String charset) {
+      if (this.isImage(fileType)) {
+         this.switchContentPane("image");
+         Image image = new Image(new ByteArrayInputStream(content));
+         this.fileContentImageView.setImage(image);
+         this.fileContentImageView.setPreserveRatio(true);
+         this.fileContentImageView.fitWidthProperty().bind(this.fileContentImageViewContainer.widthProperty());
+         this.fileContentImageView.fitHeightProperty().bind(this.fileContentImageViewContainer.heightProperty());
+      } else {
+         this.fillFileContentWebview("");
+         this.switchContentPane("code");
+
+         try {
+            this.fillFileContentWebview(new String(content, charset == null ? "UTF-8" : charset));
+         } catch (UnsupportedEncodingException var5) {
+            var5.printStackTrace();
+         }
+      }
+
+   }
+
    private void showFile(String filePath, String charset) {
       this.statusLabel.setText("正在加载文件内容……");
       this.switchPane("content");
-      this.fileContentTextArea.clear();
+      this.fileContentWebview.toFront();
+      this.switchContentPane("code");
       Runnable runner = () -> {
          try {
             JSONObject resultObj = this.currentShellService.showFile(filePath, charset);
             String status = resultObj.getString("status");
             String msg = resultObj.getString("msg");
-            Platform.runLater(() -> {
-               if (status.equals("fail")) {
+            if (status.equals("fail")) {
+               Platform.runLater(() -> {
                   this.statusLabel.setText("文件打开失败:" + msg);
-               } else {
-                  this.fileContentTextArea.setText(msg);
-                  this.statusLabel.setText("文件内容加载成功。");
-               }
+               });
+               return;
+            }
+
+            System.out.println(resultObj);
+            byte[] fileContentBytes = Base64.getDecoder().decode(msg);
+            Platform.runLater(() -> {
+               String fileType = Utils.getFileType(filePath);
+               this.fillFileContent(fileType, fileContentBytes, charset);
+               this.statusLabel.setText("文件内容加载成功。");
             });
-         } catch (Exception var6) {
-            this.statusLabel.setText("操作失败:" + var6.getMessage());
-            var6.printStackTrace();
+         } catch (Exception var7) {
+            Platform.runLater(() -> {
+               this.statusLabel.setText("操作失败:" + var7.getMessage());
+            });
+            var7.printStackTrace();
          }
 
       };
@@ -669,58 +761,91 @@ public class FileManagerViewController {
    private void loadContextMenu() {
       ContextMenu cm = new ContextMenu();
       MenuItem refreshBtn = new MenuItem("刷新");
+      refreshBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.REFRESH));
       cm.getItems().add(refreshBtn);
       MenuItem openBtn = new MenuItem("打开");
+      openBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FOLDER_OPEN));
       cm.getItems().add(openBtn);
       MenuItem renameBtn = new MenuItem("重命名");
-      cm.getItems().add(renameBtn);
+      renameBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.EXCHANGE));
+      if (!this.effectShellEntity.getString("type").equals("asp")) {
+         cm.getItems().add(renameBtn);
+      }
+
+      MenuItem compressBtn = new MenuItem("打包压缩");
+      compressBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FILE_ZIP_ALT));
+      if (!this.effectShellEntity.getString("type").equals("asp")) {
+         cm.getItems().add(compressBtn);
+      }
+
       MenuItem delBtn = new MenuItem("删除");
+      delBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.REMOVE));
       cm.getItems().add(delBtn);
       cm.getItems().add(new SeparatorMenuItem());
       MenuItem downloadBtn = new MenuItem("下载");
+      downloadBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.DOWNLOAD));
       cm.getItems().add(downloadBtn);
       MenuItem uploadBtn = new MenuItem("上传");
+      uploadBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.UPLOAD));
       cm.getItems().add(uploadBtn);
       Menu createMenu = new Menu("新建");
+      createMenu.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.PLUS_SQUARE));
       MenuItem createFileBtn = new MenuItem("文件...");
+      createFileBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FILE_ALT));
       createFileBtn.setOnAction((event) -> {
          this.filePathText.setText(this.currentPathCombo.getValue() + "new.txt");
-         this.fileContentTextArea.clear();
+         this.editor.call("setValue", new Object[]{""});
          this.switchPane("content");
+         this.switchContentPane("code");
       });
       MenuItem createDirectoryBtn = new MenuItem("文件夹");
+      createDirectoryBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FOLDER_ALT));
       createDirectoryBtn.setOnAction((event) -> {
          this.createDirectory();
       });
       createMenu.getItems().add(createFileBtn);
       createMenu.getItems().add(createDirectoryBtn);
       cm.getItems().add(createMenu);
-      cm.getItems().add(new SeparatorMenuItem());
       MenuItem changeTimeStampBtn = new MenuItem("修改时间戳");
-      cm.getItems().add(changeTimeStampBtn);
+      changeTimeStampBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.CLOCK_ALT));
+      if (!this.effectShellEntity.getString("type").equals("asp")) {
+         cm.getItems().add(new SeparatorMenuItem());
+         cm.getItems().add(changeTimeStampBtn);
+      }
+
       changeTimeStampBtn.setOnAction((event) -> {
          this.showChangeTimeStamp();
       });
       MenuItem cloneTimeStampBtn = new MenuItem("克隆时间戳");
-      cm.getItems().add(cloneTimeStampBtn);
+      cloneTimeStampBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.CLONE));
       this.fileListTableView.setContextMenu(cm);
       openBtn.setOnAction((event) -> {
-         String type = ((StringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(3)).getValue();
-         String name = ((StringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
-         String pathString = this.currentPathCombo.getValue().toString();
-         pathString = Paths.get(pathString).normalize().toString();
-         if (!pathString.endsWith("/")) {
-            pathString = pathString + "/";
-         }
+         List selectedRow = this.getSelectedRow();
+         if (selectedRow != null) {
+            String type = ((StringProperty)selectedRow.get(3)).getValue();
+            String name = ((StringProperty)selectedRow.get(0)).getValue();
+            String size = ((StringProperty)selectedRow.get(1)).getValue();
+            if (Long.parseLong(size) > 2097152L) {
+               Optional result = Utils.showConfirmMessage("确认", "该文件大于2M，确认打开？");
+               if (result.get() != ButtonType.OK) {
+                  return;
+               }
+            }
 
-         pathString = pathString + name;
-         if (type.equals("directory")) {
-            this.expandByPath(pathString);
-         } else {
-            this.filePathText.setText(pathString);
-            this.showFile(pathString, (String)null);
-         }
+            String pathString = this.currentPathCombo.getValue().toString();
+            if (!pathString.endsWith("/")) {
+               pathString = pathString + "/";
+            }
 
+            pathString = pathString + name;
+            if (type.equals("directory")) {
+               this.expandByPath(pathString);
+            } else {
+               this.filePathText.setText(pathString);
+               this.showFile(pathString, (String)null);
+            }
+
+         }
       });
       refreshBtn.setOnAction((event) -> {
          this.statusLabel.setText("正在刷新……");
@@ -728,33 +853,35 @@ public class FileManagerViewController {
          this.statusLabel.setText("刷新完成。");
       });
       renameBtn.setOnAction((event) -> {
-         int row = this.fileListTableView.getSelectionModel().getSelectedIndex();
-         String oldFileName = ((StringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
-         Alert confirmDialog = new Alert(AlertType.NONE);
-         confirmDialog.setResizable(true);
-         confirmDialog.setHeaderText("");
-         confirmDialog.setTitle("重命名");
-         Window window = confirmDialog.getDialogPane().getScene().getWindow();
-         window.setOnCloseRequest((e) -> {
-            window.hide();
-         });
-         HBox panel = new HBox();
-         Label renameLabel = new Label("重命名：");
-         renameLabel.setAlignment(Pos.BASELINE_CENTER);
-         TextField renameTxt = new TextField(oldFileName);
-         renameTxt.setPrefWidth(300.0D);
-         panel.getChildren().addAll(new Node[]{renameLabel, renameTxt});
-         confirmDialog.getDialogPane().setContent(panel);
-         renameTxt.selectAll();
-         renameTxt.setOnKeyPressed((keyEvent) -> {
-            if (keyEvent.getCode() == KeyCode.ENTER) {
-               String newFileName = renameTxt.getText();
-               this.rename(oldFileName, newFileName);
-               confirmDialog.getDialogPane().getScene().getWindow().hide();
-            }
+         List selectedRow = this.getSelectedRow();
+         if (selectedRow != null) {
+            String oldFileName = ((StringProperty)selectedRow.get(0)).getValue();
+            Alert confirmDialog = new Alert(AlertType.NONE);
+            confirmDialog.setResizable(true);
+            confirmDialog.setHeaderText("");
+            confirmDialog.setTitle("重命名");
+            Window window = confirmDialog.getDialogPane().getScene().getWindow();
+            window.setOnCloseRequest((e) -> {
+               window.hide();
+            });
+            HBox panel = new HBox();
+            Label renameLabel = new Label("重命名：");
+            renameLabel.setAlignment(Pos.BASELINE_CENTER);
+            TextField renameTxt = new TextField(oldFileName);
+            renameTxt.setPrefWidth(300.0);
+            panel.getChildren().addAll(new Node[]{renameLabel, renameTxt});
+            confirmDialog.getDialogPane().setContent(panel);
+            renameTxt.selectAll();
+            renameTxt.setOnKeyPressed((keyEvent) -> {
+               if (keyEvent.getCode() == KeyCode.ENTER) {
+                  String newFileName = renameTxt.getText();
+                  this.rename(oldFileName, newFileName);
+                  confirmDialog.getDialogPane().getScene().getWindow().hide();
+               }
 
-         });
-         confirmDialog.showAndWait();
+            });
+            confirmDialog.showAndWait();
+         }
       });
       delBtn.setOnAction((event) -> {
          String name = ((StringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
@@ -795,6 +922,37 @@ public class FileManagerViewController {
          }
 
       });
+      compressBtn.setOnAction((event) -> {
+         List selectedRow = this.getSelectedRow();
+         if (selectedRow != null) {
+            String name = ((StringProperty)selectedRow.get(0)).getValue();
+            String fileFullPath = this.currentPathCombo.getValue().toString() + name;
+            Runnable runner = () -> {
+               try {
+                  JSONObject resultObj = this.currentShellService.compress(fileFullPath);
+                  String status = resultObj.getString("status");
+                  String msg = resultObj.getString("msg");
+                  Platform.runLater(() -> {
+                     if (status.equals("success")) {
+                        this.expandByPath(this.currentPathCombo.getValue().toString());
+                        this.statusLabel.setText("压缩完成");
+                     } else {
+                        this.statusLabel.setText(msg);
+                     }
+
+                  });
+               } catch (Exception var5) {
+                  Platform.runLater(() -> {
+                     this.statusLabel.setText("操作失败:" + var5.getMessage());
+                  });
+               }
+
+            };
+            Thread workThrad = new Thread(runner);
+            this.workList.add(workThrad);
+            workThrad.start();
+         }
+      });
       uploadBtn.setOnAction((event) -> {
          try {
             this.uploadFile();
@@ -820,7 +978,7 @@ public class FileManagerViewController {
       HBox hBox = new HBox();
       Label newDirectoryLabel = new Label("新建目录名称：");
       TextField newDirectoryTxt = new TextField("新建文件夹");
-      newDirectoryTxt.setPrefWidth(300.0D);
+      newDirectoryTxt.setPrefWidth(300.0);
       newDirectoryTxt.setOnKeyPressed((keyEvent) -> {
          if (keyEvent.getCode() == KeyCode.ENTER) {
             inputDialog.getDialogPane().getScene().getWindow().hide();
@@ -892,112 +1050,145 @@ public class FileManagerViewController {
    }
 
    private void showChangeTimeStamp() {
-      Alert inputDialog = new Alert(AlertType.NONE);
-      inputDialog.setResizable(true);
-      inputDialog.setHeaderText("");
-      inputDialog.setTitle("修改时间戳");
-      Window window = inputDialog.getDialogPane().getScene().getWindow();
-      window.setOnCloseRequest((e) -> {
-         window.hide();
-      });
-      String currentPath = this.currentPathCombo.getValue().toString();
-      String name = ((StringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
-      String filePath = currentPath + name;
-      GridPane panel = new GridPane();
-      panel.setPadding(new Insets(20.0D, 10.0D, 0.0D, 10.0D));
-      panel.setHgap(20.0D);
-      panel.setVgap(10.0D);
-      Label fileNameLabel = new Label("文件：");
-      fileNameLabel.setAlignment(Pos.CENTER_RIGHT);
-      Label fileNameTxtLabel = new Label(name);
-      Label createTimeLabel = new Label("创建时间：");
-      TextField createTimeTxt = new TextField();
-      Label accessTimeLabel = new Label("访问时间：");
-      TextField accessTimeTxt = new TextField();
-      Label modifyTimeLabel = new Label("修改时间：");
-      TextField modifyTimeTxt = new TextField();
-      HBox buttonBox = new HBox();
-      Button saveBtn = new Button("保存");
-      saveBtn.setOnAction((event) -> {
-         this.doChangeTimeStamp(filePath, createTimeTxt.getText(), accessTimeTxt.getText(), modifyTimeTxt.getText());
-         inputDialog.getDialogPane().getScene().getWindow().hide();
-      });
-      Button cancelBtn = new Button("取消");
-      cancelBtn.setOnAction((event) -> {
-         inputDialog.getDialogPane().getScene().getWindow().hide();
-      });
-      buttonBox.setSpacing(20.0D);
-      buttonBox.setAlignment(Pos.CENTER);
-      buttonBox.getChildren().addAll(new Node[]{saveBtn, cancelBtn});
-      panel.add(fileNameLabel, 0, 0);
-      panel.add(fileNameTxtLabel, 1, 0);
-      panel.add(createTimeLabel, 0, 1);
-      panel.add(createTimeTxt, 1, 1);
-      panel.add(modifyTimeLabel, 0, 2);
-      panel.add(modifyTimeTxt, 1, 2);
-      panel.add(accessTimeLabel, 0, 3);
-      panel.add(accessTimeTxt, 1, 3);
-      panel.add(buttonBox, 0, 4, 2, 1);
-      inputDialog.getDialogPane().setContent(panel);
-      inputDialog.show();
-      Runnable runner = () -> {
-         try {
-            JSONObject resultObj = this.currentShellService.getTimeStamp(filePath);
-            String status = resultObj.getString("status");
-            String msg = resultObj.getString("msg");
-            Platform.runLater(() -> {
-               if (status.equals("fail")) {
-                  this.statusLabel.setText(msg);
-               } else {
-                  JSONObject timeStampObj = new JSONObject(msg);
-                  String createTimeStamp = new String(Base64.getDecoder().decode(timeStampObj.getString("createTime")));
-                  String accessTimeStamp = new String(Base64.getDecoder().decode(timeStampObj.getString("lastAccessTime")));
-                  String modifyTimeStamp = new String(Base64.getDecoder().decode(timeStampObj.getString("lastModifiedTime")));
-                  createTimeTxt.setText(createTimeStamp);
-                  accessTimeTxt.setText(accessTimeStamp);
-                  modifyTimeTxt.setText(modifyTimeStamp);
-               }
-            });
-         } catch (Exception var8) {
-            Platform.runLater(() -> {
-               this.statusLabel.setText("操作失败:" + var8.getMessage());
-            });
-         }
-
-      };
-      Thread workThrad = new Thread(runner);
-      this.workList.add(workThrad);
-      workThrad.start();
-   }
-
-   private void downloadFile() {
-      String fileName = ((StringProperty)((List)this.fileListTableView.getSelectionModel().getSelectedItem()).get(0)).getValue();
-      String fileFullPath = this.currentPathCombo.getValue().toString() + fileName;
-      FileChooser fileChooser = new FileChooser();
-      fileChooser.setTitle("请选择保存路径");
-      fileChooser.setInitialFileName(fileName);
-      File selectedFile = fileChooser.showSaveDialog(this.fileListGridPane.getScene().getWindow());
-      if (selectedFile != null) {
-         String localFilePath = selectedFile.getAbsolutePath();
-         this.statusLabel.setText("正在下载" + fileFullPath + "……");
+      List selectedRow = this.getSelectedRow();
+      if (selectedRow != null) {
+         Alert inputDialog = Utils.getAlert(AlertType.NONE);
+         String currentPath = this.currentPathCombo.getValue().toString();
+         String name = ((StringProperty)selectedRow.get(0)).getValue();
+         String filePath = currentPath + name;
+         GridPane panel = new GridPane();
+         panel.setPadding(new Insets(20.0, 10.0, 0.0, 10.0));
+         panel.setHgap(20.0);
+         panel.setVgap(10.0);
+         Label fileNameLabel = new Label("文件：");
+         fileNameLabel.setAlignment(Pos.CENTER_RIGHT);
+         Label fileNameTxtLabel = new Label(name);
+         Label createTimeLabel = new Label("创建时间：");
+         TextField createTimeTxt = new TextField();
+         Label accessTimeLabel = new Label("访问时间：");
+         TextField accessTimeTxt = new TextField();
+         Label modifyTimeLabel = new Label("修改时间：");
+         TextField modifyTimeTxt = new TextField();
+         HBox buttonBox = new HBox();
+         Button saveBtn = new Button("保存");
+         saveBtn.setOnAction((event) -> {
+            this.doChangeTimeStamp(filePath, createTimeTxt.getText(), accessTimeTxt.getText(), modifyTimeTxt.getText());
+            inputDialog.getDialogPane().getScene().getWindow().hide();
+         });
+         Button cancelBtn = new Button("取消");
+         cancelBtn.setOnAction((event) -> {
+            inputDialog.getDialogPane().getScene().getWindow().hide();
+         });
+         buttonBox.setSpacing(20.0);
+         buttonBox.setAlignment(Pos.CENTER);
+         buttonBox.getChildren().addAll(new Node[]{saveBtn, cancelBtn});
+         panel.add(fileNameLabel, 0, 0);
+         panel.add(fileNameTxtLabel, 1, 0);
+         panel.add(createTimeLabel, 0, 1);
+         panel.add(createTimeTxt, 1, 1);
+         panel.add(modifyTimeLabel, 0, 2);
+         panel.add(modifyTimeTxt, 1, 2);
+         panel.add(accessTimeLabel, 0, 3);
+         panel.add(accessTimeTxt, 1, 3);
+         panel.add(buttonBox, 0, 4, 2, 1);
+         inputDialog.getDialogPane().setContent(panel);
+         inputDialog.show();
          Runnable runner = () -> {
             try {
-               this.currentShellService.downloadFile(fileFullPath, localFilePath);
-               String result = selectedFile.getName() + "下载完成,文件大小:" + selectedFile.length();
+               JSONObject resultObj = this.currentShellService.getTimeStamp(filePath);
+               String status = resultObj.getString("status");
+               String msg = resultObj.getString("msg");
                Platform.runLater(() -> {
-                  this.statusLabel.setText(result);
+                  if (status.equals("fail")) {
+                     this.statusLabel.setText(msg);
+                  } else {
+                     JSONObject timeStampObj = new JSONObject(msg);
+                     String createTimeStamp = new String(Base64.getDecoder().decode(timeStampObj.getString("createTime")));
+                     String accessTimeStamp = new String(Base64.getDecoder().decode(timeStampObj.getString("lastAccessTime")));
+                     String modifyTimeStamp = new String(Base64.getDecoder().decode(timeStampObj.getString("lastModifiedTime")));
+                     createTimeTxt.setText(createTimeStamp);
+                     accessTimeTxt.setText(accessTimeStamp);
+                     modifyTimeTxt.setText(modifyTimeStamp);
+                  }
                });
-            } catch (Exception var5) {
+            } catch (Exception var8) {
                Platform.runLater(() -> {
-                  this.statusLabel.setText("操作失败:" + var5.getMessage());
+                  this.statusLabel.setText("操作失败:" + var8.getMessage());
                });
-               var5.printStackTrace();
             }
 
          };
          Thread workThrad = new Thread(runner);
          this.workList.add(workThrad);
          workThrad.start();
+      }
+   }
+
+   private void fillFileContentWebview(String content) {
+      this.editor.call("setValue", new Object[]{content});
+   }
+
+   private void initFileContentWebview() {
+      WebEngine webEngine = this.fileContentWebview.getEngine();
+      webEngine.load(this.getClass().getResource("/net/rebeyond/behinder/resource/codeEditor/editor_aspx.html").toExternalForm());
+      webEngine.setOnAlert((event) -> {
+         Utils.setClipboardString((String)event.getData());
+      });
+      webEngine.documentProperty().addListener((observable, oldValue, newValue) -> {
+         if (newValue != null) {
+            this.editor = (JSObject)webEngine.executeScript("window.editor");
+         }
+      });
+   }
+
+   private List getSelectedRow() {
+      List selectedRow = (List)this.fileListTableView.getSelectionModel().getSelectedItem();
+      return selectedRow;
+   }
+
+   private void downloadFile() {
+      List selectedRow = this.getSelectedRow();
+      if (selectedRow != null) {
+         String fileName = ((StringProperty)selectedRow.get(0)).getValue();
+         long fileSize = Long.parseLong(((StringProperty)selectedRow.get(1)).getValue());
+         final String fileFullPath = this.currentPathCombo.getValue().toString() + fileName;
+         FileChooser fileChooser = new FileChooser();
+         fileChooser.setTitle("请选择保存路径");
+         fileChooser.setInitialFileName(fileName);
+         File selectedFile = fileChooser.showSaveDialog(this.fileListGridPane.getScene().getWindow());
+         if (selectedFile != null) {
+            String localFilePath = selectedFile.getAbsolutePath();
+            this.statusLabel.setText("正在下载" + fileFullPath + "……");
+            ICallBack downloadCallBack = new ICallBack() {
+               public void onSuccess(String status, String message) {
+                  Platform.runLater(() -> {
+                     FileManagerViewController.this.statusLabel.setText(String.format("(%s)正在下载%s……", message, fileFullPath));
+                  });
+               }
+
+               public void onFail(String message) {
+               }
+            };
+            Runnable runner = () -> {
+               try {
+                  this.fileService.downloadFile(localFilePath, fileFullPath, fileSize, downloadCallBack);
+                  boolean isAsp = this.effectShellEntity.getString("type").equals("asp");
+                  String result = selectedFile.getName() + (isAsp ? "下载完成，文件大小:" : "下载完成，哈希校验通过，文件大小:") + selectedFile.length();
+                  Platform.runLater(() -> {
+                     this.statusLabel.setText(result);
+                  });
+               } catch (Exception var9) {
+                  Platform.runLater(() -> {
+                     this.statusLabel.setText("操作失败:" + var9.getMessage());
+                  });
+                  var9.printStackTrace();
+               }
+
+            };
+            Thread workThrad = new Thread(runner);
+            this.workList.add(workThrad);
+            workThrad.start();
+         }
       }
    }
 }

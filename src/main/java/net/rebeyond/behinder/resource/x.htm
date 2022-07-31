@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
+  <script src="node_modules/xterm/lib/xterm.js"></script>
+  <script src="node_modules/xterm/lib/xterm-addon-fit.js"></script>
+</head>
+<style>
+  #terminal{
+  position: fixed;
+  left:2px;
+  top:2px;
+  right: 2px;
+  bottom: 0px;
+
+  }
+  .xterm
+  {
+    padding: 5px;
+  }
+  </style>
+<body>
+<div id="terminal"></div>
+<script>
+window.addEventListener('load', function(event)
+{
+var term = new Terminal({
+      rendererType: "dom", //渲染类型
+      fontWeight:'bold',
+      fontSize:14,
+      theme: {
+          foreground: "#00ff00", //字体
+          //background: "#000000", //背景色
+          fontWeight:'bold',
+          cursor: "help", //设置光标
+          lineHeight: 20
+        }
+    });
+    var fitAddon = new  FitAddon.FitAddon();;
+    term.loadAddon(fitAddon);
+      window.term=term;
+      term.open(document.getElementById('terminal'));
+            term.onData(function(val){
+      window.app.receive(val);
+      });
+      fitAddon.fit();
+
+     window.addEventListener("resize", resizeScreen)
+      function resizeScreen() {
+        try { // 窗口大小改变时，触发xterm的resize方法使自适应
+          fitAddon.fit()
+        } catch (e) {
+          console.log("e", e.message)
+        }
+      }
+});
+
+  </script>
+</body>
+
+</html>

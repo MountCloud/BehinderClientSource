@@ -17,12 +17,12 @@
                     <RowConstraints minHeight="10.0" percentHeight="75.00" prefHeight="30.0" vgrow="SOMETIMES" />
                 </rowConstraints>
                 <children>
-                    <GridPane GridPane.columnSpan="2">
+                    <GridPane fx:id="databaseGridPane" GridPane.columnSpan="2">
                         <columnConstraints>
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="15.00" prefWidth="100.0" />
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
-                            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="55.00" prefWidth="100.0" />
+                            <ColumnConstraints minWidth="10.0" percentWidth="55.00" prefWidth="100.0" />
                             <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
                         </columnConstraints>
                         <rowConstraints>
@@ -32,7 +32,7 @@
                             <ComboBox fx:id="databaseTypeCombo" prefWidth="150.0" promptText="请选择……" GridPane.columnIndex="1" GridPane.halignment="CENTER" />
                             <Label text="数据库类型：" GridPane.halignment="RIGHT" />
                             <Label text="连接字符串：" GridPane.columnIndex="2" GridPane.halignment="RIGHT" />
-                            <TextField fx:id="connStrText" promptText="连接密码中如有特殊字符可将密码进行URL编码" GridPane.columnIndex="3" />
+                            <!--<ComboBox fx:id="connStrCombo" editable="true" promptText="连接密码中如有特殊字符可将密码进行URL编码" maxWidth="1.7976931348623157E308" GridPane.columnIndex="3" />-->
                             <Button fx:id="connectBtn" mnemonicParsing="false" text="连接" GridPane.columnIndex="4" GridPane.halignment="CENTER" />
                         </children>
                     </GridPane>

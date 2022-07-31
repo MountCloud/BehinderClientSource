@@ -16,6 +16,7 @@ public class PluginTools {
    private WebView pluginWebview;
    private JSONObject shellEntity;
    private Map taskMap = new HashMap();
+   private String PluginBasePath = "d:/tmp/Plugins/";
    private List workList;
 
    public PluginTools(ShellService shellService, WebView pluginWebview, Label statusLabel, List workList) {
@@ -39,7 +40,11 @@ public class PluginTools {
          type = "java";
       }
 
-      String payloadPath = String.format("/Users/rebeyond/Documents/Behinder/plugin/%s/payload/%s.payload", pluginName, type);
+      if (type.equals("aspx")) {
+         type = "dll";
+      }
+
+      String payloadPath = String.format(this.PluginBasePath + "/%s/payload/%s.payload", pluginName, type);
       JSONObject paramObj = new JSONObject(paramStr);
       Map params = Utils.jsonToMap(paramObj);
       params.put("taskID", pluginName);
@@ -53,8 +58,54 @@ public class PluginTools {
                this.statusLabel.setText(msg);
             });
          } catch (Exception var7) {
+            var7.printStackTrace();
             Platform.runLater(() -> {
                this.statusLabel.setText("插件运行失败");
+            });
+         }
+
+      };
+      Thread workThrad = new Thread(runner);
+      this.workList.add(workThrad);
+      workThrad.start();
+   }
+
+   public void execTask(String pluginName, String paramStr) throws Exception {
+      String type = this.shellEntity.getString("type");
+      if (type.equals("jsp")) {
+         type = "java";
+      }
+
+      String payloadPath = String.format(this.PluginBasePath + "/%s/payload/%s.payload", pluginName, type);
+      JSONObject paramObj = new JSONObject(paramStr);
+      Map params = Utils.jsonToMap(paramObj);
+      params.put("taskID", pluginName);
+      this.statusLabel.setText("正在执行插件……");
+      Runnable runner = () -> {
+         try {
+            JSONObject resultObj = this.currentShellService.submitPluginTask(pluginName, payloadPath, params);
+            String status = resultObj.getString("status");
+            String msg = resultObj.getString("msg");
+            if (!status.equals("success")) {
+               throw new Exception(msg);
+            }
+
+            Platform.runLater(() -> {
+               this.statusLabel.setText("插件执行成功。");
+            });
+            JSONObject msgObj = new JSONObject(msg);
+            String pluginResult = new String(Base64.getDecoder().decode(msgObj.getString("result")), "UTF-8");
+            String pluginRunning = new String(Base64.getDecoder().decode(msgObj.getString("running")), "UTF-8");
+
+            try {
+               this.pluginWebview.getEngine().executeScript(String.format("onResult('%s','%s','%s')", status, pluginResult, pluginRunning));
+            } catch (Exception var11) {
+               this.statusLabel.setText("结果刷新成功，但是插件解析结果失败，请检查插件:" + var11.getMessage());
+            }
+         } catch (Exception var12) {
+            var12.printStackTrace();
+            Platform.runLater(() -> {
+               this.statusLabel.setText("插件运行失败：" + var12.getMessage());
             });
          }
 
@@ -80,6 +131,7 @@ public class PluginTools {
             callBack.onPluginSubmit(status, msg);
          } catch (Exception var8) {
             callBack.onPluginSubmit("fail", var8.getMessage());
+            var8.printStackTrace();
          }
 
       };
@@ -107,7 +159,7 @@ public class PluginTools {
             String msg = resultObj.getString("msg");
             JSONObject msgObj = new JSONObject(msg);
             String pluginResult = new String(Base64.getDecoder().decode(msgObj.getString("result")), "UTF-8");
-            String pluginRunning = msgObj.getString("running");
+            String pluginRunning = new String(Base64.getDecoder().decode(msgObj.getString("running")), "UTF-8");
             Platform.runLater(() -> {
                if (status.equals("success")) {
                   this.statusLabel.setText("结果刷新成功");
@@ -116,6 +168,7 @@ public class PluginTools {
                      this.pluginWebview.getEngine().executeScript(String.format("onResult('%s','%s','%s')", status, pluginResult, pluginRunning));
                   } catch (Exception var5) {
                      this.statusLabel.setText("结果刷新成功，但是插件解析结果失败，请检查插件:" + var5.getMessage());
+                     var5.printStackTrace();
                   }
                } else {
                   this.statusLabel.setText("结果刷新失败");
@@ -126,6 +179,7 @@ public class PluginTools {
             Platform.runLater(() -> {
                this.statusLabel.setText("结果刷新失败:" + var8.getMessage());
             });
+            var8.printStackTrace();
          }
 
       };
@@ -152,6 +206,7 @@ public class PluginTools {
             }
          } catch (Exception var10) {
             callBack.onPluginResult("fail", var10.getMessage(), "false");
+            var10.printStackTrace();
          }
 
       };

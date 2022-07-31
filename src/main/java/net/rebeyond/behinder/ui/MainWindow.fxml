@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 
+<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.web.*?>
-
-<GridPane fx:id="mainGridPane" prefHeight="800" prefWidth="1000.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.MainWindowController">
+<?import javafx.scene.web.WebView?>
+<GridPane fx:id="mainGridPane" prefHeight="800" prefWidth="1300.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.MainWindowController">
    <columnConstraints>
       <ColumnConstraints hgrow="SOMETIMES" minWidth="500.0" />
       <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" percentWidth="10.00" prefWidth="100.0" />
@@ -123,13 +123,18 @@
                </GridPane.margin></Label>
             <HBox alignment="CENTER_RIGHT" fillHeight="false" prefWidth="200.0" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.valignment="BOTTOM">
                <children>
+                       <Label text=" " fx:id="taskCenterLabel">
+                           <graphic>
+                               <FontAwesomeIconView glyphName="TASKS" glyphSize="16"/>
+                           </graphic>
+                       </Label>
                   <Separator orientation="VERTICAL" prefHeight="20.0" />
                   <Label fx:id="versionLabel" text="冰蝎 %s">
                      <padding>
                         <Insets right="5.0" />
                      </padding></Label>
                   <Separator orientation="VERTICAL" prefHeight="20.0" />
-                  <Label fx:id="authorLabel" text="By rebeyond">
+                  <Label fx:id="authorLabel">
                      <padding>
                         <Insets right="10.0" />
                      </padding></Label>

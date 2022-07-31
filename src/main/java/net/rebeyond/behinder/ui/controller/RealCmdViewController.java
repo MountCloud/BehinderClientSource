@@ -11,13 +11,18 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import net.rebeyond.behinder.core.Constants;
-import net.rebeyond.behinder.core.ShellService;
+import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.ShellManager;
 import net.rebeyond.behinder.utils.Utils;
 import netscape.javascript.JSObject;
@@ -29,7 +34,7 @@ public class RealCmdViewController {
    private TextField shellPathText;
    @FXML
    private Button realCmdBtn;
-   private ShellService currentShellService;
+   private IShellService currentShellService;
    private JSONObject shellEntity;
    private List workList;
    private List cmdWorkList = new ArrayList();
@@ -46,7 +51,7 @@ public class RealCmdViewController {
       this.running = Constants.REALCMD_STOPPED;
    }
 
-   public void init(ShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
+   public void init(IShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
       this.currentShellService = shellService;
       this.shellEntity = shellService.getShellEntity();
       this.basicInfoMap = basicInfoMap;
@@ -59,6 +64,11 @@ public class RealCmdViewController {
       if (this.running != Constants.REALCMD_RUNNING) {
          this.statusLabel.setText("虚拟终端已停止，请先启动虚拟终端.");
       } else {
+         String osInfo = (String)this.basicInfoMap.get("osInfo");
+         if (Utils.getOSType(osInfo) == Constants.OS_TYPE_WINDOWS && input.getBytes()[0] == 127) {
+            input = "\b \b";
+         }
+
          this.commandQueue.offer(input);
       }
    }
@@ -88,34 +98,47 @@ public class RealCmdViewController {
                      String commandToExecute = (String)this.commandQueue.poll(10000L, TimeUnit.MILLISECONDS);
                      if (commandToExecute != null) {
                         String osInfo = (String)this.basicInfoMap.get("osInfo");
-                        if (osInfo.indexOf("windows") < 0 && osInfo.indexOf("winnt") < 0) {
-                           if (commandToExecute.charAt(commandToExecute.length() - 1) == '\r' || commandToExecute.charAt(commandToExecute.length() - 1) == '\n') {
-                              commandToExecute = commandToExecute.replace('\n', '\r');
-                           }
-                        } else {
+                        if (Utils.getOSType(osInfo) == Constants.OS_TYPE_WINDOWS) {
                            if (commandToExecute.charAt(commandToExecute.length() - 1) != '\r' && commandToExecute.charAt(commandToExecute.length() - 1) != '\n') {
-                              windowsCommondBuf.append(commandToExecute);
-                              final String finalCommandToExecute = commandToExecute;
+                              int delIndex = commandToExecute.indexOf("\b \b");
+                              if (delIndex == 0) {
+                                 windowsCommondBuf.setLength(windowsCommondBuf.length() - 1);
+                                 if (commandToExecute.length() > 2) {
+                                    windowsCommondBuf.append(commandToExecute.substring(3));
+                                 }
+                              } else if (delIndex > 0) {
+                                 windowsCommondBuf.append(commandToExecute.substring(0, delIndex - 1) + commandToExecute.substring(delIndex + 3));
+                              } else {
+                                 windowsCommondBuf.append(commandToExecute);
+                              }
+
+                              String finalcommandToExecute = commandToExecute;
                               Platform.runLater(() -> {
-                                 this.write(finalCommandToExecute);
+                                 for(int i = 0; i < finalcommandToExecute.length(); ++i) {
+                                    System.out.println(finalcommandToExecute.getBytes()[i]);
+                                 }
+
+                                 this.write(finalcommandToExecute);
                               });
                               continue;
                            }
 
                            commandToExecute = commandToExecute.replace((new StringBuilder()).append('\r'), "" + '\r' + '\n');
                            windowsCommondBuf.append(commandToExecute);
-                           final String finalCommandToExecute = commandToExecute;
+                           String finalcommandToExecute = commandToExecute;
                            Platform.runLater(() -> {
-                              this.write(finalCommandToExecute);
+                              this.write(finalcommandToExecute);
                            });
                            commandToExecute = windowsCommondBuf.toString();
                            windowsCommondBuf.setLength(0);
+                        } else if (commandToExecute.charAt(commandToExecute.length() - 1) == '\r' || commandToExecute.charAt(commandToExecute.length() - 1) == '\n') {
+                           commandToExecute = commandToExecute.replace('\n', '\r');
                         }
 
                         this.currentShellService.writeRealCMD(commandToExecute);
                         this.immediatelyRead = true;
                      }
-                  } catch (Exception var5) {
+                  } catch (Exception var6) {
                   }
                }
             }
@@ -174,7 +197,6 @@ public class RealCmdViewController {
                      }
                   } catch (InterruptedException var6) {
                   } catch (Exception var7) {
-                     System.err.println(var7.getMessage());
                   }
                }
             }
@@ -196,7 +218,7 @@ public class RealCmdViewController {
             icon.setImage(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/stop.png"))));
          }
 
-         icon.setFitHeight(14.0D);
+         icon.setFitHeight(14.0);
          icon.setPreserveRatio(true);
          this.realCmdBtn.setGraphic(icon);
       } catch (Exception var3) {
@@ -218,7 +240,6 @@ public class RealCmdViewController {
             this.statusLabel.setText("正在启动虚拟终端……");
             this.initCmdQueue();
             this.createRealCmd();
-            this.initWorkers();
          } else {
             this.stopRealCmd();
             this.stopWorkers();
@@ -226,12 +247,16 @@ public class RealCmdViewController {
          }
 
       });
+      WebEngine webEngine = this.mywebview.getEngine();
       this.mywebview.setContextMenuEnabled(false);
-      this.mywebview.getEngine().getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
-         JSObject window = (JSObject)this.mywebview.getEngine().executeScript("window");
-         window.setMember("app", this.me);
+      this.createContextMenu(this.mywebview);
+      webEngine.documentProperty().addListener((observable, oldValue, newValue) -> {
+         if (newValue != null) {
+            JSObject window = (JSObject)webEngine.executeScript("window");
+            window.setMember("app", this.me);
+         }
       });
-      this.mywebview.getEngine().load(this.getClass().getResource("/net/rebeyond/behinder/resource/hterm.html").toExternalForm());
+      this.mywebview.getEngine().load(this.getClass().getResource("/net/rebeyond/behinder/resource/x.htm").toExternalForm());
    }
 
    private void initCmdQueue() {
@@ -249,12 +274,22 @@ public class RealCmdViewController {
       Utils.setClipboardString(text);
    }
 
+   private void pasteText() {
+      JSObject window = (JSObject)this.mywebview.getEngine().executeScript("window");
+      JSObject terminal = (JSObject)window.getMember("term");
+      terminal.call("paste", new Object[]{Utils.getClipboardString()});
+   }
+
    private void write(String text) {
       try {
          JSObject window = (JSObject)this.mywebview.getEngine().executeScript("window");
-         JSObject terminal = (JSObject)window.getMember("t");
-         JSObject htermIO = (JSObject)terminal.getMember("io");
-         htermIO.call("print", new Object[]{text});
+         JSObject terminal = (JSObject)window.getMember("term");
+         String osInfo = (String)this.basicInfoMap.get("osInfo");
+         if (Utils.getOSType(osInfo) != Constants.OS_TYPE_WINDOWS) {
+            text = text.replaceFirst("\r[^\n]", "\r\n");
+         }
+
+         terminal.call("write", new Object[]{text});
       } catch (Exception var5) {
       }
 
@@ -293,6 +328,7 @@ public class RealCmdViewController {
             Platform.runLater(() -> {
                if (status.equals("success")) {
                   this.statusLabel.setText("虚拟终端启动完成。");
+                  this.initWorkers();
                   this.mywebview.requestFocus();
                   this.realCmdBtn.setText("停止");
                   this.setBtnIcon("stop");
@@ -344,5 +380,31 @@ public class RealCmdViewController {
       Thread workThrad = new Thread(runner);
       this.workList.add(workThrad);
       workThrad.start();
+   }
+
+   private void createContextMenu(WebView webView) {
+      ContextMenu contextMenu = new ContextMenu();
+      MenuItem copyItem = new MenuItem("复制");
+      copyItem.setOnAction((e) -> {
+         this.copyText(webView.getEngine().executeScript("window.term.getSelection()").toString());
+      });
+      MenuItem pastItem = new MenuItem("粘贴");
+      pastItem.setOnAction((e) -> {
+         this.pasteText();
+      });
+      SeparatorMenuItem sep = new SeparatorMenuItem();
+      MenuItem reload = new MenuItem("清屏");
+      reload.setOnAction((e) -> {
+         webView.getEngine().reload();
+      });
+      contextMenu.getItems().addAll(new MenuItem[]{copyItem, pastItem, sep, reload});
+      webView.setOnMousePressed((e) -> {
+         if (e.getButton() == MouseButton.SECONDARY) {
+            contextMenu.show(webView, e.getScreenX(), e.getScreenY());
+         } else {
+            contextMenu.hide();
+         }
+
+      });
    }
 }

@@ -23,14 +23,7 @@ public class ShellManager {
 
    public ShellManager() throws Exception {
       DB_PATH = URLDecoder.decode(Utils.getSelfPath(), "UTF-8") + File.separator + DB_PATH;
-      DB_URL = "jdbc:sqlite:" + DB_PATH;
-      if (!(new File(DB_PATH)).exists()) {
-         throw new Exception("数据库文件丢失，无法启动。");
-      } else {
-         Class.forName("org.sqlite.JDBC");
-         this.connection = DriverManager.getConnection(DB_URL);
-         this.connection.setAutoCommit(true);
-      }
+      this.connection = DBClient.getConnection();
    }
 
    public ShellManager(String dbPath) throws Exception {
@@ -70,7 +63,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       statement.close();
@@ -93,7 +86,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       statement.close();
@@ -116,7 +109,77 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
+      }
+
+      statement.close();
+      return result;
+   }
+
+   public JSONArray getShellByUrl(String url) throws Exception {
+      JSONArray result = new JSONArray();
+      PreparedStatement statement = this.connection.prepareStatement("select * from shells where url = ?");
+      statement.setString(1, url);
+      ResultSet rs = statement.executeQuery();
+      ResultSetMetaData rsmd = rs.getMetaData();
+
+      while(rs.next()) {
+         int numColumns = rsmd.getColumnCount();
+         JSONObject obj = new JSONObject();
+
+         for(int i = 1; i <= numColumns; ++i) {
+            String column_name = rsmd.getColumnName(i);
+            obj.put(column_name, rs.getObject(column_name));
+         }
+
+         result.put(obj);
+      }
+
+      statement.close();
+      return result;
+   }
+
+   public JSONArray findShellByTransProtocolNameAndType(String transProtocolName, String type) throws Exception {
+      JSONArray result = new JSONArray();
+      PreparedStatement statement = this.connection.prepareStatement("select a.* from shells as a,TransProtocol as b  where a.transProtocolId =b.id and b.name=? and a.type=?");
+      statement.setString(1, transProtocolName);
+      statement.setString(2, type);
+      ResultSet rs = statement.executeQuery();
+      ResultSetMetaData rsmd = rs.getMetaData();
+
+      while(rs.next()) {
+         int numColumns = rsmd.getColumnCount();
+         JSONObject obj = new JSONObject();
+
+         for(int i = 1; i <= numColumns; ++i) {
+            String column_name = rsmd.getColumnName(i);
+            obj.put(column_name, rs.getObject(column_name));
+         }
+
+         result.put(obj);
+      }
+
+      statement.close();
+      return result;
+   }
+
+   public JSONArray findShellByType(String type) throws Exception {
+      JSONArray result = new JSONArray();
+      PreparedStatement statement = this.connection.prepareStatement("select * from shells where type=?");
+      statement.setString(1, type);
+      ResultSet rs = statement.executeQuery();
+      ResultSetMetaData rsmd = rs.getMetaData();
+
+      while(rs.next()) {
+         int numColumns = rsmd.getColumnCount();
+         JSONObject obj = new JSONObject();
+
+         for(int i = 1; i <= numColumns; ++i) {
+            String column_name = rsmd.getColumnName(i);
+            obj.put(column_name, rs.getObject(column_name));
+         }
+
+         result.put(obj);
       }
 
       statement.close();
@@ -124,6 +187,7 @@ public class ShellManager {
    }
 
    public JSONArray listCatagory() throws Exception {
+
       JSONArray result = new JSONArray();
       Statement statement = this.connection.createStatement();
       ResultSet rs = statement.executeQuery("select * from catagory");
@@ -138,7 +202,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       statement.close();
@@ -161,7 +225,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       statement.close();
@@ -185,14 +249,14 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       statement.close();
       return result.length() == 0 ? null : result.getJSONObject(0);
    }
 
-   public int addShell(String url, String password, String type, String catagory, String os, String comment, String headers, int status, int memType) throws Exception {
+   public int addShell(String url, int transProtocolId, String type, String catagory, String os, String comment, String headers, int status, int memType) throws Exception {
       PreparedStatement statement = this.connection.prepareStatement("select count(*) from shells where url=?");
       statement.setString(1, url);
       int num = statement.executeQuery().getInt(1);
@@ -200,10 +264,10 @@ public class ShellManager {
       if (num > 0) {
          throw new Exception("该URL已存在");
       } else {
-         statement = this.connection.prepareStatement("insert into shells(url,ip,password,type,catagory,os,comment,headers,addtime,updatetime,accesstime,status,memType) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+         statement = this.connection.prepareStatement("insert into shells(url,ip,transProtocolId,type,catagory,os,comment,headers,addtime,updatetime,accesstime,status,memType) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
          statement.setString(1, url);
          statement.setString(2, InetAddress.getByName((new URL(url)).getHost()).getHostAddress());
-         statement.setString(3, password);
+         statement.setInt(3, transProtocolId);
          statement.setString(4, type);
          statement.setString(5, catagory);
          statement.setString(6, os);
@@ -314,11 +378,11 @@ public class ShellManager {
       }
    }
 
-   public int updateShell(int shellID, String url, String password, String type, String catagory, String comment, String headers) throws Exception {
-      PreparedStatement statement = this.connection.prepareStatement("update shells set url=?,ip=?,password=?,type=?,catagory=?,comment=?,headers=?,updatetime=? where id=?");
+   public int updateShell(int shellID, String url, int transProtocolId, String type, String catagory, String comment, String headers) throws Exception {
+      PreparedStatement statement = this.connection.prepareStatement("update shells set url=?,ip=?,transProtocolId=?,type=?,catagory=?,comment=?,headers=?,updatetime=? where id=?");
       statement.setString(1, url);
       statement.setString(2, InetAddress.getByName((new URL(url)).getHost()).getHostAddress());
-      statement.setString(3, password);
+      statement.setInt(3, transProtocolId);
       statement.setString(4, type);
       statement.setString(5, catagory);
       statement.setString(6, comment);
@@ -401,7 +465,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       statement.close();
@@ -425,7 +489,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       return result.length() == 0 ? null : result.getJSONObject(0);
@@ -482,7 +546,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       return result;
@@ -503,7 +567,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       return result;
@@ -525,7 +589,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       return result;
@@ -547,7 +611,7 @@ public class ShellManager {
             obj.put(column_name, rs.getObject(column_name));
          }
 
-         result.put((Object)obj);
+         result.put(obj);
       }
 
       return result;
@@ -565,6 +629,15 @@ public class ShellManager {
    public int updateMemo(int shellID, String memo) throws Exception {
       PreparedStatement statement = this.connection.prepareStatement("update shells set memo=? where id=?");
       statement.setString(1, memo);
+      statement.setInt(2, shellID);
+      int num = statement.executeUpdate();
+      statement.close();
+      return num;
+   }
+
+   public int updateConfig(int shellID, String config) throws Exception {
+      PreparedStatement statement = this.connection.prepareStatement("update shells set config=? where id=?");
+      statement.setString(1, config);
       statement.setInt(2, shellID);
       int num = statement.executeUpdate();
       statement.close();

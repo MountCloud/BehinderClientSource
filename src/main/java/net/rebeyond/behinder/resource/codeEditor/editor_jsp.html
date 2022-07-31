@@ -21,19 +21,17 @@
 </head>
 <body>
 
-<pre id="editor">function foo(items) {
-    var i;
-    for (i = 0; i &lt; items.length; i++) {
-        alert("Ace Rocks " + items[i]);
-    }
-}</pre>
+<pre id="editor">
+
+</pre>
 
 <script src="src-min/ace.js" type="text/javascript" charset="utf-8"></script>
 <script>
+alert("111");
     var editor = ace.edit("editor");
     editor.setTheme("ace/theme/twilight");
     editor.session.setMode("ace/mode/java");
-
+    alert("222");
 </script>
 
 </body>

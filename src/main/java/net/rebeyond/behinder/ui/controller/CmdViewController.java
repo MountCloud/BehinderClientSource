@@ -3,6 +3,7 @@ package net.rebeyond.behinder.ui.controller;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javafx.application.Platform;
@@ -12,8 +13,9 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import net.rebeyond.behinder.core.Constants;
-import net.rebeyond.behinder.core.ShellService;
+import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.ShellManager;
+import net.rebeyond.behinder.service.PortScanService;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONObject;
 
@@ -21,7 +23,7 @@ public class CmdViewController {
    private ShellManager shellManager;
    @FXML
    private TextArea cmdTextArea;
-   private ShellService currentShellService;
+   private IShellService currentShellService;
    private JSONObject shellEntity;
    Map basicInfoMap;
    private List workList;
@@ -31,13 +33,21 @@ public class CmdViewController {
    private int historyIndex;
    private List history = new ArrayList();
 
-   public void init(ShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
+   public void init(IShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
       this.currentShellService = shellService;
       this.shellEntity = shellService.getShellEntity();
       this.basicInfoMap = basicInfoMap;
       this.workList = workList;
       this.statusLabel = statusLabel;
       this.initCmdView();
+      new HashMap();
+
+      try {
+         new PortScanService();
+      } catch (Exception var7) {
+         var7.printStackTrace();
+      }
+
    }
 
    private void initCmdView() {
@@ -58,7 +68,7 @@ public class CmdViewController {
 
    }
 
-   private String loadHistoryCmd(int index, int direction) {
+   private void loadHistoryCmd(int index, int direction) {
       String currentHistoryCmd = (String)this.history.get(index);
       this.removeCurrentCmd();
       if (direction == Constants.HISTORY_DIRECTION_UP) {
@@ -74,7 +84,6 @@ public class CmdViewController {
          }
       }
 
-      return (String)this.history.get(index);
    }
 
    private void addHistory(String cmd) {
@@ -154,13 +163,13 @@ public class CmdViewController {
          }
 
          this.addHistory(cmd);
-         final String finalCdPath = cdPath;
+         String finalcdPath = cdPath;
          Runnable runner = () -> {
             try {
                final JSONObject resultObj = this.currentShellService.runCmd(this.addPathInfo(cmd), this.getCurrnetPath());
                final String statusText = resultObj.getString("status").equals("fail") ? "[-]命令执行失败。" : "[+]命令执行成功。";
                if (cmd.startsWith("cd ") && resultObj.getString("status").equals("success")) {
-                  this.setCurrnetPath(finalCdPath);
+                  this.setCurrnetPath(finalcdPath);
                }
 
                Platform.runLater(new Runnable() {
@@ -172,6 +181,7 @@ public class CmdViewController {
                   }
                });
             } catch (final Exception var5) {
+               var5.printStackTrace();
                Platform.runLater(new Runnable() {
                   public void run() {
                      CmdViewController.this.statusLabel.setText("[-]操作失败:" + var5.getMessage());
@@ -270,7 +280,7 @@ public class CmdViewController {
       if (this.getCurrentOSType() == Constants.OS_TYPE_WINDOWS) {
          cmd = String.format("cd /d \"%s\"&%s", this.getCurrnetPath().replace("/", "\\"), cmd);
       } else {
-         cmd = "cd " + this.getCurrnetPath() + ";" + cmd;
+         cmd = "cd " + this.getCurrnetPath() + " ;" + cmd;
       }
 
       return cmd;

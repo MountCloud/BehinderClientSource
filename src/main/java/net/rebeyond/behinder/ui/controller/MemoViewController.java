@@ -6,7 +6,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import net.rebeyond.behinder.core.ShellService;
+import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.ShellManager;
 import org.json.JSONObject;
 
@@ -14,12 +14,12 @@ public class MemoViewController {
    private ShellManager shellManager;
    @FXML
    private TextArea memoTextArea;
-   private ShellService currentShellService;
+   private IShellService currentShellService;
    private JSONObject shellEntity;
    private List workList;
    private Label statusLabel;
 
-   public void init(ShellService shellService, List workList, Label statusLabel, ShellManager shellManager) {
+   public void init(IShellService shellService, List workList, Label statusLabel, ShellManager shellManager) {
       this.currentShellService = shellService;
       this.shellEntity = shellService.getShellEntity();
       this.workList = workList;

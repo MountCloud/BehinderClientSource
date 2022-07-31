@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-
-<AnchorPane fx:id="fileManagerView" minHeight="0.0" minWidth="0.0" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/10.0.2-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.FileManagerViewController">
+<?import javafx.scene.web.WebView?>
+<AnchorPane fx:id="fileManagerView" minHeight="0.0" minWidth="0.0" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="net.rebeyond.behinder.ui.controller.FileManagerViewController">
     <children>
         <GridPane fx:id="fileGridPane" hgap="5.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <columnConstraints>
@@ -33,18 +34,73 @@
                     <rowConstraints>
                       <RowConstraints minHeight="10.0" prefHeight="50.0" vgrow="NEVER" />
                       <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                      <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="NEVER" />
                     </rowConstraints>
                      <children>
                         <Label text="文件路径：" GridPane.halignment="RIGHT" />
                         <TextField fx:id="filePathText" GridPane.columnIndex="1" />
                         <ComboBox fx:id="charsetCombo" prefWidth="85.0" GridPane.columnIndex="2" GridPane.halignment="CENTER" />
-                        <TextArea fx:id="fileContentTextArea" prefHeight="200.0" prefWidth="200.0" wrapText="true" GridPane.columnSpan="3" GridPane.rowIndex="1" />
-                         <HBox alignment="CENTER" prefHeight="100.0" prefWidth="200.0" spacing="100.0" GridPane.columnSpan="3" GridPane.rowIndex="2">
-                           <children>
-                              <Button fx:id="cancelFileContentBtn" mnemonicParsing="false" text="返回" />
-                              <Button fx:id="saveFileContentBtn" defaultButton="true" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="保存" />
-                           </children></HBox>
+                         <StackPane fx:id="fileContentStackPane" GridPane.columnSpan="3" GridPane.rowIndex="1">
+                            <children>
+                                <GridPane fx:id="fileContentCodeGridPane">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="15.0" percentWidth="100.00" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="NEVER" />
+                                    </rowConstraints>
+                                    <children>
+                                        <WebView fx:id="fileContentWebview" GridPane.rowIndex="0" />
+                                        <HBox alignment="BOTTOM_CENTER" prefWidth="200.0" spacing="100.0" GridPane.rowIndex="1">
+                                            <children>
+                                                <Button fx:id="cancelFileContentBtn" mnemonicParsing="false" text="返回" />
+                                                <Button fx:id="saveFileContentBtn" defaultButton="true" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="保存" />
+                                            </children></HBox>
+                                    </children>
+                                </GridPane>
+                                <!--<GridPane>
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="15.0" percentWidth="100.00" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                    <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="NEVER" />
+                                    </rowConstraints>
+                                    <children>
+                                        <TextArea fx:id="fileContentTextArea" prefWidth="200.0" wrapText="true" />
+                                        <HBox alignment="BOTTOM_CENTER"  prefWidth="200.0" spacing="100.0" GridPane.rowIndex="1">
+                                            <children>
+
+                                            </children></HBox>
+                                    </children>
+                                </GridPane> -->
+                                <GridPane fx:id="fileContentImageGridPane">
+                                    <columnConstraints>
+                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="15.0" percentWidth="100.00" />
+                                    </columnConstraints>
+                                    <rowConstraints>
+                                        <RowConstraints minHeight="10.0" prefHeight="200" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="40.0" vgrow="NEVER" />
+                                    </rowConstraints>
+                                    <children>
+                                        <HBox fx:id="fileContentImageViewContainer" alignment="CENTER"  GridPane.halignment="CENTER" GridPane.valignment="CENTER" GridPane.rowIndex="0">
+                                            <children>
+                                                <ImageView fx:id="fileContentImageView" />
+                                            </children>
+                                        </HBox>
+
+                                        <HBox alignment="BOTTOM_CENTER" prefWidth="200.0" spacing="100.0" GridPane.rowIndex="1">
+                                            <children>
+                                                <Button fx:id="cancelFileImageContentBtn" mnemonicParsing="false" text="返回" />
+                                                <Button fx:id="saveFileImageContentBtn" defaultButton="true" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" text="另存到本地" />
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </GridPane>
+
+                            </children>
+                         </StackPane>
+
                      </children>
                   </GridPane>
                   <GridPane fx:id="fileListGridPane">

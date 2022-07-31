@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
+  <script src="node_modules/xterm/lib/xterm.js"></script>
+    <script src="node_modules/xterm/lib/xterm-addon-attach.js"></script>
+  <script src="node_modules/xterm/lib/FitAddon.js"></script>
+</head>
+
+<body>
+<div id="terminal"></div>
+<script>
+
+	window.addEventListener('load', (event) => {
+    var term = new Terminal({
+      rendererType: "canvas", //渲染类型
+      theme: {
+          foreground: "#00ff00", //字体
+          background: "#000000", //背景色
+          cursor: "help", //设置光标
+          lineHeight: 20
+        }
+    });
+    //alert(33);
+    var fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+      window.term=term;
+      term.open(document.getElementById('terminal'));
+      term.write("vvvv");
+      term.onData((val) => {
+        //window.app.receive(val);
+        term.write(val);
+      });
+
+      //fitAddon.fit();
+});
+
+
+  </script>
+</body>
+
+</html>

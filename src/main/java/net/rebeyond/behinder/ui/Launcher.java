@@ -14,6 +14,8 @@ public class Launcher {
          ClassLoader.getSystemClassLoader().loadClass("javafx.application.Application");
          Main.main(args);
       } catch (ClassNotFoundException var9) {
+         var9.printStackTrace();
+
          try {
             String selfPath = Utils.getSelfPath();
             String javafxPath = selfPath + File.separator + "lib";

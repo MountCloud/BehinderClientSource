@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.ui.controller;
 
+//import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,26 +18,33 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.stage.FileChooser;
-import net.rebeyond.behinder.core.ShellService;
+import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.ShellManager;
 import net.rebeyond.behinder.utils.Utils;
 import org.json.JSONArray;
@@ -45,9 +53,11 @@ import org.json.JSONObject;
 public class DatabaseViewController {
    private ShellManager shellManager;
    @FXML
+   private GridPane databaseGridPane;
+   @FXML
    private ComboBox databaseTypeCombo;
    @FXML
-   private TextField connStrText;
+   private ComboBox connStrCombo;
    @FXML
    private TextArea sqlText;
    @FXML
@@ -58,44 +68,52 @@ public class DatabaseViewController {
    private Button connectBtn;
    @FXML
    private Button executeSqlBtn;
-   private ShellService currentShellService;
+   private IShellService currentShellService;
    private JSONObject shellEntity;
+   private JSONObject effectShellEntity;
    private List workList;
    private Label statusLabel;
+   private int shellId;
 
-   public void init(ShellService shellService, List workList, Label statusLabel) {
+   public void init(IShellService shellService, List workList, Label statusLabel, ShellManager shellManager) {
       this.currentShellService = shellService;
       this.shellEntity = shellService.getShellEntity();
+      this.shellId = this.shellEntity.getInt("id");
+      this.effectShellEntity = shellService.getEffectShellEntity();
       this.workList = workList;
       this.statusLabel = statusLabel;
+      this.shellManager = shellManager;
       this.initDatabaseView();
    }
 
    private void initDatabaseView() {
+      this.initConnStrCombo();
       this.schemaTree.setOnMouseClicked((event) -> {
          TreeItem currentTreeItem = (TreeItem)this.schemaTree.getSelectionModel().getSelectedItem();
-         if (currentTreeItem.isExpanded()) {
-            currentTreeItem.setExpanded(false);
-         } else if (event.getButton() == MouseButton.PRIMARY && !currentTreeItem.isExpanded()) {
-            if (currentTreeItem.getGraphic().getUserData().toString().equals("database")) {
-               try {
-                  this.showTables(currentTreeItem);
-               } catch (Exception var5) {
-                  var5.printStackTrace();
-               }
-            } else if (currentTreeItem.getGraphic().getUserData().toString().equals("table")) {
-               try {
-                  this.showColumns(currentTreeItem);
-               } catch (Exception var4) {
-                  var4.printStackTrace();
+         if (currentTreeItem != null) {
+            if (currentTreeItem.isExpanded()) {
+               currentTreeItem.setExpanded(false);
+            } else if (event.getButton() == MouseButton.PRIMARY && !currentTreeItem.isExpanded()) {
+               if (currentTreeItem.getGraphic().getUserData().toString().equals("database")) {
+                  try {
+                     this.showTables(currentTreeItem);
+                  } catch (Exception var5) {
+                     var5.printStackTrace();
+                  }
+               } else if (currentTreeItem.getGraphic().getUserData().toString().equals("table")) {
+                  try {
+                     this.showColumns(currentTreeItem);
+                  } catch (Exception var4) {
+                     var4.printStackTrace();
+                  }
                }
             }
-         }
 
+         }
       });
       this.executeSqlBtn.setOnAction((event) -> {
          try {
-            Map connParams = this.parseConnURI(this.connStrText.getText());
+            Map connParams = this.parseConnURI(this.connStrCombo.getValue().toString());
             Runnable runner = () -> {
                try {
                   String resultText = this.executeSQL(connParams, this.sqlText.getText());
@@ -132,6 +150,117 @@ public class DatabaseViewController {
       this.loadTableContextMenu();
    }
 
+   private void initConnStrCombo() {
+      this.connStrCombo = new ComboBox();
+      this.connStrCombo.setEditable(true);
+      this.connStrCombo.setPromptText("连接密码中如有特殊字符可将密码进行URL编码");
+      this.connStrCombo.setMaxWidth(Double.MAX_VALUE);
+
+      try {
+         JSONObject shell = this.shellManager.findShell(this.shellId);
+         if (shell.has("config")) {
+            JSONObject configObj = new JSONObject(shell.getString("config"));
+            if (configObj.has("dbConfig")) {
+               JSONArray dbConfigArr = configObj.getJSONArray("dbConfig");
+               this.connStrCombo.getItems().addAll(dbConfigArr.toList());
+
+               for(int i = 0; i < dbConfigArr.length(); ++i) {
+               }
+            }
+         }
+      } catch (Exception var5) {
+         var5.printStackTrace();
+      }
+
+      this.connStrCombo.setSkin(new ComboBoxListViewSkin(this.connStrCombo) {
+         protected boolean isHideOnClickEnabled() {
+            return false;
+         }
+      });
+      this.connStrCombo.setCellFactory((lv) -> {
+         return new ListCell() {
+            private HBox graphic;
+
+            {
+               Label label = new Label();
+               label.textProperty().bind(this.itemProperty());
+               label.setMaxWidth(Double.POSITIVE_INFINITY);
+               label.setOnMouseClicked((event) -> {
+                  DatabaseViewController.this.connStrCombo.hide();
+                  String value = label.getText();
+                  DatabaseViewController.this.connStrCombo.getEditor().setText(value);
+               });
+               Hyperlink cross = new Hyperlink("X");
+               cross.setVisited(true);
+               cross.setOnAction((event) -> {
+                  String item = (String)this.getItem();
+                  if (this.isSelected()) {
+                  }
+
+                  DatabaseViewController.this.removeConnStr(item);
+               });
+               this.graphic = new HBox(new Node[]{label, cross});
+               HBox var10000 = this.graphic;
+               HBox.setHgrow(label, Priority.ALWAYS);
+               this.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+            }
+
+            protected void updateItem(String item, boolean empty) {
+               super.updateItem(item, empty);
+               if (empty) {
+                  this.setGraphic((Node)null);
+               } else {
+                  this.setGraphic(this.graphic);
+               }
+
+            }
+         };
+      });
+      this.databaseGridPane.add(this.connStrCombo, 3, 0);
+   }
+
+   private boolean addDBConfig(String dbConfig) throws Exception {
+      JSONObject shell = this.shellManager.findShell(this.shellId);
+      JSONObject configObj;
+      if (!shell.has("config")) {
+         configObj = new JSONObject();
+      } else {
+         String config = shell.getString("config");
+         configObj = new JSONObject(config);
+      }
+
+      if (configObj.has("dbConfig")) {
+         configObj.getJSONArray("dbConfig").put(dbConfig);
+      } else {
+         JSONArray dbConfigArr = new JSONArray();
+         dbConfigArr.put(dbConfig);
+         configObj.put("dbConfig", dbConfigArr);
+      }
+
+      return this.shellManager.updateConfig(this.shellId, configObj.toString()) > 0;
+   }
+
+   private void delDBConfig(String dbConfig) throws Exception {
+      int shellId = this.shellEntity.getInt("id");
+      JSONObject shell = this.shellManager.findShell(shellId);
+      if (shell.has("config")) {
+         String config = shell.getString("config");
+         JSONObject configObj = new JSONObject(config);
+         if (configObj.has("dbConfig")) {
+            JSONArray dbConfigArr = configObj.getJSONArray("dbConfig");
+
+            for(int i = 0; i < dbConfigArr.length(); ++i) {
+               if (dbConfigArr.getString(i).equals(dbConfig)) {
+                  dbConfigArr.remove(i);
+                  this.shellManager.updateConfig(shellId, configObj.toString());
+                  return;
+               }
+            }
+         }
+
+      }
+   }
+
    private void loadTreeContextMenu() {
       ContextMenu treeContextMenu = new ContextMenu();
       MenuItem queryHeadBtn = new MenuItem("查询前10条");
@@ -146,7 +275,7 @@ public class DatabaseViewController {
          String dataBaseName = currentTreeItem.getParent().getValue().toString();
          Runnable runner = () -> {
             try {
-               Map connParams = this.parseConnURI(this.connStrText.getText());
+               Map connParams = this.parseConnURI(this.connStrCombo.getValue().toString());
                String databaseType = (String)connParams.get("type");
                String sql = null;
                if (databaseType.equals("mysql")) {
@@ -189,7 +318,7 @@ public class DatabaseViewController {
          if (result.get() == ButtonType.OK) {
             Runnable runner = () -> {
                try {
-                  Map connParams = this.parseConnURI(this.connStrText.getText());
+                  Map connParams = this.parseConnURI(this.connStrCombo.getValue().toString());
                   String databaseType = (String)connParams.get("type");
                   String sql = null;
                   if (databaseType.equals("mysql")) {
@@ -234,7 +363,7 @@ public class DatabaseViewController {
          if (selected != null && !selected.equals("")) {
             Runnable runner = () -> {
                try {
-                  Map connParams = this.parseConnURI(this.connStrText.getText());
+                  Map connParams = this.parseConnURI(this.connStrCombo.getValue().toString());
                   String databaseType = (String)connParams.get("type");
                   String sql = null;
                   if (databaseType.equals("mysql")) {
@@ -400,55 +529,66 @@ public class DatabaseViewController {
       this.databaseTypeCombo.setOnAction((event) -> {
          String type = this.databaseTypeCombo.getValue().toString();
          String connStr = this.formatConnectString(type);
-         this.connStrText.setText(connStr);
+         this.connStrCombo.setValue(connStr);
       });
       this.connectBtn.setOnAction((event) -> {
          try {
-            this.showDatabases(this.connStrText.getText());
+            String currentConnStr = this.connStrCombo.getValue().toString();
+            this.saveConnStr(currentConnStr);
+            this.showDatabases(currentConnStr);
          } catch (Exception var3) {
             var3.printStackTrace();
+            Utils.showErrorMessage("错误", "连接失败，请检查连接字符串");
             this.statusLabel.setText("连接失败:" + var3.getMessage());
          }
 
       });
    }
 
-   private String formatConnectString(String type) {
-      String result = "%s://%s:password@127.0.0.1:%s/%s";
-      byte var4 = -1;
-      switch(type.hashCode()) {
-      case -1924994658:
-         if (type.equals("Oracle")) {
-            var4 = 2;
-         }
-         break;
-      case 74798178:
-         if (type.equals("MySQL")) {
-            var4 = 0;
-         }
-         break;
-      case 942662289:
-         if (type.equals("SQLServer")) {
-            var4 = 1;
+   private void saveConnStr(String connStr) {
+      if (!this.connStrCombo.getItems().contains(connStr)) {
+         this.connStrCombo.getItems().add(connStr);
+
+         try {
+            this.addDBConfig(connStr);
+         } catch (Exception var3) {
+            var3.printStackTrace();
          }
       }
 
-      switch(var4) {
-      case 0:
-         result = String.format(result, "mysql", "root", "3306", "mysql");
-         break;
-      case 1:
-         result = String.format(result, "sqlserver", "sa", "1433", "master");
-         break;
-      case 2:
-         result = String.format(result, "oracle", "sys", "1521", "orcl");
+   }
+
+   private void removeConnStr(String connStr) {
+      if (this.connStrCombo.getItems().contains(connStr)) {
+         this.connStrCombo.getItems().remove(connStr);
+      }
+
+      try {
+         this.delDBConfig(connStr);
+      } catch (Exception var3) {
+         var3.printStackTrace();
+      }
+
+   }
+
+   private String formatConnectString(String type) {
+      String result = "%s://%s:password@127.0.0.1:%s/%s";
+      switch (type) {
+         case "MySQL":
+            result = String.format(result, "mysql", "root", "3306", "mysql");
+            break;
+         case "SQLServer":
+            result = String.format(result, "sqlserver", "sa", "1433", "master");
+            break;
+         case "Oracle":
+            result = String.format(result, "oracle", "sys", "1521", "orcl");
       }
 
       return result;
    }
 
    private void showTables(TreeItem currentTreeItem) throws Exception {
-      Map connParams = this.parseConnURI(this.connStrText.getText());
+      Map connParams = this.parseConnURI(this.connStrCombo.getValue().toString());
       String sql = null;
       String databaseName = currentTreeItem.getValue().toString();
       String databaseType = (String)connParams.get("type");
@@ -460,10 +600,11 @@ public class DatabaseViewController {
          sql = "select table_name,num_rows from user_tables";
       }
 
-      final String finalSql = sql;
+      String sqlfinal = sql;
+
       Runnable runner = () -> {
          try {
-            String resultText = this.executeSQL(connParams, finalSql);
+            String resultText = this.executeSQL(connParams, sqlfinal);
             Platform.runLater(() -> {
                try {
                   this.fillTable(resultText);
@@ -474,7 +615,9 @@ public class DatabaseViewController {
 
             });
          } catch (Exception var5) {
-            this.statusLabel.setText(var5.getMessage());
+            Platform.runLater(() -> {
+               this.statusLabel.setText(var5.getMessage());
+            });
          }
 
       };
@@ -487,7 +630,7 @@ public class DatabaseViewController {
       try {
          String tableName = currentTreeItem.getValue().toString();
          String databaseName = currentTreeItem.getParent().getValue().toString();
-         Map connParams = this.parseConnURI(this.connStrText.getText());
+         Map connParams = this.parseConnURI(this.connStrCombo.getValue().toString());
          String sql = null;
          String databaseType = (String)connParams.get("type");
          if (databaseType.equals("mysql")) {
@@ -524,7 +667,8 @@ public class DatabaseViewController {
          sql = "select sys_context('userenv','db_name') as db_name from dual";
       }
 
-      final String finalSql = sql;
+      String sqlfinal = sql;
+
       Runnable runner = () -> {
          try {
             if (shellType.equals("aspx")) {
@@ -532,7 +676,7 @@ public class DatabaseViewController {
                this.loadDriver("aspx", "oracle");
             }
 
-            String resultText = this.executeSQL(connParams, finalSql);
+            String resultText = this.executeSQL(connParams, sqlfinal);
             if (resultText.equals("NoDriver")) {
                this.loadDriver(shellType, (String)connParams.get("type"));
                return;
@@ -551,6 +695,7 @@ public class DatabaseViewController {
          } catch (Exception var6) {
             var6.printStackTrace();
             Platform.runLater(() -> {
+               Utils.showErrorMessage("错误", var6.getMessage());
                this.statusLabel.setText(var6.getMessage());
             });
          }
@@ -600,12 +745,13 @@ public class DatabaseViewController {
       Platform.runLater(() -> {
          this.statusLabel.setText("正在上传数据库驱动……");
       });
-      String os = this.currentShellService.shellEntity.getString("os").toLowerCase();
+      String os = this.effectShellEntity.getString("os").toLowerCase();
       String remoteDir = os.indexOf("windows") >= 0 ? "c:/windows/temp/" : "/tmp/";
       String libName = null;
       if (scriptType.equals("jsp")) {
          if (databaseType.equals("sqlserver")) {
             libName = "sqljdbc41.jar";
+            libName = "sqljdbc4-3.0.jar";
          } else if (databaseType.equals("mysql")) {
             libName = "mysql-connector-java-5.1.36.jar";
          } else if (databaseType.equals("oracle")) {
@@ -670,37 +816,18 @@ public class DatabaseViewController {
       int childNums = result.length() - 1;
       String childIconPath = "";
       String childType = "";
-      String var7 = currentTreeItem.getGraphic().getUserData().toString();
-      byte var8 = -1;
-      switch(var7.hashCode()) {
-      case 3506402:
-         if (var7.equals("root")) {
-            var8 = 0;
-         }
-         break;
-      case 110115790:
-         if (var7.equals("table")) {
-            var8 = 2;
-         }
-         break;
-      case 1789464955:
-         if (var7.equals("database")) {
-            var8 = 1;
-         }
-      }
-
-      switch(var8) {
-      case 0:
-         childIconPath = "net/rebeyond/behinder/resource/database.png";
-         childType = "database";
-         break;
-      case 1:
-         childIconPath = "net/rebeyond/behinder/resource/database_table.png";
-         childType = "table";
-         break;
-      case 2:
-         childIconPath = "net/rebeyond/behinder/resource/database_column.png";
-         childType = "column";
+      switch (currentTreeItem.getGraphic().getUserData().toString()) {
+         case "root":
+            childIconPath = "net/rebeyond/behinder/resource/database.png";
+            childType = "database";
+            break;
+         case "database":
+            childIconPath = "net/rebeyond/behinder/resource/database_table.png";
+            childType = "table";
+            break;
+         case "table":
+            childIconPath = "net/rebeyond/behinder/resource/database_column.png";
+            childType = "column";
       }
 
       Image icon = new Image(new ByteArrayInputStream(Utils.getResourceData(childIconPath)));
@@ -735,7 +862,7 @@ public class DatabaseViewController {
             String fieldName = field.get("name").toString();
             TableColumn col = new TableColumn(fieldName);
             tableViewColumns.add(col);
-            final int finali = i;
+            int finali = i;
             col.setCellValueFactory((datax) -> {
                //return (StringProperty)((List)datax.getValue()).get(i);
                return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(finali);
@@ -745,7 +872,7 @@ public class DatabaseViewController {
          this.dataTable.getColumns().setAll(tableViewColumns);
          ObservableList data = FXCollections.observableArrayList();
 
-         for(int i = 1; i < rows; ++i) {
+         for(int i = 1; i < rows + 1; ++i) {
             JSONArray rowArr = result.getJSONArray(i);
             List row = new ArrayList();
 

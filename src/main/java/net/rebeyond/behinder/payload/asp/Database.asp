@@ -29,14 +29,7 @@ Function Stream_StringToBinary(Text)
   Set BinaryStream = Nothing
 End Function
 
-Function Encrypt(data)
-	key=Session("k")
-	size=len(data)
-	For i=1 To size
-		encryptResult=encryptResult&chrb(asc(mid(data,i,1)) Xor Asc(Mid(key,(i and 15)+1,1)))
-	Next
-	Encrypt=encryptResult
-End Function
+__Encrypt__
 
 Sub SendErr(Err)'检查错误处理
 	If Err Then
