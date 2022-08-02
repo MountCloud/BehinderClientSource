@@ -228,7 +228,7 @@ public class MainWindowController {
                      });
                      Separator separator = new Separator();
                      separator.setOrientation(Orientation.VERTICAL);
-                     separator.setPrefHeight(20.0);
+                     separator.setPrefHeight(20.0D);
                      HBox statusContainer = (HBox)((GridPane)this.statusLabel.getParent()).getChildren().get(1);
                      statusContainer.getChildren().add(0, separator);
                      statusContainer.getChildren().add(0, detailLink);
@@ -262,10 +262,24 @@ public class MainWindowController {
       });
       this.mainTabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
          public void changed(ObservableValue observable, Tab oldTab, Tab newTab) {
-            switch (newTab.getId()) {
-               case "cmdTab":
-               case "":
-               default:
+            String tabId = newTab.getId();
+            byte var6 = -1;
+            switch(tabId.hashCode()) {
+            case -1356954629:
+               if (tabId.equals("cmdTab")) {
+                  var6 = 0;
+               }
+               break;
+            case 0:
+               if (tabId.equals("")) {
+                  var6 = 1;
+               }
+            }
+
+            switch(var6) {
+            case 0:
+            case 1:
+            default:
             }
          }
       });
@@ -358,29 +372,29 @@ public class MainWindowController {
    private void showTaskCenter() {
       Alert inputDialog = Utils.getAlert(AlertType.NONE);
       inputDialog.setTitle("运行中的任务");
-      inputDialog.setWidth(800.0);
+      inputDialog.setWidth(800.0D);
       inputDialog.setResizable(true);
       Window window = inputDialog.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((e) -> {
          window.hide();
       });
       VBox taskBox = new VBox();
-      taskBox.setPrefWidth(600.0);
+      taskBox.setPrefWidth(600.0D);
       taskBox.setFillWidth(true);
-      taskBox.setSpacing(10.0);
+      taskBox.setSpacing(10.0D);
       Iterator var4 = this.taskList.iterator();
 
       while(var4.hasNext()) {
          Task task = (Task)var4.next();
-         if (!(task.getProgress() >= 1.0)) {
+         if (!(task.getProgress() >= 1.0D)) {
             VBox taskContainer = new VBox();
-            taskContainer.setSpacing(10.0);
+            taskContainer.setSpacing(10.0D);
             HBox taskItem = new HBox();
-            taskItem.setSpacing(20.0);
+            taskItem.setSpacing(20.0D);
             Label taskName = new Label("任务名称：" + task.getName());
             StackPane progressPane = new StackPane();
             ProgressBar taskProgress = new ProgressBar(task.getProgress());
-            taskProgress.setPrefWidth(300.0);
+            taskProgress.setPrefWidth(300.0D);
             Label taskPercent = new Label((int)task.getProgress() * 100 + "%");
             taskPercent.textProperty().bind((new SimpleIntegerProperty((int)task.getProgress() * 100)).asString());
             progressPane.getChildren().addAll(new Node[]{taskProgress, taskPercent});

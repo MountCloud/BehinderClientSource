@@ -30,7 +30,7 @@ public class Transfer {
    private Object Session;
 
    public boolean equals(Object obj) {
-      Map result = new HashMap();
+      HashMap result = new HashMap();
 
       try {
          this.fillContext(obj);
@@ -139,8 +139,9 @@ public class Transfer {
 
    private byte[] readLine(InputStream in) throws IOException {
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
-      int c = 0;
+      boolean var3 = true;
 
+      int c;
       while((c = in.read()) != -1 && c != 10 && c != 13) {
          bos.write(c);
       }
@@ -188,14 +189,14 @@ public class Transfer {
          String encoding = conn.getContentEncoding();
          DataInputStream din;
          byte[] buffer;
-         length = 0;
+         boolean var24;
          if (encoding != null) {
             if (encoding != null && encoding.equals("gzip")) {
                din = null;
                GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
                din = new DataInputStream(gZIPInputStream);
                buffer = new byte[1024];
-               length = 0;
+               boolean var13 = false;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -203,7 +204,7 @@ public class Transfer {
             } else {
                din = new DataInputStream(conn.getInputStream());
                buffer = new byte[1024];
-               length = 0;
+               var24 = false;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -212,7 +213,7 @@ public class Transfer {
          } else {
             din = new DataInputStream(conn.getInputStream());
             buffer = new byte[1024];
-            length = 0;
+            var24 = false;
 
             while((length = din.read(buffer)) != -1) {
                bos.write(buffer, 0, length);
@@ -235,7 +236,7 @@ public class Transfer {
       } else {
          DataInputStream din = new DataInputStream(conn.getErrorStream());
          byte[] buffer = new byte[1024];
-         length = 0;
+         boolean var21 = false;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);

@@ -52,56 +52,18 @@ public class FileService {
 
       int finalI = 0;
       for(finalI = 0; (long)finalI < blockCount; ++finalI) {
-         int fi = finalI;
-         long fblockCount = blockCount;
-         Runnable runner = () -> {
-            try {
-               ByteBuffer byteBuffer = ByteBuffer.allocate(UPLOAD_BLOCK_SIZE);
-               int size;
-               synchronized(fileChannel) {
-                  fileChannel.position((long)(fi * UPLOAD_BLOCK_SIZE));
-                  size = fileChannel.read(byteBuffer);
-               }
-
-               JSONObject responseObj = this.currentShellService.uploadFilePart(remoteFilePath, Arrays.copyOfRange(byteBuffer.array(), 0, size), (long)fi, (long)UPLOAD_BLOCK_SIZE);
-               String status = responseObj.getString("status");
-               String msg = responseObj.getString("msg");
-               if (!status.equals("success")) {
-                  errorMsg.add(msg);
-                  executorService.shutdownNow();
-                  return;
-               }
-
-               int var10002 = currentCount[0]++;
-               String progress = Utils.getPercent(currentCount[0], (int)fblockCount);
-               callBack.onSuccess("success", progress);
-            } catch (SocketTimeoutException var18) {
-               errList.add(fi);
-            } catch (SocketException var19) {
-               errList.add(fi);
-            } catch (Exception var20) {
-               errList.add(fi);
-               var20.printStackTrace();
-            }
-
-         };
-         executorService.submit(runner);
-      }
-
-      while(errList.size() > 0) {
-         finalI = (Integer)errList.get(0);
-         int fi = finalI;
+         int finalii = finalI;
          long finalblockCount = blockCount;
          Runnable runner = () -> {
             try {
                ByteBuffer byteBuffer = ByteBuffer.allocate(UPLOAD_BLOCK_SIZE);
                int size;
                synchronized(fileChannel) {
-                  fileChannel.position((long)(fi * UPLOAD_BLOCK_SIZE));
+                  fileChannel.position((long)(finalii * UPLOAD_BLOCK_SIZE));
                   size = fileChannel.read(byteBuffer);
                }
 
-               JSONObject responseObj = this.currentShellService.uploadFilePart(remoteFilePath, Arrays.copyOfRange(byteBuffer.array(), 0, size), (long)fi, (long)UPLOAD_BLOCK_SIZE);
+               JSONObject responseObj = this.currentShellService.uploadFilePart(remoteFilePath, Arrays.copyOfRange(byteBuffer.array(), 0, size), (long)finalii, (long)UPLOAD_BLOCK_SIZE);
                String status = responseObj.getString("status");
                String msg = responseObj.getString("msg");
                if (!status.equals("success")) {
@@ -114,11 +76,51 @@ public class FileService {
                String progress = Utils.getPercent(currentCount[0], (int)finalblockCount);
                callBack.onSuccess("success", progress);
             } catch (SocketTimeoutException var18) {
-               errList.add(fi);
+               errList.add(finalii);
             } catch (SocketException var19) {
-               errList.add(fi);
+               errList.add(finalii);
             } catch (Exception var20) {
-               errList.add(fi);
+               errList.add(finalii);
+               var20.printStackTrace();
+            }
+
+         };
+         executorService.submit(runner);
+      }
+
+      while(errList.size() > 0) {
+         finalI = (Integer)errList.get(0);
+         int finalii = finalI;
+         long finalblockCount = blockCount;
+         Runnable runner = () -> {
+            try {
+               ByteBuffer byteBuffer = ByteBuffer.allocate(UPLOAD_BLOCK_SIZE);
+               int size;
+               synchronized(fileChannel) {
+                  fileChannel.position((long)(finalii * UPLOAD_BLOCK_SIZE));
+                  size = fileChannel.read(byteBuffer);
+               }
+
+               JSONObject responseObj = this.currentShellService.uploadFilePart(remoteFilePath, Arrays.copyOfRange(byteBuffer.array(), 0, size), (long)finalii, (long)UPLOAD_BLOCK_SIZE);
+               String status = responseObj.getString("status");
+               String msg = responseObj.getString("msg");
+               if (!status.equals("success")) {
+                  errorMsg.add(msg);
+                  executorService.shutdownNow();
+                  return;
+               }
+
+               int var10002 = currentCount[0]++;
+               String progress = Utils.getPercent(currentCount[0], (int)finalblockCount);
+               callBack.onSuccess("success", progress);
+            } catch (SocketTimeoutException var18) {
+               var18.printStackTrace();
+               errList.add(finalii);
+            } catch (SocketException var19) {
+               var19.printStackTrace();
+               errList.add(finalii);
+            } catch (Exception var20) {
+               errList.add(finalii);
                var20.printStackTrace();
             }
 
@@ -158,13 +160,13 @@ public class FileService {
       List errList = new ArrayList();
       int[] currentCount = new int[]{0};
 
-      int finalI = 0;
+      int finalI;
       for(finalI = 0; (long)finalI < blockCount; ++finalI) {
-         int fi = finalI;
+         int finalii = finalI;
          long finalblockCount = blockCount;
          Runnable runner = () -> {
             try {
-               JSONObject responseObj = this.currentShellService.downFilePart(remoteFilePath, (long)fi, (long)DOWNLOAD_BLOCK_SIZE);
+               JSONObject responseObj = this.currentShellService.downFilePart(remoteFilePath, (long)finalii, (long)DOWNLOAD_BLOCK_SIZE);
                String status = responseObj.getString("status");
                String msg = responseObj.getString("msg");
                if (!status.equals("success")) {
@@ -178,15 +180,15 @@ public class FileService {
                String progress = Utils.getPercent(currentCount[0], (int)finalblockCount);
                callBack.onSuccess("success", progress);
                synchronized(fileChannel) {
-                  fileChannel.position((long)fi * (long)DOWNLOAD_BLOCK_SIZE);
+                  fileChannel.position((long)finalii * (long)DOWNLOAD_BLOCK_SIZE);
                   fileChannel.write(ByteBuffer.wrap(content));
                }
             } catch (SocketTimeoutException var19) {
-               errList.add(fi);
+               errList.add(finalii);
             } catch (SocketException var20) {
-               errList.add(fi);
+               errList.add(finalii);
             } catch (Exception var21) {
-               errList.add(fi);
+               errList.add(finalii);
                var21.printStackTrace();
             }
 
@@ -196,11 +198,11 @@ public class FileService {
 
       while(errList.size() > 0) {
          finalI = (Integer)errList.get(0);
-         int fi = finalI;
+         int finalii = finalI;
          long finalblockCount = blockCount;
          Runnable runner = () -> {
             try {
-               JSONObject responseObj = this.currentShellService.downFilePart(remoteFilePath, (long)fi, (long)DOWNLOAD_BLOCK_SIZE);
+               JSONObject responseObj = this.currentShellService.downFilePart(remoteFilePath, (long)finalii, (long)DOWNLOAD_BLOCK_SIZE);
                String status = responseObj.getString("status");
                String msg = responseObj.getString("msg");
                if (!status.equals("success")) {
@@ -214,17 +216,17 @@ public class FileService {
                String progress = Utils.getPercent(currentCount[0], (int)finalblockCount);
                callBack.onSuccess("success", progress);
                synchronized(fileChannel) {
-                  fileChannel.position((long)fi * (long)DOWNLOAD_BLOCK_SIZE);
+                  fileChannel.position((long)finalii * (long)DOWNLOAD_BLOCK_SIZE);
                   fileChannel.write(ByteBuffer.wrap(content));
                }
 
-               errList.remove(fi);
+               errList.remove(finalii);
             } catch (SocketTimeoutException var19) {
                return;
             } catch (SocketException var20) {
-               errList.add(fi);
+               errList.add(finalii);
             } catch (Exception var21) {
-               errList.add(fi);
+               errList.add(finalii);
                var21.printStackTrace();
             }
 

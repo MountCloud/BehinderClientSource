@@ -135,21 +135,44 @@ public class Crypt {
 
    public static byte[] Encrypt(byte[] bs, String key, String scriptType, int encryptType) throws Exception {
       byte[] result = null;
-      switch (scriptType) {
-         case "jsp":
-            result = Encrypt(bs, key);
-            break;
-         case "php":
-            result = EncryptForPhp(bs, key, encryptType);
-            if (encryptType == Constants.ENCRYPT_TYPE_AES) {
-               result = Base64.getEncoder().encode(result);
-            }
-            break;
-         case "aspx":
-            result = EncryptForCSharp(bs, key);
-            break;
-         case "asp":
-            result = EncryptForAsp(bs, key);
+      byte var6 = -1;
+      switch(scriptType.hashCode()) {
+      case 96894:
+         if (scriptType.equals("asp")) {
+            var6 = 3;
+         }
+         break;
+      case 105543:
+         if (scriptType.equals("jsp")) {
+            var6 = 0;
+         }
+         break;
+      case 110968:
+         if (scriptType.equals("php")) {
+            var6 = 1;
+         }
+         break;
+      case 3003834:
+         if (scriptType.equals("aspx")) {
+            var6 = 2;
+         }
+      }
+
+      switch(var6) {
+      case 0:
+         result = Encrypt(bs, key);
+         break;
+      case 1:
+         result = EncryptForPhp(bs, key, encryptType);
+         if (encryptType == Constants.ENCRYPT_TYPE_AES) {
+            result = Base64.getEncoder().encode(result);
+         }
+         break;
+      case 2:
+         result = EncryptForCSharp(bs, key);
+         break;
+      case 3:
+         result = EncryptForAsp(bs, key);
       }
 
       return result;

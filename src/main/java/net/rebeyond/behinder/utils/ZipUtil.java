@@ -91,7 +91,7 @@ public class ZipUtil {
    }
 
    public static void unZipFiles(String zipPath, String descDir) throws IOException {
-      long start = System.currentTimeMillis();
+      long var2 = System.currentTimeMillis();
 
       try {
          File zipFile = new File(zipPath);
@@ -142,7 +142,7 @@ public class ZipUtil {
    }
 
    public static void delDir(String dirPath) throws IOException {
-      long start = System.currentTimeMillis();
+      long var1 = System.currentTimeMillis();
 
       try {
          File dirFile = new File(dirPath);

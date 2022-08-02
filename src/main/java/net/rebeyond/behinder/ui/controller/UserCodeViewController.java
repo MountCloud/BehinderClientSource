@@ -57,18 +57,41 @@ public class UserCodeViewController {
       webEngine.documentProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue != null) {
             this.editor = (JSObject)webEngine.executeScript("window.editor");
-            switch (currentType) {
-               case "jsp":
-                  this.editor.call("setValue", new Object[]{javaCodeDemo});
-                  break;
-               case "php":
-                  this.editor.call("setValue", new Object[]{"<?php\n" + phpCodeDemo + "\n?>"});
-                  break;
-               case "aspx":
-                  this.editor.call("setValue", new Object[]{aspxCodeDemo});
-                  break;
-               case "asp":
-                  this.editor.call("setValue", new Object[]{aspCodeDemo});
+            byte var11 = -1;
+            switch(currentType.hashCode()) {
+            case 96894:
+               if (currentType.equals("asp")) {
+                  var11 = 3;
+               }
+               break;
+            case 105543:
+               if (currentType.equals("jsp")) {
+                  var11 = 0;
+               }
+               break;
+            case 110968:
+               if (currentType.equals("php")) {
+                  var11 = 1;
+               }
+               break;
+            case 3003834:
+               if (currentType.equals("aspx")) {
+                  var11 = 2;
+               }
+            }
+
+            switch(var11) {
+            case 0:
+               this.editor.call("setValue", new Object[]{javaCodeDemo});
+               break;
+            case 1:
+               this.editor.call("setValue", new Object[]{"<?php\n" + phpCodeDemo + "\n?>"});
+               break;
+            case 2:
+               this.editor.call("setValue", new Object[]{aspxCodeDemo});
+               break;
+            case 3:
+               this.editor.call("setValue", new Object[]{aspCodeDemo});
             }
 
          }

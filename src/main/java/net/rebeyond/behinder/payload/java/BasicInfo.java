@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.Map.Entry;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -46,7 +47,7 @@ public class BasicInfo {
             Iterator var7 = entrySet.iterator();
 
             while(var7.hasNext()) {
-               Map.Entry entry = (Map.Entry)var7.next();
+               Entry entry = (Entry)var7.next();
                basicInfo.append(entry.getKey() + " = " + entry.getValue() + "<br/>");
             }
 

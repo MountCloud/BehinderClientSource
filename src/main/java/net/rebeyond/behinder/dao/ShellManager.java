@@ -187,7 +187,6 @@ public class ShellManager {
    }
 
    public JSONArray listCatagory() throws Exception {
-
       JSONArray result = new JSONArray();
       Statement statement = this.connection.createStatement();
       ResultSet rs = statement.executeQuery("select * from catagory");

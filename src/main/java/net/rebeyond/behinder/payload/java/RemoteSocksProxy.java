@@ -155,7 +155,7 @@ public class RemoteSocksProxy implements Runnable {
 
    public void run() {
       if (this.threadType.equals("link")) {
-         Map paramMap = new HashMap();
+         HashMap paramMap = new HashMap();
 
          try {
             long threadID = Thread.currentThread().getId();
@@ -296,8 +296,8 @@ public class RemoteSocksProxy implements Runnable {
          temp = tempArray.length;
 
          for(int var16 = 0; var16 < temp; ++var16) {
-            String tempp = var23[var16];
-            host = host + tempp + ".";
+            String tempstr = var23[var16];
+            host = host + tempstr + ".";
          }
 
          host = host.substring(0, host.length() - 1);

@@ -1,10 +1,8 @@
 package net.rebeyond.behinder.dao;
 
 import java.io.File;
-import java.net.URLDecoder;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import net.rebeyond.behinder.utils.Utils;
 
 public class DBClient {
    private static final String Class_Name = "org.sqlite.JDBC";
@@ -14,7 +12,7 @@ public class DBClient {
 
    public static Connection getConnection() throws Exception {
       if (connection == null) {
-         DB_PATH = URLDecoder.decode(Utils.getSelfPath(), "UTF-8") + File.separator + DB_PATH;
+         DB_PATH = "./" + DB_PATH;
          DB_URL = "jdbc:sqlite:" + DB_PATH;
          if (!(new File(DB_PATH)).exists()) {
             throw new Exception("数据库文件丢失，无法启动。");

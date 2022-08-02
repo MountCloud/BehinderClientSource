@@ -78,15 +78,28 @@ public class ConsoleService {
       shellAction = (String)paramList.get(0);
       List subList = paramList.subList(1, paramList.size());
       String[] params = (String[])subList.toArray(new String[subList.size()]);
-      switch (shellAction) {
-         case "runcmd":
-            if (params.length == 1) {
-               params = (String[])Utils.appendArray(params, ".");
-            }
-         case "showfile":
-         default:
-            String result = this.doInvoke(shellAction, params);
-            return result + "\nBShell >";
+      byte var9 = -1;
+      switch(shellAction.hashCode()) {
+      case -919816497:
+         if (shellAction.equals("runcmd")) {
+            var9 = 0;
+         }
+         break;
+      case -338294279:
+         if (shellAction.equals("showfile")) {
+            var9 = 1;
+         }
+      }
+
+      switch(var9) {
+      case 0:
+         if (params.length == 1) {
+            params = (String[])Utils.appendArray(params, ".");
+         }
+      case 1:
+      default:
+         String result = this.doInvoke(shellAction, params);
+         return result + "\nBShell >";
       }
    }
 

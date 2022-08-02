@@ -40,7 +40,7 @@ public class PackageInternalsFinder {
    }
 
    private List processJar(URL packageFolderURL) {
-      List result = new ArrayList();
+      ArrayList result = new ArrayList();
 
       try {
          String jarUri = packageFolderURL.toExternalForm().split("!")[0];
@@ -68,7 +68,7 @@ public class PackageInternalsFinder {
    }
 
    private List processRsrc(URL packageFolderURL) {
-      List result = new ArrayList();
+      ArrayList result = new ArrayList();
 
       try {
          String jarUri = packageFolderURL.toExternalForm().split("!")[0];

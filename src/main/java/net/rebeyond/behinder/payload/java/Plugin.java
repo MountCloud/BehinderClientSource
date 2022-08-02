@@ -158,7 +158,7 @@ public class Plugin implements Runnable {
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
-               } catch (Exception var25) {
+               } catch (Exception var26) {
                }
 
             }
@@ -170,7 +170,7 @@ public class Plugin implements Runnable {
             method.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
-         } catch (Exception var26) {
+         } catch (Exception var25) {
          }
 
          return var4;

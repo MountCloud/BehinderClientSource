@@ -99,7 +99,7 @@ public class BShell implements Runnable {
    private Map listBShell() throws Exception {
       Map result = new HashMap();
       Enumeration keys = this.sessionGetAttributeNames(this.Session);
-      List objArr = new ArrayList();
+      ArrayList objArr = new ArrayList();
 
       while(keys.hasMoreElements()) {
          String key = (String)keys.nextElement();
@@ -130,7 +130,7 @@ public class BShell implements Runnable {
    private Map listReverseBShell() throws Exception {
       Map result = new HashMap();
       Enumeration keys = this.sessionGetAttributeNames(this.Session);
-      List objArr = new ArrayList();
+      ArrayList objArr = new ArrayList();
 
       while(keys.hasMoreElements()) {
          String key = (String)keys.nextElement();

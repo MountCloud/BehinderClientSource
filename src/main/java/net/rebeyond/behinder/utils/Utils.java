@@ -78,6 +78,7 @@ import javax.tools.ForwardingJavaFileManager;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
+import javax.tools.JavaFileManager.Location;
 import javax.tools.JavaFileObject.Kind;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.Crypt;
@@ -93,7 +94,7 @@ public class Utils {
    private static Map fileObjects = new ConcurrentHashMap();
    public static Map alertMap = new HashMap();
 
-   public static Alert getAlert(Alert.AlertType type) {
+   public static Alert getAlert(AlertType type) {
       Alert alert = (Alert)alertMap.get(type);
       if (alert == null) {
          alert = new Alert(type);
@@ -214,14 +215,14 @@ public class Utils {
          String encoding = conn.getContentEncoding();
          DataInputStream din;
          byte[] buffer;
-         length = 0;
+         boolean var24;
          if (encoding != null) {
             if (encoding != null && encoding.equals("gzip")) {
                din = null;
                GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
                din = new DataInputStream(gZIPInputStream);
                buffer = new byte[1024];
-               length = 0;
+               boolean var12 = false;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -229,7 +230,7 @@ public class Utils {
             } else {
                din = new DataInputStream(conn.getInputStream());
                buffer = new byte[1024];
-               length = 0;
+               var24 = false;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -238,7 +239,7 @@ public class Utils {
          } else {
             din = new DataInputStream(conn.getInputStream());
             buffer = new byte[1024];
-            length = 0;
+            var24 = false;
 
             while((length = din.read(buffer)) != -1) {
                bos.write(buffer, 0, length);
@@ -261,7 +262,7 @@ public class Utils {
       } else {
          DataInputStream din = new DataInputStream(conn.getErrorStream());
          byte[] buffer = new byte[1024];
-         length = 0;
+         boolean var21 = false;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -617,7 +618,8 @@ public class Utils {
       FileInputStream fis = new FileInputStream(new File(filePath));
       byte[] buffer = new byte[10240000];
 
-      for(int length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      int length;
+      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();
@@ -635,14 +637,34 @@ public class Utils {
       List result = new ArrayList();
       byte[] buffer = new byte[size];
       ByteArrayInputStream bis = new ByteArrayInputStream(content);
-      int length = 0;
+      boolean var5 = false;
 
+      int length;
       while((length = bis.read(buffer)) > 0) {
          result.add(Arrays.copyOfRange(buffer, 0, length));
       }
 
       bis.close();
       return result;
+   }
+
+   public static int indexOf(byte[] outerArray, byte[] smallerArray) {
+      for(int i = 0; i < outerArray.length - smallerArray.length + 1; ++i) {
+         boolean found = true;
+
+         for(int j = 0; j < smallerArray.length; ++j) {
+            if (outerArray[i + j] != smallerArray[j]) {
+               found = false;
+               break;
+            }
+         }
+
+         if (found) {
+            return i;
+         }
+      }
+
+      return -1;
    }
 
    public static String[] splitString(String str, int length) {
@@ -686,8 +708,9 @@ public class Utils {
       InputStream is = Utils.class.getClassLoader().getResourceAsStream(filePath);
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       byte[] buffer = new byte[102400];
-      int num = 0;
+      boolean var4 = false;
 
+      int num;
       while((num = is.read(buffer)) != -1) {
          bos.write(buffer, 0, num);
          bos.flush();
@@ -892,7 +915,7 @@ public class Utils {
             }
          }
 
-         HttpsURLConnection.setDefaultSSLSocketFactory(new MySSLSocketFactory(sc.getSocketFactory(), (String[])cipherSuites.toArray(new String[0])));
+         HttpsURLConnection.setDefaultSSLSocketFactory(new Utils.MySSLSocketFactory(sc.getSocketFactory(), (String[])cipherSuites.toArray(new String[0])));
          HostnameVerifier allHostsValid = new HostnameVerifier() {
             public boolean verify(String hostname, SSLSession session) {
                return true;
@@ -1159,7 +1182,7 @@ public class Utils {
       return s.substring(1, s.length() - 1);
    }
 
-   private static Collector<Byte, ?, byte[]>  toByteArray() {
+   private static Collector<Byte, ?, byte[]> toByteArray() {
       return Collector.of(ByteArrayOutputStream::new, ByteArrayOutputStream::write, (baos1, baos2) -> {
          try {
             baos2.writeTo(baos1);
@@ -1216,7 +1239,7 @@ public class Utils {
          super(fileManager);
       }
 
-      public JavaFileObject getJavaFileForInput(JavaFileManager.Location location, String className, JavaFileObject.Kind kind) throws IOException {
+      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
          JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
          if (javaFileObject == null) {
             super.getJavaFileForInput(location, className, kind);
@@ -1225,8 +1248,8 @@ public class Utils {
          return javaFileObject;
       }
 
-      public JavaFileObject getJavaFileForOutput(JavaFileManager.Location location, String qualifiedClassName, JavaFileObject.Kind kind, FileObject sibling) throws IOException {
-         JavaFileObject javaFileObject = new MyJavaFileObject(qualifiedClassName, kind);
+      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
+         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
          Utils.fileObjects.put(qualifiedClassName, javaFileObject);
          return javaFileObject;
       }
@@ -1294,7 +1317,7 @@ public class Utils {
          this.source = source;
       }
 
-      public MyJavaFileObject(String name, JavaFileObject.Kind kind) {
+      public MyJavaFileObject(String name, Kind kind) {
          super(URI.create("String:///" + name + kind.extension), kind);
          this.source = null;
       }

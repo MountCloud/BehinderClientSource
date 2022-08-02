@@ -3,7 +3,6 @@ package net.rebeyond.behinder.core;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -295,18 +294,18 @@ public class Params {
       String domainA = domainAs[domainAIndex];
       int randomSegments = (new Random()).nextInt(3) + 3;
       String randomName;
-      switch (randomSegments) {
-         case 3:
-            randomName = domainA + "/" + domainB + "/" + className;
-            break;
-         case 4:
-            randomName = domainA + "/" + domainB + "/" + domainC + "/" + className;
-            break;
-         case 5:
-            randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
-            break;
-         default:
-            randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
+      switch(randomSegments) {
+      case 3:
+         randomName = domainA + "/" + domainB + "/" + className;
+         break;
+      case 4:
+         randomName = domainA + "/" + domainB + "/" + domainC + "/" + className;
+         break;
+      case 5:
+         randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
+         break;
+      default:
+         randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
       }
 
       while(randomName.length() > sourceName.length()) {
@@ -414,7 +413,7 @@ public class Params {
 
          byte[] search = Utils.ascii2unicode("~" + searchStr.substring(0, paraValue.length()), 0);
          byte[] replacement = Utils.ascii2unicode(paraValue, 1);
-         InputStream ris = new ReplacingInputStream(bis, search, replacement);
+         ReplacingInputStream ris = new ReplacingInputStream(bis, search, replacement);
 
          int b;
          while(-1 != (b = ris.read())) {

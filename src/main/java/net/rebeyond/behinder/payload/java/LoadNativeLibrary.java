@@ -322,7 +322,8 @@ public class LoadNativeLibrary implements Runnable {
       FileInputStream fis = new FileInputStream(new File(filePath));
       byte[] buffer = new byte[10240000];
 
-      for(int length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      int length;
+      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();

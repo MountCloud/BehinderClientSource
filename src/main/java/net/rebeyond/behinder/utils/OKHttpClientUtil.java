@@ -5,7 +5,6 @@ import java.net.Proxy;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -26,10 +25,11 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.TlsVersion;
+import okhttp3.Interceptor.Chain;
+import okhttp3.Request.Builder;
 import okhttp3.internal.http.RealResponseBody;
 import okio.GzipSource;
 import okio.Okio;
-import org.apache.http.Header;
 
 public class OKHttpClientUtil {
    private static ConcurrentHashMap cookieStore = new ConcurrentHashMap();
@@ -37,10 +37,10 @@ public class OKHttpClientUtil {
    private static OkHttpClient client;
 
    public static Map post(String url, Map headers, byte[] requestBody) throws IOException {
-      HashMap result = new HashMap();
+      Map result = new HashMap();
       String host = (new URL(url)).getHost();
       RequestBody body = RequestBody.create(requestBody);
-      Request.Builder builder = (new Request.Builder()).url(url).post(body);
+      Builder builder = (new Builder()).url(url).post(body);
       builder.addHeader("Host", host);
       headers.remove("Host");
       headers.put("Content-Length", body.contentLength() + "");
@@ -66,7 +66,7 @@ public class OKHttpClientUtil {
          Throwable var30 = null;
 
          try {
-            HashMap responseHeader = new HashMap();
+            Map responseHeader = new HashMap();
             Headers resheaders = response.headers();
             Iterator var13 = resheaders.names().iterator();
 
@@ -78,7 +78,7 @@ public class OKHttpClientUtil {
             result.put("data", response.body().bytes());
             responseHeader.put("status", response.code() + "");
             result.put("header", responseHeader);
-            HashMap var32 = result;
+            Map var32 = result;
             return var32;
          } catch (Throwable var25) {
             var30 = var25;
@@ -116,7 +116,7 @@ public class OKHttpClientUtil {
    }
 
    static {
-      spec = (new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)).tlsVersions(new TlsVersion[]{TlsVersion.TLS_1_0, TlsVersion.TLS_1_1, TlsVersion.TLS_1_2, TlsVersion.TLS_1_3}).build();
+      spec = (new okhttp3.ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)).tlsVersions(new TlsVersion[]{TlsVersion.TLS_1_0, TlsVersion.TLS_1_1, TlsVersion.TLS_1_2, TlsVersion.TLS_1_3}).build();
       client = (new OkHttpClient()).newBuilder().connectTimeout(10L, TimeUnit.SECONDS).sslSocketFactory(SSLSocketClient.getSSLSocketFactory(), SSLSocketClient.getX509TrustManager()).hostnameVerifier(SSLSocketClient.getHostnameVerifier()).connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS, ConnectionSpec.CLEARTEXT, spec)).readTimeout(60L, TimeUnit.SECONDS).proxy((Proxy)MainController.currentProxy.get("proxy")).connectionPool(new ConnectionPool(100, 30L, TimeUnit.SECONDS)).cookieJar(new CookieJar() {
          public void saveFromResponse(HttpUrl url, List cookiesx) {
             Set cookieSet = new HashSet(cookiesx);
@@ -131,21 +131,8 @@ public class OKHttpClientUtil {
       }).build();
    }
 
-   static class MyComprator implements Comparator {
-      public int compare(Object arg0, Object arg1) {
-         String t1 = ((Header)arg0).getName();
-         String t2 = ((Header)arg1).getValue();
-         if (t1.equals("Host")) {
-            return -2;
-         } else {
-            int delta = t1.compareTo(t2);
-            return delta < 0 ? -1 : 0;
-         }
-      }
-   }
-
    private static class UnzippingInterceptor implements Interceptor {
-      public Response intercept(Interceptor.Chain chain) throws IOException {
+      public Response intercept(Chain chain) throws IOException {
          Response response = chain.proceed(chain.request());
          return this.unzip(response);
       }

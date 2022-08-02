@@ -187,7 +187,7 @@ public class CipherUtils {
          if (hexStr != null && hexStr.length() != 0) {
             char[] hexChars = hexStr.toCharArray();
             if ((hexChars.length & 1) != 0) {
-               throw new DecodeHexStrException("hexStr is Odd number");
+               throw new CipherUtils.DecodeHexStrException("hexStr is Odd number");
             } else {
                result = new byte[hexChars.length / 2];
                int i = 0;
@@ -197,7 +197,7 @@ public class CipherUtils {
                   ++i;
                   int l = Character.digit(hexChars[i], 16);
                   if (h == -1 || l == -1) {
-                     throw new DecodeHexStrException("Illegal hexStr");
+                     throw new CipherUtils.DecodeHexStrException("Illegal hexStr");
                   }
 
                   result[j] = (byte)(h << 4 | l);

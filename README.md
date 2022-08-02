@@ -3,7 +3,8 @@
 
 # 本git更新内容【非官方内容】
 ```
-2021-05-19 V4.0.1 官方原版逆向，请支持原版作者rebeyond。
+2021-05-19 V4.0.2 官方原版逆向，请支持原版作者rebeyond。
+2022-08- V4.0.1 官方原版逆向，请支持原版作者rebeyond。
 2021-05-20 V3.0 Beta11_t00ls 官方原版逆向，请支持原版作者rebeyond。
 2021-04-25 V3.0 Beta10 官方原版逆向，本git注入内存马加了是否选择网站的非空判断。
 2021-04-22 V3.0 Beta9 fixed 官方原版逆向未做修改
@@ -29,6 +30,7 @@
 --module-path "你javafx的lib文件夹" --add-modules=javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.swing,javafx.web
 例如：
 --module-path "C:\tool\javafx-sdk-17.0.2\lib" --add-modules=javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.swing,javafx.web
+如果爆数据库丢失错误，把data.db复制到项目根路径。
 ```
 
 # 分支

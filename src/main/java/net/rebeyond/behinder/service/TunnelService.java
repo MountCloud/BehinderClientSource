@@ -52,7 +52,7 @@ public class TunnelService {
          serviceThreadList = new ArrayList();
          this.localSocksProxyThreadMap.put(localPort, serviceThreadList);
       }
-      List fianlserviceThreadList = serviceThreadList;
+      List finalserviceThreadList = serviceThreadList;
       Runnable runner = () -> {
          try {
             ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -73,6 +73,7 @@ public class TunnelService {
 
                ((List)socketChannelList).add(socketChannel);
                String socketHash = Utils.getMD5("" + socketChannel.socket().getInetAddress() + socketChannel.socket().getPort() + "");
+
                Runnable singeTunnelRunner = () -> {
                   try {
                      if (this.handleSocks(socketChannel.socket(), socketHash)) {
@@ -168,8 +169,8 @@ public class TunnelService {
                         writeWorker.start();
                         singleTaskList.add(readWorker);
                         singleTaskList.add(writeWorker);
-                        fianlserviceThreadList.add(readWorker);
-                        fianlserviceThreadList.add(writeWorker);
+                        finalserviceThreadList.add(readWorker);
+                        finalserviceThreadList.add(writeWorker);
                      }
                   } catch (Exception var9) {
                      var9.printStackTrace();
@@ -180,7 +181,7 @@ public class TunnelService {
                worker.setName("localSocksProxyServer");
                this.workList.add(worker);
                worker.start();
-               fianlserviceThreadList.add(worker);
+               finalserviceThreadList.add(worker);
             }
          } catch (AsynchronousCloseException var11) {
          } catch (Exception var12) {

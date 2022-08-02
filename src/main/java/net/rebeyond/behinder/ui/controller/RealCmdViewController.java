@@ -218,7 +218,7 @@ public class RealCmdViewController {
             icon.setImage(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/stop.png"))));
          }
 
-         icon.setFitHeight(14.0);
+         icon.setFitHeight(14.0D);
          icon.setPreserveRatio(true);
          this.realCmdBtn.setGraphic(icon);
       } catch (Exception var3) {
@@ -314,8 +314,9 @@ public class RealCmdViewController {
             (new Thread() {
                public void run() {
                   try {
-                     RealCmdViewController.this.currentShellService.createRealCMD(bashPath);
+                     JSONObject var1 = RealCmdViewController.this.currentShellService.createRealCMD(bashPath);
                   } catch (Exception var2) {
+                     var2.printStackTrace();
                   }
 
                }

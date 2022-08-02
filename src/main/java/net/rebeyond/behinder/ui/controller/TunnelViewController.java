@@ -91,7 +91,7 @@ public class TunnelViewController {
    private List workList;
    private List reversePortMapThreadList = new ArrayList();
    private Label statusLabel;
-   private ProxyTunnelWorker proxyTunnelWorker;
+   private TunnelViewController.ProxyTunnelWorker proxyTunnelWorker;
    private ITunnelCallBack callBack;
    private TunnelService tunnelService;
    private List ReversePortMapWorkerList = new ArrayList();
@@ -325,7 +325,7 @@ public class TunnelViewController {
       Runnable worker = () -> {
          try {
             Runnable runner = () -> {
-               JSONObject result = null;
+               Object var2 = null;
 
                try {
                   this.currentShellService.createReversePortMap(listenPort);
@@ -341,7 +341,7 @@ public class TunnelViewController {
             Map paramMap = new HashMap();
             paramMap.put("listenIP", listenIP);
             paramMap.put("listenPort", listenPort);
-            ReversePortMapWorker reversePortMapWorkerDaemon = new ReversePortMapWorker("daemon", paramMap);
+            TunnelViewController.ReversePortMapWorker reversePortMapWorkerDaemon = new TunnelViewController.ReversePortMapWorker("daemon", paramMap);
             Thread reversePortMapWorker = new Thread(reversePortMapWorkerDaemon);
             reversePortMapWorker.start();
             this.ReversePortMapWorkerList.add(reversePortMapWorkerDaemon);
@@ -369,7 +369,7 @@ public class TunnelViewController {
             Iterator var2 = this.ReversePortMapWorkerList.iterator();
 
             while(var2.hasNext()) {
-               ReversePortMapWorker reversePortMapWorker = (ReversePortMapWorker)var2.next();
+               TunnelViewController.ReversePortMapWorker reversePortMapWorker = (TunnelViewController.ReversePortMapWorker)var2.next();
                reversePortMapWorker.stop();
             }
 
@@ -469,7 +469,7 @@ public class TunnelViewController {
                         this.paramMap.put("socketHash", socketHashx);
                         List proxyTunnelWorkListx = new ArrayList();
                         this.paramMap.put("workerList", proxyTunnelWorkListx);
-                        ProxyTunnelWorker sessionWorker = TunnelViewController.this.new ProxyTunnelWorker("session", this.paramMap);
+                        TunnelViewController.ProxyTunnelWorker sessionWorker = TunnelViewController.this.new ProxyTunnelWorker("session", this.paramMap);
                         Thread sessionWorkerThread = new Thread(sessionWorker);
                         sessionWorkerThread.start();
                         proxyTunnelWorkListx.add(sessionWorkerThread);
@@ -497,12 +497,12 @@ public class TunnelViewController {
                   if (this.handleSocks(socketx, targetIp)) {
                      this.log("INFO", "正在通信...");
                      this.paramMap.put("idleCount", 0);
-                     ProxyTunnelWorker readWorker = TunnelViewController.this.new ProxyTunnelWorker("read", this.paramMap);
+                     TunnelViewController.ProxyTunnelWorker readWorker = TunnelViewController.this.new ProxyTunnelWorker("read", this.paramMap);
                      Thread readWorkerThread = new Thread(readWorker);
                      TunnelViewController.this.workList.add(readWorkerThread);
                      readWorkerThread.start();
                      proxyTunnelWorkerList.add(readWorkerThread);
-                     ProxyTunnelWorker writeWorker = TunnelViewController.this.new ProxyTunnelWorker("write", this.paramMap);
+                     TunnelViewController.ProxyTunnelWorker writeWorker = TunnelViewController.this.new ProxyTunnelWorker("write", this.paramMap);
                      Thread writeWorkerThread = new Thread(writeWorker);
                      TunnelViewController.this.workList.add(writeWorkerThread);
                      writeWorkerThread.start();
@@ -783,8 +783,8 @@ public class TunnelViewController {
                         this.socketMetaList.put(socketHashx, socketMetax);
                         Map paramMap = new HashMap();
                         paramMap.put("socketMeta", socketMetax);
-                        ReversePortMapWorker reversePortMapWorkerReader = TunnelViewController.this.new ReversePortMapWorker("read", paramMap);
-                        ReversePortMapWorker reversePortMapWorkerWriter = TunnelViewController.this.new ReversePortMapWorker("write", paramMap);
+                        TunnelViewController.ReversePortMapWorker reversePortMapWorkerReader = TunnelViewController.this.new ReversePortMapWorker("read", paramMap);
+                        TunnelViewController.ReversePortMapWorker reversePortMapWorkerWriter = TunnelViewController.this.new ReversePortMapWorker("write", paramMap);
                         TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerReader);
                         TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerWriter);
                         Thread reader = new Thread(reversePortMapWorkerReader);

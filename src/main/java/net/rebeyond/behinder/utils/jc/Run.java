@@ -18,6 +18,7 @@ import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
+import javax.tools.JavaCompiler.CompilationTask;
 
 public class Run {
    public static void main(String[] args) {
@@ -25,7 +26,7 @@ public class Run {
    }
 
    public void test() {
-      String sourceCode = "\r\nimport javax.servlet.jsp.PageContext;\r\nimport javax.servlet.ServletOutputStream;\r\npublic class test\r\n{\r\n\tpublic boolean equals(Object obj){\r\n\r\n\tPageContext page = (PageContext) obj;\r\n\t\t\ttry {\r\n\t\t\t\tServletOutputStream so=page.getResponse().getOutputStream();\r\n\t\t\t\tso.write(\"afsddf\".getBytes(\"UTF-8\"));\r\n\t\t\t\tso.flush();\r\n\t\t\t\tso.close();\r\n\t\t\t\tpage.getOut().clear();  \r\n\t\t\t} catch (Exception e) {\r\n\t\t\t\t// TODO Auto-generated catch block\r\n\t\t\t\te.printStackTrace();\r\n\t\t\t} \r\n\t\treturn true;\r\n}\r\n}";
+      String var1 = "\r\nimport javax.servlet.jsp.PageContext;\r\nimport javax.servlet.ServletOutputStream;\r\npublic class test\r\n{\r\n\tpublic boolean equals(Object obj){\r\n\r\n\tPageContext page = (PageContext) obj;\r\n\t\t\ttry {\r\n\t\t\t\tServletOutputStream so=page.getResponse().getOutputStream();\r\n\t\t\t\tso.write(\"afsddf\".getBytes(\"UTF-8\"));\r\n\t\t\t\tso.flush();\r\n\t\t\t\tso.close();\r\n\t\t\t\tpage.getOut().clear();  \r\n\t\t\t} catch (Exception e) {\r\n\t\t\t\t// TODO Auto-generated catch block\r\n\t\t\t\te.printStackTrace();\r\n\t\t\t} \r\n\t\treturn true;\r\n}\r\n}";
 
       try {
          while(true) {
@@ -55,7 +56,7 @@ public class Run {
             options.add("-target");
             options.add("1.7");
             DiagnosticCollector collector = new DiagnosticCollector();
-            JavaCompiler.CompilationTask cTask = jc.getTask((Writer)null, fileManager, collector, options, (Iterable)null, Arrays.asList(javaFileObject));
+            CompilationTask cTask = jc.getTask((Writer)null, fileManager, collector, options, (Iterable)null, Arrays.asList(javaFileObject));
             boolean result = cTask.call();
             if (!result) {
                List diagnostics = collector.getDiagnostics();

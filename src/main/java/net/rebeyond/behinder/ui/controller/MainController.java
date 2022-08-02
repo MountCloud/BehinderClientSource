@@ -143,6 +143,7 @@ public class MainController {
          this.shellManager = new ShellManager();
          this.transProtocolDao = new TransProtocolDao();
       } catch (Exception var2) {
+         var2.printStackTrace();
          this.showErrorMessage("错误", "数据库文件丢失");
          System.exit(0);
       }
@@ -220,12 +221,12 @@ public class MainController {
          enableRadio.setToggleGroup(statusGroup);
          disableRadio.setToggleGroup(statusGroup);
          HBox statusHbox = new HBox();
-         statusHbox.setSpacing(10.0);
+         statusHbox.setSpacing(10.0D);
          statusHbox.getChildren().add(enableRadio);
          statusHbox.getChildren().add(disableRadio);
          GridPane proxyGridPane = new GridPane();
-         proxyGridPane.setVgap(15.0);
-         proxyGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
+         proxyGridPane.setVgap(15.0D);
+         proxyGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
          Label typeLabel = new Label("类型：");
          ComboBox typeCombo = new ComboBox();
          typeCombo.setItems(FXCollections.observableArrayList(new String[]{"HTTP", "SOCKS"}));
@@ -291,13 +292,14 @@ public class MainController {
                } catch (Exception var13) {
                }
 
-               final String type;
+               String type;
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
                   type = passwordText.getText();
+                  String finalType = type;
                   Authenticator.setDefault(new Authenticator() {
                      public PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(proxyUser, type.toCharArray());
+                        return new PasswordAuthentication(proxyUser, finalType.toCharArray());
                      }
                   });
                } else {
@@ -307,12 +309,12 @@ public class MainController {
                currentProxy.put("username", userNameText.getText());
                currentProxy.put("password", passwordText.getText());
                InetSocketAddress proxyAddr = new InetSocketAddress(IPText.getText(), Integer.parseInt(PortText.getText()));
-               String temptype = typeCombo.getValue().toString();
+               type = typeCombo.getValue().toString();
                Proxy proxy = null;
-               if (temptype.equals("HTTP")) {
+               if (type.equals("HTTP")) {
                   proxy = new Proxy(Type.HTTP, proxyAddr);
                   currentProxy.put("proxy", proxy);
-               } else if (temptype.equals("SOCKS")) {
+               } else if (type.equals("SOCKS")) {
                   proxy = new Proxy(Type.SOCKS, proxyAddr);
                   currentProxy.put("proxy", proxy);
                }
@@ -338,7 +340,7 @@ public class MainController {
          proxyGridPane.add(passwordLabel, 0, 5);
          proxyGridPane.add(passwordText, 1, 5);
          HBox buttonBox = new HBox();
-         buttonBox.setSpacing(20.0);
+         buttonBox.setSpacing(20.0D);
          buttonBox.setAlignment(Pos.CENTER);
          buttonBox.getChildren().add(cancelBtn);
          buttonBox.getChildren().add(saveBtn);
@@ -842,10 +844,10 @@ public class MainController {
 
       TextArea header = new TextArea();
       header.setPromptText("请输入自定义请求头Key:value对，一行一个，如：User-Agent: Just_For_Fun");
-      header.setPrefHeight(100.0);
+      header.setPrefHeight(100.0D);
       TextArea comment = new TextArea();
       comment.setPromptText("请输入备注信息");
-      comment.setPrefHeight(50.0);
+      comment.setPrefHeight(50.0D);
       urlText.textProperty().addListener((observable, oldValue, newValue) -> {
          URL url;
          try {
@@ -867,8 +869,8 @@ public class MainController {
       saveBtn.setDefaultButton(true);
       Button cancelBtn = new Button("取消");
       GridPane vpsInfoPane = new GridPane();
-      GridPane.setMargin(vpsInfoPane, new Insets(20.0, 0.0, 0.0, 0.0));
-      vpsInfoPane.setVgap(10.0);
+      GridPane.setMargin(vpsInfoPane, new Insets(20.0D, 0.0D, 0.0D, 0.0D));
+      vpsInfoPane.setVgap(10.0D);
       vpsInfoPane.setMaxWidth(Double.MAX_VALUE);
       vpsInfoPane.add(new Label("URL："), 0, 0);
       vpsInfoPane.add(urlText, 1, 0);
@@ -883,7 +885,7 @@ public class MainController {
       vpsInfoPane.add(new Label("备注："), 0, 5);
       vpsInfoPane.add(comment, 1, 5);
       HBox buttonBox = new HBox();
-      buttonBox.setSpacing(20.0);
+      buttonBox.setSpacing(20.0D);
       buttonBox.getChildren().addAll(new Node[]{cancelBtn, saveBtn});
       buttonBox.setAlignment(Pos.BOTTOM_CENTER);
       vpsInfoPane.add(buttonBox, 0, 8);
@@ -1078,7 +1080,7 @@ public class MainController {
             Utils.showErrorMessage("提示", "内存马植入目前仅支持Java");
          } else {
             Alert inputDialog = new Alert(AlertType.NONE);
-            inputDialog.setWidth(300.0);
+            inputDialog.setWidth(300.0D);
             inputDialog.setResizable(true);
             inputDialog.setTitle("注入内存马");
             Window window = inputDialog.getDialogPane().getScene().getWindow();
@@ -1086,8 +1088,8 @@ public class MainController {
                window.hide();
             });
             GridPane injectGridPane = new GridPane();
-            injectGridPane.setVgap(15.0);
-            injectGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
+            injectGridPane.setVgap(15.0D);
+            injectGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
             Label typeLabel = new Label("注入类型：");
             ComboBox typeCombo = new ComboBox();
             typeCombo.setItems(FXCollections.observableArrayList(new String[]{"AgentNoFile", "Agent"}));
@@ -1100,7 +1102,7 @@ public class MainController {
             Label pathLabel = new Label("注入路径：");
             pathLabel.setAlignment(Pos.CENTER_RIGHT);
             TextField pathText = new TextField();
-            pathText.setPrefWidth(300.0);
+            pathText.setPrefWidth(300.0D);
             pathText.setPromptText(String.format("支持正则表达式，如%smemshell.*", Utils.getContextPath(url)));
             pathText.focusedProperty().addListener((obs, oldVal, newVal) -> {
                if (pathText.getText().equals("")) {
@@ -1130,7 +1132,7 @@ public class MainController {
             injectGridPane.add(antiAgentCheckBox, 0, 2);
             injectGridPane.add(antiAgentMemo, 0, 3, 2, 1);
             HBox buttonBox = new HBox();
-            buttonBox.setSpacing(20.0);
+            buttonBox.setSpacing(20.0D);
             buttonBox.setAlignment(Pos.CENTER);
             buttonBox.getChildren().add(cancelBtn);
             buttonBox.getChildren().add(saveBtn);
@@ -1235,7 +1237,7 @@ public class MainController {
       alert.setTitle(title);
       alert.setHeaderText("");
       alert.setContentText(msg);
-      alert.show();
+      alert.showAndWait();
    }
 
    private void initCatagoryMenu() {
@@ -1257,7 +1259,7 @@ public class MainController {
          panel.add(cataGoryNameTxt, 1, 0);
          panel.add(cataGoryCommentLable, 0, 1);
          panel.add(cataGoryCommentTxt, 1, 1);
-         panel.setVgap(20.0);
+         panel.setVgap(20.0D);
          alert.getDialogPane().setContent(panel);
          Optional result = alert.showAndWait();
          if (result.get() == ButtonType.OK) {
@@ -1350,9 +1352,9 @@ public class MainController {
                JSONObject shellEntity = shells.getJSONObject(i);
 
                try {
-                  int finalCount = count;
+                  int finalcount = count;
                   Platform.runLater(() -> {
-                     this.statusLabel.setText(String.format("正在导入%d/%d...", finalCount, shells.length()));
+                     this.statusLabel.setText(String.format("正在导入%d/%d...", finalcount, shells.length()));
                   });
                   this.addShell(shellEntity);
                   ++count;

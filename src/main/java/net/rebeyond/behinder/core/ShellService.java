@@ -67,7 +67,7 @@ public class ShellService implements IShellService {
    }
 
    private ICrypt getCryptor(int transProtocolId) {
-      ICrypt cryptor = null;
+      Object cryptor = null;
 
       try {
          cryptor = new CustomCryptor(transProtocolId, Utils.getKey("rebeyond"));
@@ -79,7 +79,6 @@ public class ShellService implements IShellService {
       try {
          byte[] var3 = ((ICrypt)cryptor).getDecodeClsBytes();
       } catch (Exception var4) {
-         var4.printStackTrace();
       }
 
       return (ICrypt)cryptor;
@@ -111,7 +110,6 @@ public class ShellService implements IShellService {
          this.offlineHelper = new OfflineHelper(shellEntity.getInt("id"));
       } catch (Exception var3) {
          System.out.println("离线模块初始化失败：" + var3.getMessage());
-         var3.printStackTrace();
       }
 
       this.init();
@@ -715,7 +713,6 @@ public class ShellService implements IShellService {
    }
 
    public void downloadFile(String remotePath, String localPath) throws Exception {
-
       Map params = new LinkedHashMap();
       params.put("mode", "download");
       params.put("path", remotePath);
@@ -1102,7 +1099,19 @@ public class ShellService implements IShellService {
       this.currentHeaders.put("Accept-Encoding", "identity");
       Map resultObj = this.doRequestAndParse(data);
       Map responseHeader = (Map)resultObj.get("header");
+      JSONObject expectedSuccessObj = new JSONObject();
+      expectedSuccessObj.put("status", Base64.getEncoder().encodeToString("success".getBytes()));
+      expectedSuccessObj.put("msg", Base64.getEncoder().encodeToString(content.getBytes()));
+      String expectedSuccessBody = expectedSuccessObj.toString();
+      expectedSuccessBody = String.format("{\"status\":\"%s\",\"msg\":\"%s\"}", Base64.getEncoder().encodeToString("success".getBytes()), Base64.getEncoder().encodeToString(content.getBytes()));
+      byte[] expectedSuccessBodyBytes = this.cryptor.encrypt(expectedSuccessBody.getBytes());
       byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      this.beginIndex = Utils.indexOf(resData, expectedSuccessBodyBytes);
+      this.endIndex = resData.length - (this.beginIndex + expectedSuccessBodyBytes.length);
+      if (this.beginIndex > 0) {
+         resData = Arrays.copyOfRange(resData, this.beginIndex, resData.length - this.endIndex);
+      }
+
       String resultTxt = "";
 
       try {
@@ -1116,27 +1125,28 @@ public class ShellService implements IShellService {
 
             resultTxt = new String(this.cryptor.decrypt(resData));
          }
-      } catch (InvocationTargetException var12) {
-         if (var12.getTargetException() instanceof IllegalBlockSizeException) {
+      } catch (InvocationTargetException var15) {
+         var15.printStackTrace();
+         if (var15.getTargetException() instanceof IllegalBlockSizeException) {
             throw new DecryptException((String)responseHeader.get("status"), new String(resData));
          }
-      } catch (Exception var13) {
-         var13.printStackTrace();
-      } catch (Throwable var14) {
-         var14.printStackTrace();
+      } catch (Exception var16) {
+         var16.printStackTrace();
+      } catch (Throwable var17) {
+         var17.printStackTrace();
       }
 
       JSONObject result;
       try {
          result = new JSONObject(resultTxt);
-      } catch (Exception var11) {
+      } catch (Exception var14) {
          throw new DecryptException((String)responseHeader.get("status"), new String(resData));
       }
 
-      Iterator var9 = result.keySet().iterator();
+      Iterator var12 = result.keySet().iterator();
 
-      while(var9.hasNext()) {
-         String key = (String)var9.next();
+      while(var12.hasNext()) {
+         String key = (String)var12.next();
          result.put(key, new String(Base64.getDecoder().decode(result.getString(key)), "UTF-8"));
       }
 

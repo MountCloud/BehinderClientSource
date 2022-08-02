@@ -82,7 +82,8 @@ public class BaseDao {
       findSQL = findSQL + whereSQL;
       PreparedStatement statement = this.connection.prepareStatement(findSQL);
 
-      for(int i = 0; i < uniqueKeyList.size(); ++i) {
+      int i;
+      for(i = 0; i < uniqueKeyList.size(); ++i) {
          Field field = (Field)uniqueKeyList.get(i);
          if (Integer.TYPE.equals(field.getType())) {
             statement.setInt(i + 1, field.getInt(entity));
@@ -93,14 +94,14 @@ public class BaseDao {
          }
       }
 
-      int count = statement.executeQuery().getInt(1);
+      i = statement.executeQuery().getInt(1);
       statement.close();
-      if (count > 0) {
+      if (i > 0) {
          throw new AlreadyExistException(String.format("该%s已存在", table));
       } else {
          statement = this.connection.prepareStatement(insertSQL);
 
-         for(int i = 0; i < valueList.size(); ++i) {
+         for(i = 0; i < valueList.size(); ++i) {
             Object value = valueList.get(i);
             if (Integer.class.equals(value.getClass())) {
                statement.setInt(i + 1, (Integer)value);
@@ -111,9 +112,9 @@ public class BaseDao {
             }
          }
 
-         count = statement.executeUpdate();
+         i = statement.executeUpdate();
          statement.close();
-         return count;
+         return i;
       }
    }
 

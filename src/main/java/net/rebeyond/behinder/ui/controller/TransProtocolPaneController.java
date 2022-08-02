@@ -9,6 +9,7 @@ import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -456,6 +457,12 @@ public class TransProtocolPaneController {
       });
    }
 
+   private void extractPadding(String shellBody) {
+      Pattern pattern = Pattern.compile("<%[\\s\\S]*?%>");
+      pattern.matcher(shellBody);
+      shellBody = shellBody.replaceAll("<%[\\s\\S]*?%>", "");
+   }
+
    private boolean verify() {
       try {
          byte[] clearContent = Utils.getRandomString(20).getBytes();
@@ -494,7 +501,7 @@ public class TransProtocolPaneController {
    private byte[] encode(byte[] clearContent) throws Exception {
       String sourceCode = String.format(Constants.JAVA_CODE_TEMPLATE_SHORT, this.getCode(this.encodeWebview));
       byte[] payload = Utils.getClassFromSourceCode(sourceCode);
-      Class encodeCls = (new U(this.getClass().getClassLoader())).g(payload);
+      Class encodeCls = (new TransProtocolPaneController.U(this.getClass().getClassLoader())).g(payload);
       Method encodeMethod = encodeCls.getDeclaredMethod("Encrypt", byte[].class);
       encodeMethod.setAccessible(true);
       byte[] result = (byte[])((byte[])encodeMethod.invoke(encodeCls.newInstance(), clearContent));
@@ -504,7 +511,7 @@ public class TransProtocolPaneController {
    private byte[] decode(byte[] encryptContent) throws Exception {
       String sourceCode = String.format(Constants.JAVA_CODE_TEMPLATE_SHORT, this.getCode(this.decodeWebview));
       byte[] payload = Utils.getClassFromSourceCode(sourceCode);
-      Class encodeCls = (new U(this.getClass().getClassLoader())).g(payload);
+      Class encodeCls = (new TransProtocolPaneController.U(this.getClass().getClassLoader())).g(payload);
       Method encodeMethod = encodeCls.getDeclaredMethod("Decrypt", byte[].class);
       encodeMethod.setAccessible(true);
       byte[] result = (byte[])((byte[])encodeMethod.invoke(encodeCls.newInstance(), encryptContent));

@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import javax.crypto.Cipher;
@@ -137,7 +136,7 @@ public class Database {
          result = result + "],";
          Map record = new LinkedHashMap();
 
-         for(List recordList = new ArrayList(); rs.next(); result = result + "],") {
+         for(ArrayList recordList = new ArrayList(); rs.next(); result = result + "],") {
             result = result + "[";
             String[] var20 = colNames;
             int var21 = colNames.length;

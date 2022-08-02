@@ -308,7 +308,9 @@ public class FileOperation {
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       FileInputStream fis = new FileInputStream(new File(path));
       byte[] buffer = new byte[10240000];
-      int length = 0;
+      boolean var5 = false;
+
+      int length;
       while((length = fis.read(buffer)) > 0) {
          output.write(Arrays.copyOfRange(buffer, 0, length));
       }

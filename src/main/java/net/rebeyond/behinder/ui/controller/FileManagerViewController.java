@@ -334,13 +334,13 @@ public class FileManagerViewController {
 
    private void switchPane(String show) {
       if (show.equals("list")) {
-         this.fileListGridPane.setOpacity(1.0);
-         this.fileContentGridPane.setOpacity(0.0);
+         this.fileListGridPane.setOpacity(1.0D);
+         this.fileContentGridPane.setOpacity(0.0D);
          this.fileListGridPane.toFront();
       } else if (show.equals("content")) {
          this.fileListGridPane.toBack();
-         this.fileListGridPane.setOpacity(0.0);
-         this.fileContentGridPane.setOpacity(1.0);
+         this.fileListGridPane.setOpacity(0.0D);
+         this.fileContentGridPane.setOpacity(1.0D);
          this.fileContentGridPane.toFront();
       }
 
@@ -348,13 +348,13 @@ public class FileManagerViewController {
 
    private void switchContentPane(String show) {
       if (show.equals("code")) {
-         this.fileContentImageGridPane.setOpacity(0.0);
-         this.fileContentCodeGridPane.setOpacity(1.0);
+         this.fileContentImageGridPane.setOpacity(0.0D);
+         this.fileContentCodeGridPane.setOpacity(1.0D);
          this.fileContentImageGridPane.toBack();
          this.fileContentCodeGridPane.toFront();
       } else if (show.equals("image")) {
-         this.fileContentCodeGridPane.setOpacity(0.0);
-         this.fileContentImageGridPane.setOpacity(1.0);
+         this.fileContentCodeGridPane.setOpacity(0.0D);
+         this.fileContentImageGridPane.setOpacity(1.0D);
          this.fileContentCodeGridPane.toBack();
          this.fileContentImageGridPane.toFront();
       }
@@ -393,7 +393,6 @@ public class FileManagerViewController {
          return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(1);
       });
       ((TableColumn)tcs.get(1)).setComparator((o1, o2) -> {
-         //return Long.compare(Long.parseLong(o1), Long.parseLong(o2));
          return Long.compare(Long.parseLong(o1.toString()), Long.parseLong(o2.toString()));
       });
       ((TableColumn)tcs.get(2)).setCellValueFactory((data) -> {
@@ -464,15 +463,15 @@ public class FileManagerViewController {
                         String fileType = Utils.getFileType(name);
                         Image icon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/" + fileType + ".png")));
                         ImageView iconViewx = new ImageView(icon);
-                        iconViewx.setFitHeight(16.0);
-                        iconViewx.setFitWidth(16.0);
+                        iconViewx.setFitHeight(16.0D);
+                        iconViewx.setFitWidth(16.0D);
                         this.setGraphic(iconViewx);
                      } catch (Exception var9) {
                         try {
                            Image iconxx = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/unknown.png")));
                            ImageView iconView = new ImageView(iconxx);
-                           iconView.setFitHeight(16.0);
-                           iconView.setFitWidth(16.0);
+                           iconView.setFitHeight(16.0D);
+                           iconView.setFitWidth(16.0D);
                            this.setGraphic(iconView);
                         } catch (Exception var8) {
                         }
@@ -566,7 +565,7 @@ public class FileManagerViewController {
       ObservableList childItemList = treeItem.getChildren();
       Iterator var4 = childItemList.iterator();
 
-      TreeItem childItem = null;
+      TreeItem childItem;
       do {
          if (!var4.hasNext()) {
             if (treeItem.getParent() == null) {
@@ -587,7 +586,7 @@ public class FileManagerViewController {
             return null;
          }
 
-         childItem = (TreeItem)var4.next();
+         childItem =(TreeItem)var4.next();
       } while(!((TreeItem)childItem).getValue().toString().equals(text));
 
       return (TreeItem)childItem;
@@ -868,7 +867,7 @@ public class FileManagerViewController {
             Label renameLabel = new Label("重命名：");
             renameLabel.setAlignment(Pos.BASELINE_CENTER);
             TextField renameTxt = new TextField(oldFileName);
-            renameTxt.setPrefWidth(300.0);
+            renameTxt.setPrefWidth(300.0D);
             panel.getChildren().addAll(new Node[]{renameLabel, renameTxt});
             confirmDialog.getDialogPane().setContent(panel);
             renameTxt.selectAll();
@@ -978,7 +977,7 @@ public class FileManagerViewController {
       HBox hBox = new HBox();
       Label newDirectoryLabel = new Label("新建目录名称：");
       TextField newDirectoryTxt = new TextField("新建文件夹");
-      newDirectoryTxt.setPrefWidth(300.0);
+      newDirectoryTxt.setPrefWidth(300.0D);
       newDirectoryTxt.setOnKeyPressed((keyEvent) -> {
          if (keyEvent.getCode() == KeyCode.ENTER) {
             inputDialog.getDialogPane().getScene().getWindow().hide();
@@ -1057,9 +1056,9 @@ public class FileManagerViewController {
          String name = ((StringProperty)selectedRow.get(0)).getValue();
          String filePath = currentPath + name;
          GridPane panel = new GridPane();
-         panel.setPadding(new Insets(20.0, 10.0, 0.0, 10.0));
-         panel.setHgap(20.0);
-         panel.setVgap(10.0);
+         panel.setPadding(new Insets(20.0D, 10.0D, 0.0D, 10.0D));
+         panel.setHgap(20.0D);
+         panel.setVgap(10.0D);
          Label fileNameLabel = new Label("文件：");
          fileNameLabel.setAlignment(Pos.CENTER_RIGHT);
          Label fileNameTxtLabel = new Label(name);
@@ -1079,7 +1078,7 @@ public class FileManagerViewController {
          cancelBtn.setOnAction((event) -> {
             inputDialog.getDialogPane().getScene().getWindow().hide();
          });
-         buttonBox.setSpacing(20.0);
+         buttonBox.setSpacing(20.0D);
          buttonBox.setAlignment(Pos.CENTER);
          buttonBox.getChildren().addAll(new Node[]{saveBtn, cancelBtn});
          panel.add(fileNameLabel, 0, 0);

@@ -1,6 +1,6 @@
 package net.rebeyond.behinder.ui.controller;
 
-//import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -573,15 +573,33 @@ public class DatabaseViewController {
 
    private String formatConnectString(String type) {
       String result = "%s://%s:password@127.0.0.1:%s/%s";
-      switch (type) {
-         case "MySQL":
-            result = String.format(result, "mysql", "root", "3306", "mysql");
-            break;
-         case "SQLServer":
-            result = String.format(result, "sqlserver", "sa", "1433", "master");
-            break;
-         case "Oracle":
-            result = String.format(result, "oracle", "sys", "1521", "orcl");
+      byte var4 = -1;
+      switch(type.hashCode()) {
+      case -1924994658:
+         if (type.equals("Oracle")) {
+            var4 = 2;
+         }
+         break;
+      case 74798178:
+         if (type.equals("MySQL")) {
+            var4 = 0;
+         }
+         break;
+      case 942662289:
+         if (type.equals("SQLServer")) {
+            var4 = 1;
+         }
+      }
+
+      switch(var4) {
+      case 0:
+         result = String.format(result, "mysql", "root", "3306", "mysql");
+         break;
+      case 1:
+         result = String.format(result, "sqlserver", "sa", "1433", "master");
+         break;
+      case 2:
+         result = String.format(result, "oracle", "sys", "1521", "orcl");
       }
 
       return result;
@@ -599,12 +617,10 @@ public class DatabaseViewController {
       } else if (databaseType.equals("oracle")) {
          sql = "select table_name,num_rows from user_tables";
       }
-
-      String sqlfinal = sql;
-
+      String finalSql = sql;
       Runnable runner = () -> {
          try {
-            String resultText = this.executeSQL(connParams, sqlfinal);
+            String resultText = this.executeSQL(connParams, finalSql);
             Platform.runLater(() -> {
                try {
                   this.fillTable(resultText);
@@ -667,8 +683,7 @@ public class DatabaseViewController {
          sql = "select sys_context('userenv','db_name') as db_name from dual";
       }
 
-      String sqlfinal = sql;
-
+      String finalSql = sql;
       Runnable runner = () -> {
          try {
             if (shellType.equals("aspx")) {
@@ -676,7 +691,7 @@ public class DatabaseViewController {
                this.loadDriver("aspx", "oracle");
             }
 
-            String resultText = this.executeSQL(connParams, sqlfinal);
+            String resultText = this.executeSQL(connParams, finalSql);
             if (resultText.equals("NoDriver")) {
                this.loadDriver(shellType, (String)connParams.get("type"));
                return;
@@ -816,18 +831,37 @@ public class DatabaseViewController {
       int childNums = result.length() - 1;
       String childIconPath = "";
       String childType = "";
-      switch (currentTreeItem.getGraphic().getUserData().toString()) {
-         case "root":
-            childIconPath = "net/rebeyond/behinder/resource/database.png";
-            childType = "database";
-            break;
-         case "database":
-            childIconPath = "net/rebeyond/behinder/resource/database_table.png";
-            childType = "table";
-            break;
-         case "table":
-            childIconPath = "net/rebeyond/behinder/resource/database_column.png";
-            childType = "column";
+      String var7 = currentTreeItem.getGraphic().getUserData().toString();
+      byte var8 = -1;
+      switch(var7.hashCode()) {
+      case 3506402:
+         if (var7.equals("root")) {
+            var8 = 0;
+         }
+         break;
+      case 110115790:
+         if (var7.equals("table")) {
+            var8 = 2;
+         }
+         break;
+      case 1789464955:
+         if (var7.equals("database")) {
+            var8 = 1;
+         }
+      }
+
+      switch(var8) {
+      case 0:
+         childIconPath = "net/rebeyond/behinder/resource/database.png";
+         childType = "database";
+         break;
+      case 1:
+         childIconPath = "net/rebeyond/behinder/resource/database_table.png";
+         childType = "table";
+         break;
+      case 2:
+         childIconPath = "net/rebeyond/behinder/resource/database_column.png";
+         childType = "column";
       }
 
       Image icon = new Image(new ByteArrayInputStream(Utils.getResourceData(childIconPath)));

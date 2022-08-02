@@ -164,8 +164,9 @@ public class RealCMD implements Runnable {
          }
 
          byte[] buffer = new byte[1024];
-         int length = 0;
+         boolean var11 = false;
 
+         int length;
          while((length = stdout.read(buffer)) > -1) {
             output.append(new String(Arrays.copyOfRange(buffer, 0, length)));
          }

