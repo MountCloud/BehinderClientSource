@@ -3,6 +3,7 @@
 
 # 本git更新内容【非官方内容】
 ```
+2022-08-03 V4.0.2 基础功能测试+修复。
 2022-08-02 V4.0.2 官方原版逆向，请支持原版作者rebeyond。
 2022-07-31 V4.0.1 官方原版逆向，请支持原版作者rebeyond。
 2021-05-20 V3.0 Beta11_t00ls 官方原版逆向，请支持原版作者rebeyond。
@@ -20,18 +21,13 @@
 
 2.程序重新构建为maven工程，因为个人习惯了maven。
 
-3.server目录下是服务端小马程序。
-
 # 二开说明
 ```
-1：JDK，从4.0开始，本源码使用JDK11进行的逆向工程。
-2：JavaFx，本次使用的是javafx-sdk-17.0.2，根据需求在官网下载：https://gluonhq.com/products/javafx/
-3：因为是jdk11，所以Jvm启动参数需要加上JavaFx：
---module-path "你javafx的lib文件夹" --add-modules=javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.swing,javafx.web
-例如：
---module-path "C:\tool\javafx-sdk-17.0.2\lib" --add-modules=javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.swing,javafx.web
-如果爆数据库丢失错误，把data.db复制到项目根路径。
+试了一下，还是只能用jdk1.8二开，安心用1。8二开吧。
 ```
+
+# 4.0没有服务端
+在“传输协议”里生成服务端。
 
 # 分支
 本git的分支对标原版程序版本号。
