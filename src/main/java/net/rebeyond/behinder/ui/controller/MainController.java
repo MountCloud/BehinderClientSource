@@ -674,7 +674,7 @@ public class MainController {
 
       this.idCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-            public void updateItem(String item, boolean empty) {
+            public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
@@ -690,7 +690,7 @@ public class MainController {
       });
       this.statusCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-            public void updateItem(String item, boolean empty) {
+            public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                if (empty) {
                   this.setGraphic((Node)null);
@@ -721,7 +721,10 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        this.setText(item);
+                        if(item==null){
+                           item = "";
+                        }
+                        this.setText(item.toString());
                      }
 
                   }

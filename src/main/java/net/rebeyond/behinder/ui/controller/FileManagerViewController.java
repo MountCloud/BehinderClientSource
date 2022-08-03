@@ -375,7 +375,7 @@ public class FileManagerViewController {
          }
       }
 
-      if (!parent.getGraphic().getUserData().equals("directory") && !currentPath.endsWith(fileSep)) {
+      if (!parent.getGraphic().getUserData().equals("directoHry") && !currentPath.endsWith(fileSep)) {
          currentPath = currentPath + fileSep;
       }
 
@@ -437,7 +437,7 @@ public class FileManagerViewController {
       });
       this.fileNameCol.setCellFactory((column) -> {
          return new TableCell() {
-            public void updateItem(String item, boolean empty) {
+            public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                if (item == null | empty) {
                   this.setGraphic((Node)null);
@@ -478,7 +478,7 @@ public class FileManagerViewController {
                      }
                   }
 
-                  this.setText(item);
+                  this.setText(item.toString());
                }
 
             }
@@ -486,9 +486,12 @@ public class FileManagerViewController {
       });
       this.filePermCol.setCellFactory((column) -> {
          return new TableCell() {
-            public void updateItem(String item, boolean empty) {
+            public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
-               this.setText(item);
+               if(item==null){
+                  item = "";
+               }
+               this.setText(item.toString());
                this.setAlignment(Pos.CENTER);
             }
          };
