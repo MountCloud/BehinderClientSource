@@ -19,7 +19,7 @@ import javax.tools.ToolProvider;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.utils.Utils;
 
-public class Main extends Application {
+public class Main extends Object {
    public void start(Stage primaryStage) throws Exception {
       try {
          Parent root = (Parent)FXMLLoader.load(this.getClass().getResource("Main.fxml"));
