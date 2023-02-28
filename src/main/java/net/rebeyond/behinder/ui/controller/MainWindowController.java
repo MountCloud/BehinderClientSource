@@ -149,7 +149,15 @@ public class MainWindowController {
                   this.doConnect();
                   int randStringLength = (new SecureRandom()).nextInt(3000);
                   String randString = Utils.getRandomString(randStringLength);
-                  JSONObject basicInfoObj = this.currentShellService.getBasicInfo(randString);
+
+                  JSONObject basicInfoObj;
+                  try {
+                     basicInfoObj = this.currentShellService.getBasicInfo(randString);
+                  } catch (Exception var15) {
+                     this.currentShellService.setCompareMode(Constants.COMPARE_MODE_BYTES);
+                     basicInfoObj = this.currentShellService.getBasicInfo(randString);
+                  }
+
                   if (basicInfoObj.has("msg")) {
                      basicInfoObj = new JSONObject(basicInfoObj.getString("msg"));
                   }
@@ -217,18 +225,18 @@ public class MainWindowController {
                   Thread keepAliveWorker = new Thread(worker);
                   keepAliveWorker.start();
                   this.workList.add(keepAliveWorker);
-               } catch (DecryptException var15) {
+               } catch (DecryptException var16) {
                   Platform.runLater(() -> {
                      this.connStatusLabel.setText("连接失败");
                      this.connStatusLabel.setTextFill(Color.RED);
-                     this.statusLabel.setText(var15.getMessage());
+                     this.statusLabel.setText(var16.getMessage());
                      Hyperlink detailLink = new Hyperlink("点击查看响应详情");
                      detailLink.setOnMouseClicked((event) -> {
-                        Utils.showErrorMessage("响应内容", var15.getResponseBody());
+                        Utils.showErrorMessage("响应内容", var16.getResponseBody());
                      });
                      Separator separator = new Separator();
                      separator.setOrientation(Orientation.VERTICAL);
-                     separator.setPrefHeight(20.0D);
+                     separator.setPrefHeight(20.0);
                      HBox statusContainer = (HBox)((GridPane)this.statusLabel.getParent()).getChildren().get(1);
                      statusContainer.getChildren().add(0, separator);
                      statusContainer.getChildren().add(0, detailLink);
@@ -238,12 +246,12 @@ public class MainWindowController {
                      this.shellManager.setShellStatus(this.shellEntity.getInt("id"), Constants.SHELL_STATUS_DEAD);
                   } catch (Exception var14) {
                   }
-               } catch (Exception var16) {
-                  var16.printStackTrace();
+               } catch (Exception var17) {
+                  var17.printStackTrace();
                   Platform.runLater(() -> {
                      this.connStatusLabel.setText("连接失败");
                      this.connStatusLabel.setTextFill(Color.RED);
-                     this.statusLabel.setText("[ERROR]连接失败：" + var16.getClass().getName() + ":" + var16.getMessage());
+                     this.statusLabel.setText("[ERROR]连接失败：" + var17.getClass().getName() + ":" + var17.getMessage());
                   });
 
                   try {
@@ -262,24 +270,10 @@ public class MainWindowController {
       });
       this.mainTabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
          public void changed(ObservableValue observable, Tab oldTab, Tab newTab) {
-            String tabId = newTab.getId();
-            byte var6 = -1;
-            switch(tabId.hashCode()) {
-            case -1356954629:
-               if (tabId.equals("cmdTab")) {
-                  var6 = 0;
-               }
-               break;
-            case 0:
-               if (tabId.equals("")) {
-                  var6 = 1;
-               }
-            }
-
-            switch(var6) {
-            case 0:
-            case 1:
-            default:
+            switch (newTab.getId()) {
+               case "cmdTab":
+               case "":
+               default:
             }
          }
       });
@@ -372,29 +366,29 @@ public class MainWindowController {
    private void showTaskCenter() {
       Alert inputDialog = Utils.getAlert(AlertType.NONE);
       inputDialog.setTitle("运行中的任务");
-      inputDialog.setWidth(800.0D);
+      inputDialog.setWidth(800.0);
       inputDialog.setResizable(true);
       Window window = inputDialog.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((e) -> {
          window.hide();
       });
       VBox taskBox = new VBox();
-      taskBox.setPrefWidth(600.0D);
+      taskBox.setPrefWidth(600.0);
       taskBox.setFillWidth(true);
-      taskBox.setSpacing(10.0D);
+      taskBox.setSpacing(10.0);
       Iterator var4 = this.taskList.iterator();
 
       while(var4.hasNext()) {
          Task task = (Task)var4.next();
-         if (!(task.getProgress() >= 1.0D)) {
+         if (!(task.getProgress() >= 1.0)) {
             VBox taskContainer = new VBox();
-            taskContainer.setSpacing(10.0D);
+            taskContainer.setSpacing(10.0);
             HBox taskItem = new HBox();
-            taskItem.setSpacing(20.0D);
+            taskItem.setSpacing(20.0);
             Label taskName = new Label("任务名称：" + task.getName());
             StackPane progressPane = new StackPane();
             ProgressBar taskProgress = new ProgressBar(task.getProgress());
-            taskProgress.setPrefWidth(300.0D);
+            taskProgress.setPrefWidth(300.0);
             Label taskPercent = new Label((int)task.getProgress() * 100 + "%");
             taskPercent.textProperty().bind((new SimpleIntegerProperty((int)task.getProgress() * 100)).asString());
             progressPane.getChildren().addAll(new Node[]{taskProgress, taskPercent});

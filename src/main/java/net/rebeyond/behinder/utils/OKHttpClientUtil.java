@@ -25,8 +25,6 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.TlsVersion;
-import okhttp3.Interceptor.Chain;
-import okhttp3.Request.Builder;
 import okhttp3.internal.http.RealResponseBody;
 import okio.GzipSource;
 import okio.Okio;
@@ -37,10 +35,10 @@ public class OKHttpClientUtil {
    private static OkHttpClient client;
 
    public static Map post(String url, Map headers, byte[] requestBody) throws IOException {
-      Map result = new HashMap();
+      HashMap result = new HashMap();
       String host = (new URL(url)).getHost();
       RequestBody body = RequestBody.create(requestBody);
-      Builder builder = (new Builder()).url(url).post(body);
+      Request.Builder builder = (new Request.Builder()).url(url).post(body);
       builder.addHeader("Host", host);
       headers.remove("Host");
       headers.put("Content-Length", body.contentLength() + "");
@@ -54,8 +52,8 @@ public class OKHttpClientUtil {
 
          try {
             builder.addHeader(key, (String)headers.get(key));
-         } catch (Exception var24) {
-            var24.printStackTrace();
+         } catch (Exception var15) {
+            var15.printStackTrace();
          }
       }
 
@@ -63,42 +61,44 @@ public class OKHttpClientUtil {
 
       try {
          Response response = client.newCall(request).execute();
-         Throwable var30 = null;
 
+         HashMap var22;
          try {
             Map responseHeader = new HashMap();
             Headers resheaders = response.headers();
-            Iterator var13 = resheaders.names().iterator();
+            Iterator var12 = resheaders.names().iterator();
 
-            while(var13.hasNext()) {
-               String header = (String)var13.next();
+            while(true) {
+               if (!var12.hasNext()) {
+                  result.put("data", response.body().bytes());
+                  responseHeader.put("status", response.code() + "");
+                  result.put("header", responseHeader);
+                  var22 = result;
+                  break;
+               }
+
+               String header = (String)var12.next();
                responseHeader.put(header, resheaders.get(header));
             }
-
-            result.put("data", response.body().bytes());
-            responseHeader.put("status", response.code() + "");
-            result.put("header", responseHeader);
-            Map var32 = result;
-            return var32;
-         } catch (Throwable var25) {
-            var30 = var25;
-            throw var25;
-         } finally {
+         } catch (Throwable var16) {
             if (response != null) {
-               if (var30 != null) {
-                  try {
-                     response.close();
-                  } catch (Throwable var23) {
-                     var30.addSuppressed(var23);
-                  }
-               } else {
+               try {
                   response.close();
+               } catch (Throwable var14) {
+                  var16.addSuppressed(var14);
                }
             }
 
+            throw var16;
          }
-      } catch (Exception var27) {
-         throw var27;
+
+         if (response != null) {
+            response.close();
+         }
+
+         return var22;
+      } catch (Exception var17) {
+         throw var17;
       }
    }
 
@@ -116,7 +116,7 @@ public class OKHttpClientUtil {
    }
 
    static {
-      spec = (new okhttp3.ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)).tlsVersions(new TlsVersion[]{TlsVersion.TLS_1_0, TlsVersion.TLS_1_1, TlsVersion.TLS_1_2, TlsVersion.TLS_1_3}).build();
+      spec = (new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)).tlsVersions(new TlsVersion[]{TlsVersion.TLS_1_0, TlsVersion.TLS_1_1, TlsVersion.TLS_1_2, TlsVersion.TLS_1_3}).build();
       client = (new OkHttpClient()).newBuilder().connectTimeout(10L, TimeUnit.SECONDS).sslSocketFactory(SSLSocketClient.getSSLSocketFactory(), SSLSocketClient.getX509TrustManager()).hostnameVerifier(SSLSocketClient.getHostnameVerifier()).connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS, ConnectionSpec.CLEARTEXT, spec)).readTimeout(60L, TimeUnit.SECONDS).proxy((Proxy)MainController.currentProxy.get("proxy")).connectionPool(new ConnectionPool(100, 30L, TimeUnit.SECONDS)).cookieJar(new CookieJar() {
          public void saveFromResponse(HttpUrl url, List cookiesx) {
             Set cookieSet = new HashSet(cookiesx);
@@ -132,7 +132,7 @@ public class OKHttpClientUtil {
    }
 
    private static class UnzippingInterceptor implements Interceptor {
-      public Response intercept(Chain chain) throws IOException {
+      public Response intercept(Interceptor.Chain chain) throws IOException {
          Response response = chain.proceed(chain.request());
          return this.unzip(response);
       }

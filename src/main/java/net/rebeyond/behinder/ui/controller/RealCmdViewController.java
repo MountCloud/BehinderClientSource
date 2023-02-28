@@ -111,13 +111,8 @@ public class RealCmdViewController {
                               } else {
                                  windowsCommondBuf.append(commandToExecute);
                               }
-
-                              String finalcommandToExecute = commandToExecute;
+                              final String finalcommandToExecute = commandToExecute;
                               Platform.runLater(() -> {
-                                 for(int i = 0; i < finalcommandToExecute.length(); ++i) {
-                                    System.out.println(finalcommandToExecute.getBytes()[i]);
-                                 }
-
                                  this.write(finalcommandToExecute);
                               });
                               continue;
@@ -125,7 +120,7 @@ public class RealCmdViewController {
 
                            commandToExecute = commandToExecute.replace((new StringBuilder()).append('\r'), "" + '\r' + '\n');
                            windowsCommondBuf.append(commandToExecute);
-                           String finalcommandToExecute = commandToExecute;
+                           final String finalcommandToExecute = commandToExecute;
                            Platform.runLater(() -> {
                               this.write(finalcommandToExecute);
                            });
@@ -218,7 +213,7 @@ public class RealCmdViewController {
             icon.setImage(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/stop.png"))));
          }
 
-         icon.setFitHeight(14.0D);
+         icon.setFitHeight(14.0);
          icon.setPreserveRatio(true);
          this.realCmdBtn.setGraphic(icon);
       } catch (Exception var3) {

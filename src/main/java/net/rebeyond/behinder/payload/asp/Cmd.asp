@@ -35,9 +35,9 @@ Function Stream_StringToBinary(Text)
 End Function
 
 
-Function GetErr(Err)'检查错误处理
+Function GetErr(Err)
 	If Err Then
-		GetErr= "<font size=2><li>错误:"&Err.Description&"</li><li>错误源:"&Err.Source&"</li><br>"
+		GetErr= "<font size=2><li>Err:"&Err.Description&"</li><li>ErrorSource:"&Err.Source&"</li><br>"
 	End If
 End Function
 Function GetStream()

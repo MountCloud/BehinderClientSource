@@ -91,7 +91,7 @@ public class TunnelViewController {
    private List workList;
    private List reversePortMapThreadList = new ArrayList();
    private Label statusLabel;
-   private TunnelViewController.ProxyTunnelWorker proxyTunnelWorker;
+   private ProxyTunnelWorker proxyTunnelWorker;
    private ITunnelCallBack callBack;
    private TunnelService tunnelService;
    private List ReversePortMapWorkerList = new ArrayList();
@@ -325,7 +325,7 @@ public class TunnelViewController {
       Runnable worker = () -> {
          try {
             Runnable runner = () -> {
-               Object var2 = null;
+               JSONObject result = null;
 
                try {
                   this.currentShellService.createReversePortMap(listenPort);
@@ -341,7 +341,7 @@ public class TunnelViewController {
             Map paramMap = new HashMap();
             paramMap.put("listenIP", listenIP);
             paramMap.put("listenPort", listenPort);
-            TunnelViewController.ReversePortMapWorker reversePortMapWorkerDaemon = new TunnelViewController.ReversePortMapWorker("daemon", paramMap);
+            ReversePortMapWorker reversePortMapWorkerDaemon = new ReversePortMapWorker("daemon", paramMap);
             Thread reversePortMapWorker = new Thread(reversePortMapWorkerDaemon);
             reversePortMapWorker.start();
             this.ReversePortMapWorkerList.add(reversePortMapWorkerDaemon);
@@ -369,7 +369,7 @@ public class TunnelViewController {
             Iterator var2 = this.ReversePortMapWorkerList.iterator();
 
             while(var2.hasNext()) {
-               TunnelViewController.ReversePortMapWorker reversePortMapWorker = (TunnelViewController.ReversePortMapWorker)var2.next();
+               ReversePortMapWorker reversePortMapWorker = (ReversePortMapWorker)var2.next();
                reversePortMapWorker.stop();
             }
 
@@ -402,6 +402,147 @@ public class TunnelViewController {
       Thread woker = new Thread(worker);
       woker.start();
       this.workList.add(woker);
+   }
+
+   class ReversePortMapWorker implements Runnable {
+      private String threadType;
+      private Map paramMap;
+      private Map socketMetaList = new HashMap();
+
+      public ReversePortMapWorker(String threadType, Map paramMap) {
+         this.threadType = threadType;
+         this.paramMap = paramMap;
+      }
+
+      public void stop() {
+         Iterator var1 = this.socketMetaList.keySet().iterator();
+
+         while(var1.hasNext()) {
+            String key = (String)var1.next();
+            Socket socket = (Socket)((Map)this.socketMetaList.get(key)).get("socket");
+
+            try {
+               socket.close();
+            } catch (Exception var5) {
+            }
+         }
+
+         this.socketMetaList = null;
+      }
+
+      public void run() {
+         int bytesRead;
+         if (this.threadType.equals("daemon")) {
+            String listenIP = this.paramMap.get("listenIP").toString();
+            int listenPort = Integer.parseInt(this.paramMap.get("listenPort").toString());
+
+            while(true) {
+               try {
+                  JSONObject result = TunnelViewController.this.currentShellService.listReversePortMap();
+                  JSONArray socketArr = new JSONArray(result.getString("msg"));
+                  System.out.println(socketArr);
+
+                  for(bytesRead = 0; bytesRead < socketArr.length(); ++bytesRead) {
+                     JSONObject socketObj = socketArr.getJSONObject(bytesRead);
+                     String socketHashx = socketObj.getString("socketHash");
+                     if (socketHashx.startsWith("reverseportmap_socket") && !this.socketMetaList.containsKey(socketHashx)) {
+                        Map socketMetax = new HashMap();
+                        socketMetax.put("status", "ready");
+                        Socket socketx = new Socket();
+                        socketx.connect(new InetSocketAddress(listenIP, listenPort), 5000);
+                        socketx.setSoTimeout(5000);
+                        socketMetax.put("status", "connected");
+                        socketMetax.put("socket", socketx);
+                        socketMetax.put("socketHash", socketHashx);
+                        this.socketMetaList.put(socketHashx, socketMetax);
+                        Map paramMap = new HashMap();
+                        paramMap.put("socketMeta", socketMetax);
+                        ReversePortMapWorker reversePortMapWorkerReader = TunnelViewController.this.new ReversePortMapWorker("read", paramMap);
+                        ReversePortMapWorker reversePortMapWorkerWriter = TunnelViewController.this.new ReversePortMapWorker("write", paramMap);
+                        TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerReader);
+                        TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerWriter);
+                        Thread reader = new Thread(reversePortMapWorkerReader);
+                        Thread writer = new Thread(reversePortMapWorkerWriter);
+                        TunnelViewController.this.reversePortMapThreadList.add(reader);
+                        TunnelViewController.this.reversePortMapThreadList.add(writer);
+                        TunnelViewController.this.workList.add(reader);
+                        TunnelViewController.this.workList.add(writer);
+                        reader.start();
+                        writer.start();
+                     }
+                  }
+
+                  Thread.sleep(3000L);
+               } catch (Exception var21) {
+                  break;
+               }
+            }
+         } else {
+            Map socketMeta;
+            String socketHash;
+            Socket socket;
+            JSONObject var27;
+            if (this.threadType.equals("read")) {
+               socketMeta = (Map)this.paramMap.get("socketMeta");
+               socketHash = socketMeta.get("socketHash").toString();
+               socket = (Socket)socketMeta.get("socket");
+
+               while(true) {
+                  try {
+                     Thread.sleep(100L);
+                     JSONObject responseObj = TunnelViewController.this.currentShellService.readReversePortMapData(socketHash);
+                     if (!responseObj.getString("status").equals("success")) {
+                        try {
+                           var27 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHash);
+                        } catch (Exception var17) {
+                        }
+                        break;
+                     }
+
+                     String msg = responseObj.getString("msg");
+                     byte[] data = Base64.getDecoder().decode(msg);
+                     socket.getOutputStream().write(data);
+                     socket.getOutputStream().flush();
+                  } catch (Exception var18) {
+                     var18.printStackTrace();
+
+                     try {
+                        var27 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHash);
+                     } catch (Exception var16) {
+                     }
+                     break;
+                  }
+               }
+            } else if (this.threadType.equals("write")) {
+               socketMeta = (Map)this.paramMap.get("socketMeta");
+               socketHash = socketMeta.get("socketHash").toString();
+               socket = (Socket)socketMeta.get("socket");
+
+               while(true) {
+                  try {
+                     byte[] buf = new byte[20480];
+
+                     for(bytesRead = socket.getInputStream().read(buf); bytesRead > 0; bytesRead = socket.getInputStream().read(buf)) {
+                        TunnelViewController.this.currentShellService.writeReversePortMapData(Arrays.copyOfRange(buf, 0, bytesRead), socketHash);
+                     }
+                  } catch (SocketTimeoutException var19) {
+                  } catch (Exception var20) {
+                     var20.printStackTrace();
+
+                     try {
+                        var27 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHash);
+                     } catch (Exception var15) {
+                     }
+                     break;
+                  }
+               }
+            }
+         }
+
+      }
+
+      public void close(String listenIP, String listenPort) {
+      }
    }
 
    class ProxyTunnelWorker implements Runnable {
@@ -469,7 +610,7 @@ public class TunnelViewController {
                         this.paramMap.put("socketHash", socketHashx);
                         List proxyTunnelWorkListx = new ArrayList();
                         this.paramMap.put("workerList", proxyTunnelWorkListx);
-                        TunnelViewController.ProxyTunnelWorker sessionWorker = TunnelViewController.this.new ProxyTunnelWorker("session", this.paramMap);
+                        ProxyTunnelWorker sessionWorker = TunnelViewController.this.new ProxyTunnelWorker("session", this.paramMap);
                         Thread sessionWorkerThread = new Thread(sessionWorker);
                         sessionWorkerThread.start();
                         proxyTunnelWorkListx.add(sessionWorkerThread);
@@ -497,12 +638,12 @@ public class TunnelViewController {
                   if (this.handleSocks(socketx, targetIp)) {
                      this.log("INFO", "正在通信...");
                      this.paramMap.put("idleCount", 0);
-                     TunnelViewController.ProxyTunnelWorker readWorker = TunnelViewController.this.new ProxyTunnelWorker("read", this.paramMap);
+                     ProxyTunnelWorker readWorker = TunnelViewController.this.new ProxyTunnelWorker("read", this.paramMap);
                      Thread readWorkerThread = new Thread(readWorker);
                      TunnelViewController.this.workList.add(readWorkerThread);
                      readWorkerThread.start();
                      proxyTunnelWorkerList.add(readWorkerThread);
-                     TunnelViewController.ProxyTunnelWorker writeWorker = TunnelViewController.this.new ProxyTunnelWorker("write", this.paramMap);
+                     ProxyTunnelWorker writeWorker = TunnelViewController.this.new ProxyTunnelWorker("write", this.paramMap);
                      Thread writeWorkerThread = new Thread(writeWorker);
                      TunnelViewController.this.workList.add(writeWorkerThread);
                      writeWorkerThread.start();
@@ -727,147 +868,6 @@ public class TunnelViewController {
 
       private boolean parseSocks4(Socket socket, String socketHash) {
          return false;
-      }
-   }
-
-   class ReversePortMapWorker implements Runnable {
-      private String threadType;
-      private Map paramMap;
-      private Map socketMetaList = new HashMap();
-
-      public ReversePortMapWorker(String threadType, Map paramMap) {
-         this.threadType = threadType;
-         this.paramMap = paramMap;
-      }
-
-      public void stop() {
-         Iterator var1 = this.socketMetaList.keySet().iterator();
-
-         while(var1.hasNext()) {
-            String key = (String)var1.next();
-            Socket socket = (Socket)((Map)this.socketMetaList.get(key)).get("socket");
-
-            try {
-               socket.close();
-            } catch (Exception var5) {
-            }
-         }
-
-         this.socketMetaList = null;
-      }
-
-      public void run() {
-         int bytesRead;
-         if (this.threadType.equals("daemon")) {
-            String listenIP = this.paramMap.get("listenIP").toString();
-            int listenPort = Integer.parseInt(this.paramMap.get("listenPort").toString());
-
-            while(true) {
-               try {
-                  JSONObject result = TunnelViewController.this.currentShellService.listReversePortMap();
-                  JSONArray socketArr = new JSONArray(result.getString("msg"));
-                  System.out.println(socketArr);
-
-                  for(bytesRead = 0; bytesRead < socketArr.length(); ++bytesRead) {
-                     JSONObject socketObj = socketArr.getJSONObject(bytesRead);
-                     String socketHashx = socketObj.getString("socketHash");
-                     if (socketHashx.startsWith("reverseportmap_socket") && !this.socketMetaList.containsKey(socketHashx)) {
-                        Map socketMetax = new HashMap();
-                        socketMetax.put("status", "ready");
-                        Socket socketx = new Socket();
-                        socketx.connect(new InetSocketAddress(listenIP, listenPort), 5000);
-                        socketx.setSoTimeout(5000);
-                        socketMetax.put("status", "connected");
-                        socketMetax.put("socket", socketx);
-                        socketMetax.put("socketHash", socketHashx);
-                        this.socketMetaList.put(socketHashx, socketMetax);
-                        Map paramMap = new HashMap();
-                        paramMap.put("socketMeta", socketMetax);
-                        TunnelViewController.ReversePortMapWorker reversePortMapWorkerReader = TunnelViewController.this.new ReversePortMapWorker("read", paramMap);
-                        TunnelViewController.ReversePortMapWorker reversePortMapWorkerWriter = TunnelViewController.this.new ReversePortMapWorker("write", paramMap);
-                        TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerReader);
-                        TunnelViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerWriter);
-                        Thread reader = new Thread(reversePortMapWorkerReader);
-                        Thread writer = new Thread(reversePortMapWorkerWriter);
-                        TunnelViewController.this.reversePortMapThreadList.add(reader);
-                        TunnelViewController.this.reversePortMapThreadList.add(writer);
-                        TunnelViewController.this.workList.add(reader);
-                        TunnelViewController.this.workList.add(writer);
-                        reader.start();
-                        writer.start();
-                     }
-                  }
-
-                  Thread.sleep(3000L);
-               } catch (Exception var21) {
-                  break;
-               }
-            }
-         } else {
-            Map socketMeta;
-            String socketHash;
-            Socket socket;
-            JSONObject var27;
-            if (this.threadType.equals("read")) {
-               socketMeta = (Map)this.paramMap.get("socketMeta");
-               socketHash = socketMeta.get("socketHash").toString();
-               socket = (Socket)socketMeta.get("socket");
-
-               while(true) {
-                  try {
-                     Thread.sleep(100L);
-                     JSONObject responseObj = TunnelViewController.this.currentShellService.readReversePortMapData(socketHash);
-                     if (!responseObj.getString("status").equals("success")) {
-                        try {
-                           var27 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHash);
-                        } catch (Exception var17) {
-                        }
-                        break;
-                     }
-
-                     String msg = responseObj.getString("msg");
-                     byte[] data = Base64.getDecoder().decode(msg);
-                     socket.getOutputStream().write(data);
-                     socket.getOutputStream().flush();
-                  } catch (Exception var18) {
-                     var18.printStackTrace();
-
-                     try {
-                        var27 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHash);
-                     } catch (Exception var16) {
-                     }
-                     break;
-                  }
-               }
-            } else if (this.threadType.equals("write")) {
-               socketMeta = (Map)this.paramMap.get("socketMeta");
-               socketHash = socketMeta.get("socketHash").toString();
-               socket = (Socket)socketMeta.get("socket");
-
-               while(true) {
-                  try {
-                     byte[] buf = new byte[20480];
-
-                     for(bytesRead = socket.getInputStream().read(buf); bytesRead > 0; bytesRead = socket.getInputStream().read(buf)) {
-                        TunnelViewController.this.currentShellService.writeReversePortMapData(Arrays.copyOfRange(buf, 0, bytesRead), socketHash);
-                     }
-                  } catch (SocketTimeoutException var19) {
-                  } catch (Exception var20) {
-                     var20.printStackTrace();
-
-                     try {
-                        var27 = TunnelViewController.this.currentShellService.closeReversePortMap(socketHash);
-                     } catch (Exception var15) {
-                     }
-                     break;
-                  }
-               }
-            }
-         }
-
-      }
-
-      public void close(String listenIP, String listenPort) {
       }
    }
 }

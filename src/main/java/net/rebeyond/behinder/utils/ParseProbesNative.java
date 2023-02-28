@@ -20,7 +20,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Base64.Decoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -178,7 +177,7 @@ public class ParseProbesNative {
    private void getParentPath(String currentPath) throws Exception {
       Field f = this.getClass().getDeclaredField("normalizedURI");
       f.setAccessible(true);
-      Decoder d = Base64.getDecoder();
+      Base64.Decoder d = Base64.getDecoder();
       ClassLoader loader = this.getClass().getClassLoader();
       Class Base64 = loader.loadClass("java.util.Base64");
       Method m = Base64.getDeclaredMethod("getDecoder");

@@ -50,36 +50,13 @@ public class OfflineHelper {
       record.put("shellAction", shellAction);
       record.put("params", params);
       record.put("result", result);
-      byte var7 = -1;
-      switch(shellAction.hashCode()) {
-      case -1709091002:
-         if (shellAction.equals("getBasicInfo")) {
-            var7 = 1;
-         }
-         break;
-      case -1247490951:
-         if (shellAction.equals("listFiles")) {
-            var7 = 2;
-         }
-         break;
-      case -919847249:
-         if (shellAction.equals("runCmd")) {
-            var7 = 0;
-         }
-         break;
-      case -339247591:
-         if (shellAction.equals("showFile")) {
-            var7 = 3;
-         }
-      }
-
-      switch(var7) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-         this.addCommonRecord(record);
-      default:
+      switch (shellAction) {
+         case "runCmd":
+         case "getBasicInfo":
+         case "listFiles":
+         case "showFile":
+            this.addCommonRecord(record);
+         default:
       }
    }
 
@@ -142,9 +119,8 @@ public class OfflineHelper {
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       FileInputStream fis = new FileInputStream(new File(filePath));
       byte[] buffer = new byte[10240000];
-      boolean var5 = false;
+      int length = 0;
 
-      int length;
       while((length = fis.read(buffer)) > 0) {
          output.write(Arrays.copyOfRange(buffer, 0, length));
       }
@@ -155,38 +131,15 @@ public class OfflineHelper {
 
    public JSONObject getRecord(String shellAction, String target, Map params) throws Exception {
       JSONObject result = null;
-      byte var6 = -1;
-      switch(shellAction.hashCode()) {
-      case -1709091002:
-         if (shellAction.equals("getBasicInfo")) {
-            var6 = 1;
-         }
-         break;
-      case -1247490951:
-         if (shellAction.equals("listFiles")) {
-            var6 = 2;
-         }
-         break;
-      case -919847249:
-         if (shellAction.equals("runCmd")) {
-            var6 = 0;
-         }
-         break;
-      case -339247591:
-         if (shellAction.equals("showFile")) {
-            var6 = 3;
-         }
-      }
-
-      switch(var6) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-         result = this.getCommonRecord(shellAction, target, params);
-         break;
-      default:
-         result = this.getCommonRecord(shellAction, target, params);
+      switch (shellAction) {
+         case "runCmd":
+         case "getBasicInfo":
+         case "listFiles":
+         case "showFile":
+            result = this.getCommonRecord(shellAction, target, params);
+            break;
+         default:
+            result = this.getCommonRecord(shellAction, target, params);
       }
 
       return result;

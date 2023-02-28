@@ -8,6 +8,3 @@ function main($content)
 
     echo encrypt(json_encode($result));
 }
-
-
-

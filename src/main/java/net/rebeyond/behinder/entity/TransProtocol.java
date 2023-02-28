@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.entity;
 
+import net.rebeyond.behinder.core.ICrypt;
 import net.rebeyond.behinder.dao.PrimaryKey;
 
 public class TransProtocol {
@@ -10,6 +11,7 @@ public class TransProtocol {
    private String type;
    private String encode;
    private String decode;
+   private ICrypt cryptor;
 
    public int getId() {
       return this.id;
@@ -49,5 +51,13 @@ public class TransProtocol {
 
    public void setDecode(String decode) {
       this.decode = decode;
+   }
+
+   public ICrypt getCryptor() {
+      return this.cryptor;
+   }
+
+   public void setCryptor(ICrypt cryptor) {
+      this.cryptor = cryptor;
    }
 }

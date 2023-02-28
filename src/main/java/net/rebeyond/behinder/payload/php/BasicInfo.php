@@ -1,4 +1,3 @@
-<?
 error_reporting(0);
 function main($whatever) {
     $result = array();
@@ -68,4 +67,6 @@ if (is_callable("exec"))
 
 return $result;
 }
+
+
 

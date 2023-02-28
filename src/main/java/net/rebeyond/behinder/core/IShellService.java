@@ -178,4 +178,6 @@ public interface IShellService {
    Map transferPayload(byte[] var1) throws Exception;
 
    JSONObject doProxy(String var1, String var2, String var3) throws Exception;
+
+   void setCompareMode(int var1);
 }

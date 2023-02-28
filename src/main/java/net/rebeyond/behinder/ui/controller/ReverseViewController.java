@@ -107,7 +107,7 @@ public class ReverseViewController {
       try {
          ImageView icon = new ImageView();
          icon.setImage(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/reverse.png"))));
-         icon.setFitHeight(14.0D);
+         icon.setFitHeight(14.0);
          icon.setPreserveRatio(true);
          this.reverseButton.setGraphic(icon);
       } catch (Exception var3) {
@@ -144,7 +144,7 @@ public class ReverseViewController {
                         isPortMapTunnel = true;
                      }
 
-                     boolean finalisPortMapTunnel = isPortMapTunnel;
+                     final boolean finalisPortMapTunnel = isPortMapTunnel;
                      Platform.runLater(() -> {
                         if (finalisPortMapTunnel) {
                            this.reverseButton.setText("关闭");
@@ -205,7 +205,7 @@ public class ReverseViewController {
                            resultObj = this.currentShellService.connectBack(type, actualTargetIP, targetPort);
                            String status = resultObj.getString("status");
                            if (status.equals("fail")) {
-                              JSONObject finalresultObj = resultObj;
+                              final JSONObject finalresultObj = resultObj;
                               Platform.runLater(() -> {
                                  String msg = finalresultObj.getString("msg");
                                  this.statusLabel.setText("反弹失败:" + msg);
@@ -223,7 +223,7 @@ public class ReverseViewController {
 
                      statusx = resultObj.getString("status");
                      if (statusx.equals("fail")) {
-                        JSONObject finalresultObj = resultObj;
+                        final JSONObject finalresultObj = resultObj;
                         Platform.runLater(() -> {
                            String msg = finalresultObj.getString("msg");
                            this.statusLabel.setText("反弹失败:" + msg);
@@ -249,7 +249,7 @@ public class ReverseViewController {
                Iterator var5 = this.ReversePortMapWorkerList.iterator();
 
                while(var5.hasNext()) {
-                  ReverseViewController.ReversePortMapWorker reversePortMapWorker = (ReverseViewController.ReversePortMapWorker)var5.next();
+                  ReversePortMapWorker reversePortMapWorker = (ReversePortMapWorker)var5.next();
                   reversePortMapWorker.stop();
                }
 
@@ -313,7 +313,7 @@ public class ReverseViewController {
                Map paramMap = new HashMap();
                paramMap.put("listenIP", listenIP);
                paramMap.put("listenPort", listenPort);
-               ReverseViewController.ReversePortMapWorker reversePortMapWorkerDaemon = new ReverseViewController.ReversePortMapWorker("daemon", paramMap);
+               ReversePortMapWorker reversePortMapWorkerDaemon = new ReversePortMapWorker("daemon", paramMap);
                this.ReversePortMapWorkerList.add(reversePortMapWorkerDaemon);
                Thread reversePortMapWorker = new Thread(reversePortMapWorkerDaemon);
                reversePortMapWorker.start();
@@ -402,8 +402,8 @@ public class ReverseViewController {
                         paramMap.put("listenIP", listenIP);
                         paramMap.put("listenPort", listenPort);
                         paramMap.put("socketMeta", socketMetax);
-                        ReverseViewController.ReversePortMapWorker reversePortMapWorkerReader = ReverseViewController.this.new ReversePortMapWorker("read", paramMap);
-                        ReverseViewController.ReversePortMapWorker reversePortMapWorkerWriter = ReverseViewController.this.new ReversePortMapWorker("write", paramMap);
+                        ReversePortMapWorker reversePortMapWorkerReader = ReverseViewController.this.new ReversePortMapWorker("read", paramMap);
+                        ReversePortMapWorker reversePortMapWorkerWriter = ReverseViewController.this.new ReversePortMapWorker("write", paramMap);
                         ReverseViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerReader);
                         ReverseViewController.this.ReversePortMapWorkerList.add(reversePortMapWorkerWriter);
                         Thread reader = new Thread(reversePortMapWorkerReader);

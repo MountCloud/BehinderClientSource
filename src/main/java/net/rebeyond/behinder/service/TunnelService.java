@@ -52,7 +52,7 @@ public class TunnelService {
          serviceThreadList = new ArrayList();
          this.localSocksProxyThreadMap.put(localPort, serviceThreadList);
       }
-      List finalserviceThreadList = serviceThreadList;
+
       Runnable runner = () -> {
          try {
             ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -73,7 +73,6 @@ public class TunnelService {
 
                ((List)socketChannelList).add(socketChannel);
                String socketHash = Utils.getMD5("" + socketChannel.socket().getInetAddress() + socketChannel.socket().getPort() + "");
-
                Runnable singeTunnelRunner = () -> {
                   try {
                      if (this.handleSocks(socketChannel.socket(), socketHash)) {
@@ -169,8 +168,8 @@ public class TunnelService {
                         writeWorker.start();
                         singleTaskList.add(readWorker);
                         singleTaskList.add(writeWorker);
-                        finalserviceThreadList.add(readWorker);
-                        finalserviceThreadList.add(writeWorker);
+                        ((List) this.localSocksProxyThreadMap.get(localPort)).add(readWorker);
+                        ((List) this.localSocksProxyThreadMap.get(localPort)).add(writeWorker);
                      }
                   } catch (Exception var9) {
                      var9.printStackTrace();
@@ -181,7 +180,7 @@ public class TunnelService {
                worker.setName("localSocksProxyServer");
                this.workList.add(worker);
                worker.start();
-               finalserviceThreadList.add(worker);
+               ((List) this.localSocksProxyThreadMap.get(localPort)).add(worker);
             }
          } catch (AsynchronousCloseException var11) {
          } catch (Exception var12) {
@@ -468,8 +467,7 @@ public class TunnelService {
    public void createRemotePortMap(String remoteIp, String remotePort, String targetIp, String targetPort) {
       Runnable runner = () -> {
          try {
-            JSONObject resObj = this.currentShellService.createRemotePortMap(targetIp, targetPort, remoteIp, remotePort);
-            System.out.println(resObj);
+            this.currentShellService.createRemotePortMap(targetIp, targetPort, remoteIp, remotePort);
             this.callBack.onInfo("隧道建立成功，请连接VPS。");
          } catch (Exception var6) {
             var6.printStackTrace();
@@ -589,8 +587,8 @@ public class TunnelService {
          temp = tempArray.length;
 
          for(int var17 = 0; var17 < temp; ++var17) {
-            String tempp = var23[var17];
-            host = host + tempp + ".";
+            String tempstr = var23[var17];
+            host = host + tempstr + ".";
          }
 
          host = host.substring(0, host.length() - 1);

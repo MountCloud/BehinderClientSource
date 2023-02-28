@@ -1,7 +1,5 @@
 package net.rebeyond.behinder.ui.controller;
 
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
@@ -130,6 +128,7 @@ public class FileManagerViewController {
       try {
          this.initFileManagerView();
       } catch (Exception var6) {
+         var6.printStackTrace();
       }
 
       this.fileService = new FileService(this.currentShellService, this.shellEntity, workList);
@@ -334,13 +333,13 @@ public class FileManagerViewController {
 
    private void switchPane(String show) {
       if (show.equals("list")) {
-         this.fileListGridPane.setOpacity(1.0D);
-         this.fileContentGridPane.setOpacity(0.0D);
+         this.fileListGridPane.setOpacity(1.0);
+         this.fileContentGridPane.setOpacity(0.0);
          this.fileListGridPane.toFront();
       } else if (show.equals("content")) {
          this.fileListGridPane.toBack();
-         this.fileListGridPane.setOpacity(0.0D);
-         this.fileContentGridPane.setOpacity(1.0D);
+         this.fileListGridPane.setOpacity(0.0);
+         this.fileContentGridPane.setOpacity(1.0);
          this.fileContentGridPane.toFront();
       }
 
@@ -348,13 +347,13 @@ public class FileManagerViewController {
 
    private void switchContentPane(String show) {
       if (show.equals("code")) {
-         this.fileContentImageGridPane.setOpacity(0.0D);
-         this.fileContentCodeGridPane.setOpacity(1.0D);
+         this.fileContentImageGridPane.setOpacity(0.0);
+         this.fileContentCodeGridPane.setOpacity(1.0);
          this.fileContentImageGridPane.toBack();
          this.fileContentCodeGridPane.toFront();
       } else if (show.equals("image")) {
-         this.fileContentCodeGridPane.setOpacity(0.0D);
-         this.fileContentImageGridPane.setOpacity(1.0D);
+         this.fileContentCodeGridPane.setOpacity(0.0);
+         this.fileContentImageGridPane.setOpacity(1.0);
          this.fileContentCodeGridPane.toBack();
          this.fileContentImageGridPane.toFront();
       }
@@ -375,7 +374,7 @@ public class FileManagerViewController {
          }
       }
 
-      if (!parent.getGraphic().getUserData().equals("directoHry") && !currentPath.endsWith(fileSep)) {
+      if (!parent.getGraphic().getUserData().equals("directory") && !currentPath.endsWith(fileSep)) {
          currentPath = currentPath + fileSep;
       }
 
@@ -385,23 +384,24 @@ public class FileManagerViewController {
    private void initFileListTableColumns() {
       ObservableList tcs = this.fileListTableView.getColumns();
       ((TableColumn)tcs.get(0)).setCellValueFactory((data) -> {
-         //return (StringProperty)((List)data.getValue()).get(0);
-         return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(0);
+         //return (ObservableValue)((List)data.getValue()).get(0);
+         return (StringProperty) ((List) ((TableColumn.CellDataFeatures) data).getValue()).get(0);
       });
       ((TableColumn)tcs.get(1)).setCellValueFactory((data) -> {
-         //return (StringProperty)((List)data.getValue()).get(1);
-         return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(1);
+         //return (ObservableValue)((List)data.getValue()).get(1);
+         return (StringProperty) ((List) ((TableColumn.CellDataFeatures) data).getValue()).get(1);
       });
       ((TableColumn)tcs.get(1)).setComparator((o1, o2) -> {
+         //return Long.compare(Long.parseLong(o1), Long.parseLong(o2));
          return Long.compare(Long.parseLong(o1.toString()), Long.parseLong(o2.toString()));
       });
       ((TableColumn)tcs.get(2)).setCellValueFactory((data) -> {
-         //return (StringProperty)((List)data.getValue()).get(2);
-         return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(2);
+         //return (ObservableValue)((List)data.getValue()).get(2);
+         return (StringProperty) ((List) ((TableColumn.CellDataFeatures) data).getValue()).get(2);
       });
       ((TableColumn)tcs.get(3)).setCellValueFactory((data) -> {
-         //return (StringProperty)((List)data.getValue()).get(4);
-         return (StringProperty)((List)((TableColumn.CellDataFeatures)data).getValue()).get(4);
+         //return (ObservableValue)((List)data.getValue()).get(4);
+         return (StringProperty) ((List) ((TableColumn.CellDataFeatures) data).getValue()).get(4);
       });
       this.fileListTableView.setRowFactory((tv) -> {
          TableRow row = new TableRow();
@@ -437,6 +437,7 @@ public class FileManagerViewController {
       });
       this.fileNameCol.setCellFactory((column) -> {
          return new TableCell() {
+            //文件名不显示将item修改成object
             public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                if (item == null | empty) {
@@ -463,15 +464,15 @@ public class FileManagerViewController {
                         String fileType = Utils.getFileType(name);
                         Image icon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/" + fileType + ".png")));
                         ImageView iconViewx = new ImageView(icon);
-                        iconViewx.setFitHeight(16.0D);
-                        iconViewx.setFitWidth(16.0D);
+                        iconViewx.setFitHeight(16.0);
+                        iconViewx.setFitWidth(16.0);
                         this.setGraphic(iconViewx);
                      } catch (Exception var9) {
                         try {
                            Image iconxx = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/filetype/unknown.png")));
                            ImageView iconView = new ImageView(iconxx);
-                           iconView.setFitHeight(16.0D);
-                           iconView.setFitWidth(16.0D);
+                           iconView.setFitHeight(16.0);
+                           iconView.setFitWidth(16.0);
                            this.setGraphic(iconView);
                         } catch (Exception var8) {
                         }
@@ -486,9 +487,11 @@ public class FileManagerViewController {
       });
       this.filePermCol.setCellFactory((column) -> {
          return new TableCell() {
+            //文件权限不显示将item修改成object
             public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
-               if(item==null){
+               //这个if不能少
+               if (item == null) {
                   item = "";
                }
                this.setText(item.toString());
@@ -566,7 +569,7 @@ public class FileManagerViewController {
 
    private TreeItem findTreeItem(TreeItem treeItem, String text) {
       ObservableList childItemList = treeItem.getChildren();
-      Iterator var4 = childItemList.iterator();
+      Iterator<TreeItem> var4 = childItemList.iterator();
 
       TreeItem childItem;
       do {
@@ -589,10 +592,10 @@ public class FileManagerViewController {
             return null;
          }
 
-         childItem =(TreeItem)var4.next();
-      } while(!((TreeItem)childItem).getValue().toString().equals(text));
+         childItem = var4.next();
+      } while(!childItem.getValue().toString().equals(text));
 
-      return (TreeItem)childItem;
+      return childItem;
    }
 
    private void insertFileRows(JSONArray jsonArray) {
@@ -763,37 +766,28 @@ public class FileManagerViewController {
    private void loadContextMenu() {
       ContextMenu cm = new ContextMenu();
       MenuItem refreshBtn = new MenuItem("刷新");
-      refreshBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.REFRESH));
       cm.getItems().add(refreshBtn);
       MenuItem openBtn = new MenuItem("打开");
-      openBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FOLDER_OPEN));
       cm.getItems().add(openBtn);
       MenuItem renameBtn = new MenuItem("重命名");
-      renameBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.EXCHANGE));
       if (!this.effectShellEntity.getString("type").equals("asp")) {
          cm.getItems().add(renameBtn);
       }
 
       MenuItem compressBtn = new MenuItem("打包压缩");
-      compressBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FILE_ZIP_ALT));
       if (!this.effectShellEntity.getString("type").equals("asp")) {
          cm.getItems().add(compressBtn);
       }
 
       MenuItem delBtn = new MenuItem("删除");
-      delBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.REMOVE));
       cm.getItems().add(delBtn);
       cm.getItems().add(new SeparatorMenuItem());
       MenuItem downloadBtn = new MenuItem("下载");
-      downloadBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.DOWNLOAD));
       cm.getItems().add(downloadBtn);
       MenuItem uploadBtn = new MenuItem("上传");
-      uploadBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.UPLOAD));
       cm.getItems().add(uploadBtn);
       Menu createMenu = new Menu("新建");
-      createMenu.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.PLUS_SQUARE));
       MenuItem createFileBtn = new MenuItem("文件...");
-      createFileBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FILE_ALT));
       createFileBtn.setOnAction((event) -> {
          this.filePathText.setText(this.currentPathCombo.getValue() + "new.txt");
          this.editor.call("setValue", new Object[]{""});
@@ -801,7 +795,6 @@ public class FileManagerViewController {
          this.switchContentPane("code");
       });
       MenuItem createDirectoryBtn = new MenuItem("文件夹");
-      createDirectoryBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.FOLDER_ALT));
       createDirectoryBtn.setOnAction((event) -> {
          this.createDirectory();
       });
@@ -809,7 +802,6 @@ public class FileManagerViewController {
       createMenu.getItems().add(createDirectoryBtn);
       cm.getItems().add(createMenu);
       MenuItem changeTimeStampBtn = new MenuItem("修改时间戳");
-      changeTimeStampBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.CLOCK_ALT));
       if (!this.effectShellEntity.getString("type").equals("asp")) {
          cm.getItems().add(new SeparatorMenuItem());
          cm.getItems().add(changeTimeStampBtn);
@@ -818,8 +810,7 @@ public class FileManagerViewController {
       changeTimeStampBtn.setOnAction((event) -> {
          this.showChangeTimeStamp();
       });
-      MenuItem cloneTimeStampBtn = new MenuItem("克隆时间戳");
-      cloneTimeStampBtn.setGraphic(new FontAwesomeIconView(FontAwesomeIcon.CLONE));
+      new MenuItem("克隆时间戳");
       this.fileListTableView.setContextMenu(cm);
       openBtn.setOnAction((event) -> {
          List selectedRow = this.getSelectedRow();
@@ -870,7 +861,7 @@ public class FileManagerViewController {
             Label renameLabel = new Label("重命名：");
             renameLabel.setAlignment(Pos.BASELINE_CENTER);
             TextField renameTxt = new TextField(oldFileName);
-            renameTxt.setPrefWidth(300.0D);
+            renameTxt.setPrefWidth(300.0);
             panel.getChildren().addAll(new Node[]{renameLabel, renameTxt});
             confirmDialog.getDialogPane().setContent(panel);
             renameTxt.selectAll();
@@ -980,7 +971,7 @@ public class FileManagerViewController {
       HBox hBox = new HBox();
       Label newDirectoryLabel = new Label("新建目录名称：");
       TextField newDirectoryTxt = new TextField("新建文件夹");
-      newDirectoryTxt.setPrefWidth(300.0D);
+      newDirectoryTxt.setPrefWidth(300.0);
       newDirectoryTxt.setOnKeyPressed((keyEvent) -> {
          if (keyEvent.getCode() == KeyCode.ENTER) {
             inputDialog.getDialogPane().getScene().getWindow().hide();
@@ -1059,9 +1050,9 @@ public class FileManagerViewController {
          String name = ((StringProperty)selectedRow.get(0)).getValue();
          String filePath = currentPath + name;
          GridPane panel = new GridPane();
-         panel.setPadding(new Insets(20.0D, 10.0D, 0.0D, 10.0D));
-         panel.setHgap(20.0D);
-         panel.setVgap(10.0D);
+         panel.setPadding(new Insets(20.0, 10.0, 0.0, 10.0));
+         panel.setHgap(20.0);
+         panel.setVgap(10.0);
          Label fileNameLabel = new Label("文件：");
          fileNameLabel.setAlignment(Pos.CENTER_RIGHT);
          Label fileNameTxtLabel = new Label(name);
@@ -1081,7 +1072,7 @@ public class FileManagerViewController {
          cancelBtn.setOnAction((event) -> {
             inputDialog.getDialogPane().getScene().getWindow().hide();
          });
-         buttonBox.setSpacing(20.0D);
+         buttonBox.setSpacing(20.0);
          buttonBox.setAlignment(Pos.CENTER);
          buttonBox.getChildren().addAll(new Node[]{saveBtn, cancelBtn});
          panel.add(fileNameLabel, 0, 0);

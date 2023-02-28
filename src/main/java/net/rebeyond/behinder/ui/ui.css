@@ -1,6 +1,7 @@
 .root {
   -fx-background-color: cornsilk;
   -fx-padding: 10;
+  -fx-font-family: 'Arial';
 }
 
 .context-menu {

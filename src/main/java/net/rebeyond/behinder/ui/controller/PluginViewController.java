@@ -34,7 +34,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
-import javafx.stage.FileChooser.ExtensionFilter;
 import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.dao.PluginDao;
 import net.rebeyond.behinder.dao.ShellManager;
@@ -106,7 +105,7 @@ public class PluginViewController {
       webEngine.documentProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue != null) {
             JSObject win = (JSObject)webEngine.executeScript("window");
-            win.setMember("PluginTools", new PluginViewController.PluginHelper());
+            win.setMember("PluginTools", new PluginHelper());
             if (this.currentHost != null && !this.currentHost.equals("")) {
                webEngine.executeScript(String.format("$('#host').val('%s');", this.currentHost));
                win.call("onSetHost", new Object[]{this.currentHost});
@@ -127,14 +126,14 @@ public class PluginViewController {
          var3.printStackTrace();
       }
 
-      this.pluginDetailGridPane.setOpacity(0.0D);
+      this.pluginDetailGridPane.setOpacity(0.0);
    }
 
    private void loadPluginPage(Plugin plugin) {
       String entryFilePath = this.expandPluginPath(plugin.getName(), plugin.getEntryFile());
       entryFilePath = (new File(entryFilePath)).toURI().toString();
       this.pluginWebView.getEngine().load(entryFilePath);
-      this.pluginDetailGridPane.setOpacity(1.0D);
+      this.pluginDetailGridPane.setOpacity(1.0);
       this.statusLabel.setText("插件加载完成。");
    }
 
@@ -214,18 +213,18 @@ public class PluginViewController {
       iconFilePath = (new File(iconFilePath)).toURI().toString();
       int type = plugin.getType();
       FlowPane flowPane = (FlowPane)((AnchorPane)((TitledPane)this.pluginFlowPane.getPanes().get(type)).getContent()).getChildren().get(0);
-      flowPane.setHgap(20.0D);
-      flowPane.setVgap(10.0D);
+      flowPane.setHgap(20.0);
+      flowPane.setVgap(10.0);
       VBox box = new VBox();
       ImageView pluginIcon = new ImageView(new Image(iconFilePath));
-      pluginIcon.setFitHeight(30.0D);
+      pluginIcon.setFitHeight(30.0);
       pluginIcon.setPreserveRatio(true);
       Label pluginLabel = new Label(pluginName);
       box.getChildren().add(pluginIcon);
       box.getChildren().add(pluginLabel);
-      box.setPadding(new Insets(5.0D));
+      box.setPadding(new Insets(5.0));
       box.setAlignment(Pos.CENTER);
-      box.setSpacing(10.0D);
+      box.setSpacing(10.0);
       Tooltip tip = new Tooltip();
       tip.setText(pluginCommnet);
       Tooltip.install(box, tip);
@@ -260,7 +259,7 @@ public class PluginViewController {
       this.installLocalBtn.setOnAction((event) -> {
          FileChooser fileChooser = new FileChooser();
          fileChooser.setTitle("请选择需要安装的插件包");
-         fileChooser.getExtensionFilters().addAll(new ExtensionFilter[]{new ExtensionFilter("All ZIP Files", new String[]{"*.zip"})});
+         fileChooser.getExtensionFilters().addAll(new FileChooser.ExtensionFilter[]{new FileChooser.ExtensionFilter("All ZIP Files", new String[]{"*.zip"})});
          File pluginFile = fileChooser.showOpenDialog(this.pluginFlowPane.getScene().getWindow());
          if (pluginFile != null) {
             try {

@@ -29,9 +29,9 @@ import java.util.Base64;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Base64.Decoder;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -91,28 +91,25 @@ public class ParseProbes {
       URI launchuri = URI.create("jar:" + (new File(pathToJAR)).toURI());
       launchenv.put("create", "true");
       FileSystem zipfs = FileSystems.newFileSystem(launchuri, launchenv);
-      Throwable var8 = null;
 
       try {
          Path externalClassFile = Paths.get(classFileName);
          Path pathInJarfile = zipfs.getPath(pathToClassInsideJAR);
          Files.copy(externalClassFile, pathInJarfile, StandardCopyOption.REPLACE_EXISTING);
-      } catch (Throwable var18) {
-         var8 = var18;
-         throw var18;
-      } finally {
+      } catch (Throwable var11) {
          if (zipfs != null) {
-            if (var8 != null) {
-               try {
-                  zipfs.close();
-               } catch (Throwable var17) {
-                  var8.addSuppressed(var17);
-               }
-            } else {
+            try {
                zipfs.close();
+            } catch (Throwable var10) {
+               var11.addSuppressed(var10);
             }
          }
 
+         throw var11;
+      }
+
+      if (zipfs != null) {
+         zipfs.close();
       }
 
    }
@@ -121,7 +118,7 @@ public class ParseProbes {
       File tmpJarFile = File.createTempFile("tempJar", ".tmp");
       JarFile jarFile = new JarFile(srcJarFile);
       boolean jarUpdated = false;
-      ArrayList fileNames = new ArrayList();
+      List fileNames = new ArrayList();
 
       try {
          JarOutputStream tempJarOutputStream = new JarOutputStream(new FileOutputStream(tmpJarFile));
@@ -136,15 +133,14 @@ public class ParseProbes {
             while(true) {
                while(jarEntries.hasMoreElements()) {
                   JarEntry entry = (JarEntry)jarEntries.nextElement();
-                  String[] fileNameArray = (String[])((String[])fileNames.toArray(new String[0]));
+                  String[] fileNameArray = (String[])fileNames.toArray(new String[0]);
                   Arrays.sort(fileNameArray);
                   if (Arrays.binarySearch(fileNameArray, entry.getName()) < 0) {
                      InputStream entryInputStream = jarFile.getInputStream(entry);
                      tempJarOutputStream.putNextEntry(entry);
                      byte[] buffer = new byte[1024];
-                     boolean var15 = false;
+                     int bytesRead = 0;
 
-                     int bytesRead;
                      while((bytesRead = entryInputStream.read(buffer)) != -1) {
                         tempJarOutputStream.write(buffer, 0, bytesRead);
                      }
@@ -308,7 +304,7 @@ public class ParseProbes {
    private void getParentPath(String currentPath) throws Exception {
       Field f = this.getClass().getDeclaredField("normalizedURI");
       f.setAccessible(true);
-      Decoder d = Base64.getDecoder();
+      Base64.Decoder d = Base64.getDecoder();
       ClassLoader loader = this.getClass().getClassLoader();
       Class Base64 = loader.loadClass("java.util.Base64");
       Method m = Base64.getDeclaredMethod("getDecoder");

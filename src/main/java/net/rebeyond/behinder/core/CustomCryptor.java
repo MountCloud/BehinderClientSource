@@ -46,6 +46,10 @@ public class CustomCryptor extends ClassLoader implements ICrypt {
       return payload;
    }
 
+   public boolean isCustomized() {
+      return true;
+   }
+
    public Class define(byte[] bytes) {
       return super.defineClass(bytes, 0, bytes.length);
    }
@@ -65,8 +69,8 @@ public class CustomCryptor extends ClassLoader implements ICrypt {
       }
 
       if (!this.verify()) {
-         throw new Exception("custom cryptor verify fail");
       }
+
    }
 
    public CustomCryptor() {
@@ -76,7 +80,7 @@ public class CustomCryptor extends ClassLoader implements ICrypt {
       Class encodeCls = this.getEncodeCls();
       Method encodeMethod = encodeCls.getDeclaredMethod("Encrypt", byte[].class);
       encodeMethod.setAccessible(true);
-      byte[] result = (byte[])((byte[])encodeMethod.invoke(encodeCls.newInstance(), clearContent));
+      byte[] result = (byte[])encodeMethod.invoke(encodeCls.newInstance(), clearContent);
       return result;
    }
 
@@ -104,7 +108,7 @@ public class CustomCryptor extends ClassLoader implements ICrypt {
       Class decodeCls = this.getDecodeCls();
       Method decodeMethod = decodeCls.getDeclaredMethod("Decrypt", byte[].class);
       decodeMethod.setAccessible(true);
-      byte[] result = (byte[])((byte[])decodeMethod.invoke(decodeCls.newInstance(), decryptContent));
+      byte[] result = (byte[])decodeMethod.invoke(decodeCls.newInstance(), decryptContent);
       return result;
    }
 

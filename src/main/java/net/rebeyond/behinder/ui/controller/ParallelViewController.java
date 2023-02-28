@@ -198,12 +198,12 @@ public class ParallelViewController {
 
    private void switchAssetPane(String show) {
       if (show.equals("list")) {
-         this.hostListGridPane.setOpacity(1.0D);
-         this.hostDetailGridPane.setOpacity(0.0D);
+         this.hostListGridPane.setOpacity(1.0);
+         this.hostDetailGridPane.setOpacity(0.0);
          this.hostListGridPane.toFront();
       } else if (show.equals("detail")) {
-         this.hostListGridPane.setOpacity(0.0D);
-         this.hostDetailGridPane.setOpacity(1.0D);
+         this.hostListGridPane.setOpacity(0.0);
+         this.hostDetailGridPane.setOpacity(1.0);
          this.hostDetailGridPane.toFront();
       }
 
@@ -211,12 +211,12 @@ public class ParallelViewController {
 
    private void switchHostPane(String show) {
       if (show.equals("host")) {
-         this.hostFlowScrollPane.setOpacity(1.0D);
-         this.serviceListGridPane.setOpacity(0.0D);
+         this.hostFlowScrollPane.setOpacity(1.0);
+         this.serviceListGridPane.setOpacity(0.0);
          this.hostFlowScrollPane.toFront();
       } else if (show.equals("service")) {
-         this.hostFlowScrollPane.setOpacity(0.0D);
-         this.serviceListGridPane.setOpacity(1.0D);
+         this.hostFlowScrollPane.setOpacity(0.0);
+         this.serviceListGridPane.setOpacity(1.0);
          this.serviceListGridPane.toFront();
       }
 
@@ -224,12 +224,12 @@ public class ParallelViewController {
 
    private void switchBShellPane(String show) {
       if (show.equals("console")) {
-         this.childMainWindow.setOpacity(0.0D);
-         this.bShellConsoleGridPane.setOpacity(1.0D);
+         this.childMainWindow.setOpacity(0.0);
+         this.bShellConsoleGridPane.setOpacity(1.0);
          this.bShellConsoleGridPane.toFront();
       } else if (show.equals("gui")) {
-         this.bShellConsoleGridPane.setOpacity(0.0D);
-         this.childMainWindow.setOpacity(1.0D);
+         this.bShellConsoleGridPane.setOpacity(0.0);
+         this.childMainWindow.setOpacity(1.0);
          this.childMainWindow.toFront();
       }
 
@@ -750,10 +750,10 @@ public class ParallelViewController {
    private void fillServiceBriefList(Service service) {
       VBox serviceBriefBox = (VBox)((ScrollPane)this.hostDetailGridPane.getChildren().get(3)).getContent();
       serviceBriefBox.setAlignment(Pos.TOP_LEFT);
-      serviceBriefBox.setPadding(new Insets(10.0D));
+      serviceBriefBox.setPadding(new Insets(10.0));
       Label portItem = new Label();
       portItem.setStyle("-fx-text-fill:#00ff00");
-      portItem.setPrefHeight(20.0D);
+      portItem.setPrefHeight(20.0);
       portItem.setText(service.getPort() + "       " + service.getName());
       portItem.hoverProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue) {
@@ -773,14 +773,14 @@ public class ParallelViewController {
       VBox servicePortGroupBox = (VBox)((ScrollPane)this.serviceListGridPane.getChildren().get(2)).getContent();
       servicePortGroupBox.getChildren().clear();
       servicePortGroupBox.setAlignment(Pos.TOP_LEFT);
-      servicePortGroupBox.setPadding(new Insets(10.0D));
+      servicePortGroupBox.setPadding(new Insets(10.0));
       Iterator var4 = servicePortGroup.keySet().iterator();
 
       while(var4.hasNext()) {
          String key = (String)var4.next();
          Label portItem = new Label();
          portItem.setStyle("-fx-text-fill:#00ff00");
-         portItem.setPrefHeight(20.0D);
+         portItem.setPrefHeight(20.0);
          portItem.setText(key + "       " + servicePortGroup.get(key));
          portItem.hoverProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
@@ -796,14 +796,14 @@ public class ParallelViewController {
       VBox serviceNameGroupBox = (VBox)((ScrollPane)this.serviceListGridPane.getChildren().get(1)).getContent();
       serviceNameGroupBox.getChildren().clear();
       serviceNameGroupBox.setAlignment(Pos.TOP_LEFT);
-      serviceNameGroupBox.setPadding(new Insets(10.0D));
+      serviceNameGroupBox.setPadding(new Insets(10.0));
       Iterator var9 = serviceNameGroup.keySet().iterator();
 
       while(var9.hasNext()) {
          String key = (String)var9.next();
          Label portItem = new Label();
          portItem.setStyle("-fx-text-fill:#00ff00");
-         portItem.setPrefHeight(20.0D);
+         portItem.setPrefHeight(20.0);
          portItem.setText(key + "       " + serviceNameGroup.get(key));
          portItem.hoverProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
@@ -841,8 +841,8 @@ public class ParallelViewController {
    private static void ensureVisible(ScrollPane pane, Node node) {
       double height = pane.getContent().getBoundsInLocal().getHeight();
       double y = node.getBoundsInParent().getMaxY();
-      if (node.getBoundsInParent().getMinY() == 0.0D) {
-         y = 0.0D;
+      if (node.getBoundsInParent().getMinY() == 0.0) {
+         y = 0.0;
       }
 
       pane.setVvalue(y / height);
@@ -1325,7 +1325,7 @@ public class ParallelViewController {
       cm.getItems().addAll(new MenuItem[]{scanHostBtn, scanServiceBtn, refreshBtn});
       this.mainContextMenu = cm;
       this.hostFlowPane.setOnContextMenuRequested((event) -> {
-         this.mainContextMenu.show(this.hostFlowPane.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         this.mainContextMenu.show(this.hostFlowPane.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
       });
    }
 
@@ -1464,9 +1464,9 @@ public class ParallelViewController {
                         }
                      }
                   } else {
-                     String finalmsag = msg;
+                     final String finalmsg = msg;
                      Platform.runLater(() -> {
-                        this.statusLabel.setText("反向监听开启失败：" + finalmsag);
+                        this.statusLabel.setText("反向监听开启失败：" + finalmsg);
                      });
                   }
                } catch (Exception var13) {
@@ -1546,12 +1546,12 @@ public class ParallelViewController {
       cm.getItems().addAll(new MenuItem[]{addBtn, startReverseBtn, refreshBtn});
       this.bShellContextMenu = cm;
       this.bShellFlowPane.setOnContextMenuRequested((event) -> {
-         this.bShellContextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         this.bShellContextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
          event.consume();
       });
       new ContextMenu();
       this.bShellScrollPane.setOnContextMenuRequested((event) -> {
-         this.bShellContextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         this.bShellContextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
          event.consume();
       });
    }
@@ -1590,18 +1590,18 @@ public class ParallelViewController {
 
    private void addTunnelBox(Tunnel tunnel) throws Exception {
       String type = "";
-      switch(tunnel.getType()) {
-      case 0:
-         type = "正向（TCP）";
-         break;
-      case 1:
-         type = "正向（HTTP）";
-         break;
-      case 2:
-         type = "反向（TCP）";
-         break;
-      case 3:
-         type = "反向（HTTP）";
+      switch (tunnel.getType()) {
+         case 0:
+            type = "正向（TCP）";
+            break;
+         case 1:
+            type = "正向（HTTP）";
+            break;
+         case 2:
+            type = "反向（TCP）";
+            break;
+         case 3:
+            type = "反向（HTTP）";
       }
 
       String targetIp = tunnel.getTargetIp();
@@ -1621,11 +1621,11 @@ public class ParallelViewController {
       statusLabel.setStyle("-fx-text-fill:#00ff00");
       box.getChildren().addAll(new Node[]{targetIpLabel, targetPortLabel, remoteIpLabel, remotePortLabel, statusLabel});
       box.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;");
-      box.setPadding(new Insets(5.0D));
-      box.setPrefWidth(300.0D);
+      box.setPadding(new Insets(5.0));
+      box.setPrefWidth(300.0);
       box.setUserData(tunnel);
-      box.setSpacing(10.0D);
-      VBox.setMargin(box, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
+      box.setSpacing(10.0);
+      VBox.setMargin(box, new Insets(10.0, 0.0, 0.0, 0.0));
       box.hoverProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue) {
             this.setBoxBackground(box);
@@ -1645,7 +1645,7 @@ public class ParallelViewController {
             toggleItem.setUserData("open");
          }
 
-         this.tunnelItemContextMenu.show(this.tunnelFlowPane.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         this.tunnelItemContextMenu.show(this.tunnelFlowPane.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
          event.consume();
       });
       this.tunnelFlowPane.getChildren().add(box);
@@ -1679,18 +1679,18 @@ public class ParallelViewController {
    private void addBShellBox(BShell bShell) throws Exception {
       Host host = this.hostDao.findHostById(bShell.getHostId());
       String type = "";
-      switch(bShell.getType()) {
-      case 0:
-         type = "正向（TCP）";
-         break;
-      case 1:
-         type = "正向（HTTP）";
-         break;
-      case 2:
-         type = "反向（TCP）";
-         break;
-      case 3:
-         type = "反向（HTTP）";
+      switch (bShell.getType()) {
+         case 0:
+            type = "正向（TCP）";
+            break;
+         case 1:
+            type = "正向（HTTP）";
+            break;
+         case 2:
+            type = "反向（TCP）";
+            break;
+         case 3:
+            type = "反向（HTTP）";
       }
 
       VBox box = new VBox();
@@ -1705,11 +1705,11 @@ public class ParallelViewController {
       bannerLabel.setStyle("-fx-text-fill:#00ff00");
       box.getChildren().addAll(new Node[]{portLabel, serviceLabel, versionLabel});
       box.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;");
-      box.setPadding(new Insets(5.0D));
-      box.setPrefWidth(300.0D);
+      box.setPadding(new Insets(5.0));
+      box.setPrefWidth(300.0);
       box.setUserData(bShell);
-      box.setSpacing(10.0D);
-      VBox.setMargin(box, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
+      box.setSpacing(10.0);
+      VBox.setMargin(box, new Insets(10.0, 0.0, 0.0, 0.0));
       box.hoverProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue) {
             this.setBoxBackground(box);
@@ -1720,7 +1720,7 @@ public class ParallelViewController {
       });
       box.setOnContextMenuRequested((event) -> {
          this.bShellContextMenu.setUserData(bShell);
-         this.bShellContextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         this.bShellContextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
       });
       this.bShellFlowPane.getChildren().add(box);
    }
@@ -1752,10 +1752,10 @@ public class ParallelViewController {
       bannerLabel.setStyle("-fx-text-fill:#00ff00");
       box.getChildren().addAll(new Node[]{portLabel, serviceLabel, versionLabel, bannerLabel});
       box.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;");
-      box.setPadding(new Insets(5.0D));
-      box.setPrefWidth(300.0D);
-      box.setSpacing(10.0D);
-      VBox.setMargin(box, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
+      box.setPadding(new Insets(5.0));
+      box.setPrefWidth(300.0);
+      box.setSpacing(10.0);
+      VBox.setMargin(box, new Insets(10.0, 0.0, 0.0, 0.0));
       box.hoverProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue) {
             this.setBoxBackground(box);
@@ -1808,7 +1808,7 @@ public class ParallelViewController {
       });
       contextMenu.getItems().addAll(new MenuItem[]{stopListen, reListen});
       box.setOnContextMenuRequested((event) -> {
-         contextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         contextMenu.show(this.bShellFlowPane.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
          event.consume();
       });
       this.bShellFlowPane.getChildren().add(0, box);
@@ -1842,7 +1842,7 @@ public class ParallelViewController {
       ImageView hostItem = new ImageView();
       Image hostIcon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/host.png")));
       hostItem.setImage(hostIcon);
-      hostItem.setFitHeight(30.0D);
+      hostItem.setFitHeight(30.0);
       hostItem.setPreserveRatio(true);
       Label hostIP = new Label();
       hostIP.setStyle("-fx-text-fill:#00ff00");
@@ -1852,7 +1852,7 @@ public class ParallelViewController {
       hostOS.setStyle("-fx-text-fill:#00ff00");
       box.getChildren().addAll(new Node[]{hostItem, hostIP, hostComment, hostOS});
       box.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;");
-      box.setPadding(new Insets(5.0D));
+      box.setPadding(new Insets(5.0));
       box.setAlignment(Pos.CENTER);
       box.setOnMouseClicked((event) -> {
          if (event.getClickCount() == 2) {
@@ -1866,24 +1866,24 @@ public class ParallelViewController {
          }
 
       });
-      GridPane.setMargin(box, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
+      GridPane.setMargin(box, new Insets(10.0, 0.0, 0.0, 0.0));
       VBox portViewBox = new VBox();
       ScrollPane portViewScrollContainer = new ScrollPane();
       portViewScrollContainer.setContent(portViewBox);
       portViewScrollContainer.setFitToWidth(true);
       portViewScrollContainer.setFitToHeight(true);
       portViewScrollContainer.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;-fx-background-color:black;");
-      portViewScrollContainer.setOpacity(100.0D);
+      portViewScrollContainer.setOpacity(100.0);
       portViewBox.setStyle("-fx-background-color:black;");
-      portViewBox.setPadding(new Insets(5.0D));
+      portViewBox.setPadding(new Insets(5.0));
       portViewBox.setAlignment(Pos.CENTER);
-      GridPane.setMargin(portViewBox, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
+      GridPane.setMargin(portViewBox, new Insets(10.0, 0.0, 0.0, 0.0));
       VBox nameViewBox = new VBox();
       nameViewBox.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;");
-      nameViewBox.setPadding(new Insets(5.0D));
+      nameViewBox.setPadding(new Insets(5.0));
       nameViewBox.setAlignment(Pos.CENTER);
-      GridPane.setMargin(nameViewBox, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
-      this.hostDetailGridPane.setOpacity(0.0D);
+      GridPane.setMargin(nameViewBox, new Insets(10.0, 0.0, 0.0, 0.0));
+      this.hostDetailGridPane.setOpacity(0.0);
       this.hostDetailGridPane.add(box, 0, 0);
       this.hostDetailGridPane.add(portViewScrollContainer, 0, 1);
    }
@@ -2025,15 +2025,15 @@ public class ParallelViewController {
       }
 
       box.setStyle("-fx-border-width: 1; -fx-border-insets: 5; -fx-border-style: dashed; -fx-border-color: green;");
-      box.setPadding(new Insets(5.0D));
-      box.setPrefWidth(600.0D);
-      box.setSpacing(10.0D);
+      box.setPadding(new Insets(5.0));
+      box.setPrefWidth(600.0);
+      box.setSpacing(10.0);
       box.setUserData(service.getId());
-      VBox.setMargin(box, new Insets(10.0D, 0.0D, 0.0D, 0.0D));
+      VBox.setMargin(box, new Insets(10.0, 0.0, 0.0, 0.0));
       flowPane.getChildren().add(box);
       box.setOnContextMenuRequested((event) -> {
          this.serviceContextMenu.setUserData(service);
-         this.serviceContextMenu.show(box.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+         this.serviceContextMenu.show(box.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
       });
       box.hoverProperty().addListener((observable, oldValue, newValue) -> {
          if (newValue) {
@@ -2053,17 +2053,17 @@ public class ParallelViewController {
          ImageView hostItem = new ImageView();
          Image hostIcon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/host.png")));
          hostItem.setImage(hostIcon);
-         hostItem.setFitHeight(30.0D);
+         hostItem.setFitHeight(30.0);
          hostItem.setPreserveRatio(true);
          Label serviceInfo = new Label(service.getPort() + "/" + service.getName());
          serviceInfo.setStyle("-fx-text-fill:#00ff00");
          box.getChildren().add(hostItem);
          box.getChildren().add(serviceInfo);
-         box.setPadding(new Insets(10.0D));
+         box.setPadding(new Insets(10.0));
          box.setAlignment(Pos.CENTER);
          box.setOnContextMenuRequested((event) -> {
             this.serviceContextMenu.setUserData(service);
-            this.serviceContextMenu.show(box.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+            this.serviceContextMenu.show(box.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
             event.consume();
          });
          box.setOnMouseEntered((event) -> {
@@ -2131,17 +2131,17 @@ public class ParallelViewController {
          ImageView hostItem = new ImageView();
          Image hostIcon = new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/host.png")));
          hostItem.setImage(hostIcon);
-         hostItem.setFitHeight(30.0D);
+         hostItem.setFitHeight(30.0);
          hostItem.setPreserveRatio(true);
          Label hostIP = new Label(IPAddress);
          hostIP.setStyle("-fx-text-fill:#00ff00");
          box.getChildren().add(hostItem);
          box.getChildren().add(hostIP);
-         box.setPadding(new Insets(10.0D));
+         box.setPadding(new Insets(10.0));
          box.setAlignment(Pos.CENTER);
          box.setOnContextMenuRequested((event) -> {
             this.hostContextMenu.setUserData(IPAddress);
-            this.hostContextMenu.show(box.getScene().getWindow(), event.getScreenX() + 5.0D, event.getScreenY() + 5.0D);
+            this.hostContextMenu.show(box.getScene().getWindow(), event.getScreenX() + 5.0, event.getScreenY() + 5.0);
             event.consume();
          });
          box.setOnMouseEntered((event) -> {
@@ -2376,23 +2376,23 @@ public class ParallelViewController {
    private void showAddBShellPane(String IPAddress) {
       Alert inputDialog = Utils.getAlert(AlertType.NONE);
       inputDialog.setTitle("添加BShell");
-      inputDialog.setWidth(800.0D);
+      inputDialog.setWidth(800.0);
       inputDialog.setResizable(true);
       Window window = inputDialog.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((e) -> {
          window.hide();
       });
       GridPane proxyGridPane = new GridPane();
-      proxyGridPane.setPrefWidth(600.0D);
-      proxyGridPane.setVgap(15.0D);
+      proxyGridPane.setPrefWidth(600.0);
+      proxyGridPane.setVgap(15.0);
       ColumnConstraints firstColConfig = new ColumnConstraints();
-      firstColConfig.setPercentWidth(20.0D);
+      firstColConfig.setPercentWidth(20.0);
       firstColConfig.setFillWidth(true);
       ColumnConstraints secondColConfig = new ColumnConstraints();
-      secondColConfig.setPercentWidth(80.0D);
+      secondColConfig.setPercentWidth(80.0);
       secondColConfig.setFillWidth(true);
       proxyGridPane.getColumnConstraints().addAll(new ColumnConstraints[]{firstColConfig, secondColConfig});
-      proxyGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+      proxyGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
       Label typeLabel = new Label("类型：");
       ComboBox typeCombo = new ComboBox();
       typeCombo.setItems(FXCollections.observableArrayList(new String[]{"TCP", "HTTP"}));
@@ -2527,7 +2527,7 @@ public class ParallelViewController {
       proxyGridPane.add(targetKeyLabel, 0, 4);
       proxyGridPane.add(targetKeyText, 1, 4);
       HBox buttonBox = new HBox();
-      buttonBox.setSpacing(20.0D);
+      buttonBox.setSpacing(20.0);
       buttonBox.setAlignment(Pos.CENTER);
       buttonBox.getChildren().add(cancelBtn);
       buttonBox.getChildren().add(saveBtn);
@@ -2540,31 +2540,31 @@ public class ParallelViewController {
    private void showCustomServiceScan() {
       Alert inputDialog = Utils.getAlert(AlertType.NONE);
       inputDialog.setTitle("自定义扫描");
-      inputDialog.setWidth(800.0D);
+      inputDialog.setWidth(800.0);
       inputDialog.setResizable(true);
       Window window = inputDialog.getDialogPane().getScene().getWindow();
       window.setOnCloseRequest((e) -> {
          window.hide();
       });
       GridPane customServiceGridPane = new GridPane();
-      customServiceGridPane.setPrefWidth(600.0D);
-      customServiceGridPane.setVgap(15.0D);
+      customServiceGridPane.setPrefWidth(600.0);
+      customServiceGridPane.setVgap(15.0);
       ColumnConstraints firstColConfig = new ColumnConstraints();
-      firstColConfig.setPercentWidth(20.0D);
+      firstColConfig.setPercentWidth(20.0);
       firstColConfig.setFillWidth(true);
       ColumnConstraints secondColConfig = new ColumnConstraints();
-      secondColConfig.setPercentWidth(80.0D);
+      secondColConfig.setPercentWidth(80.0);
       secondColConfig.setFillWidth(true);
       customServiceGridPane.getColumnConstraints().addAll(new ColumnConstraints[]{firstColConfig, secondColConfig});
-      customServiceGridPane.setPadding(new Insets(20.0D, 20.0D, 0.0D, 10.0D));
+      customServiceGridPane.setPadding(new Insets(20.0, 20.0, 0.0, 10.0));
       Label targetIp = new Label("目标IP列表");
       targetIp.setAlignment(Pos.CENTER_RIGHT);
       TextArea targetIpTxt = new TextArea();
-      targetIpTxt.setPrefHeight(50.0D);
+      targetIpTxt.setPrefHeight(50.0);
       Label targetPort = new Label("目标端口列表");
       targetPort.setAlignment(Pos.CENTER_RIGHT);
       TextArea targetPortTxt = new TextArea();
-      targetPortTxt.setPrefHeight(50.0D);
+      targetPortTxt.setPrefHeight(50.0);
       Label threadNumLabel = new Label("线程数量");
       TextField threadNumTxt = new TextField();
       threadNumTxt.setTextFormatter(new TextFormatter(new NumberStringConverter()));
@@ -2587,7 +2587,7 @@ public class ParallelViewController {
       customServiceGridPane.add(threadNumLabel, 0, 2);
       customServiceGridPane.add(threadNumTxt, 1, 2);
       HBox buttonBox = new HBox();
-      buttonBox.setSpacing(20.0D);
+      buttonBox.setSpacing(20.0);
       buttonBox.setAlignment(Pos.CENTER);
       buttonBox.getChildren().add(cancelBtn);
       buttonBox.getChildren().add(confirmBtn);

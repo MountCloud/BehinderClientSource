@@ -4,7 +4,7 @@ import org.json.JSONObject;
 
 public abstract class Task {
    protected String name;
-   protected double progress = 0.5D;
+   protected double progress = 0.5;
    protected JSONObject paramObj;
 
    public Task(String name, JSONObject paramObj) {

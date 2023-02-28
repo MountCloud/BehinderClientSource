@@ -193,24 +193,10 @@ public class ChildMainWindowController {
       });
       this.mainTabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
          public void changed(ObservableValue observable, Tab oldTab, Tab newTab) {
-            String tabId = newTab.getId();
-            byte var6 = -1;
-            switch(tabId.hashCode()) {
-            case -1356954629:
-               if (tabId.equals("cmdTab")) {
-                  var6 = 0;
-               }
-               break;
-            case 0:
-               if (tabId.equals("")) {
-                  var6 = 1;
-               }
-            }
-
-            switch(var6) {
-            case 0:
-            case 1:
-            default:
+            switch (newTab.getId()) {
+               case "cmdTab":
+               case "":
+               default:
             }
          }
       });

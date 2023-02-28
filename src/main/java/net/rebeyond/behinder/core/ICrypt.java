@@ -16,4 +16,6 @@ public interface ICrypt {
    TransProtocol getTransProtocol(String var1);
 
    byte[] getDecodeClsBytes() throws Exception;
+
+   boolean isCustomized();
 }

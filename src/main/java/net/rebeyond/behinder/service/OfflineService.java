@@ -476,4 +476,7 @@ public class OfflineService implements IShellService {
    public JSONObject doProxy(String type, String target, String payloadBody) throws Exception {
       return null;
    }
+
+   public void setCompareMode(int compareMode) {
+   }
 }

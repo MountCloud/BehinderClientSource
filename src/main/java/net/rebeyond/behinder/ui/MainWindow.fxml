@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 
-<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
+
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
@@ -124,9 +124,9 @@
             <HBox alignment="CENTER_RIGHT" fillHeight="false" prefWidth="200.0" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.valignment="BOTTOM">
                <children>
                        <Label text=" " fx:id="taskCenterLabel">
-                           <graphic>
+                           <!--<graphic>
                                <FontAwesomeIconView glyphName="TASKS" glyphSize="16"/>
-                           </graphic>
+                           </graphic>-->
                        </Label>
                   <Separator orientation="VERTICAL" prefHeight="20.0" />
                   <Label fx:id="versionLabel" text="冰蝎 %s">

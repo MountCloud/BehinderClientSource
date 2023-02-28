@@ -163,7 +163,7 @@ public class CmdViewController {
          }
 
          this.addHistory(cmd);
-         String finalcdPath = cdPath;
+         final String finalcdPath = cdPath;
          Runnable runner = () -> {
             try {
                final JSONObject resultObj = this.currentShellService.runCmd(this.addPathInfo(cmd), this.getCurrnetPath());

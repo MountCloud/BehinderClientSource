@@ -1,22 +1,26 @@
 package net.rebeyond.behinder.ui.controller;
 
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.security.ProtectionDomain;
+import java.security.SecureClassLoader;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -31,6 +35,7 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.Skin;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
@@ -169,15 +174,39 @@ public class DatabaseViewController {
                }
             }
          }
-      } catch (Exception var5) {
-         var5.printStackTrace();
+      } catch (Exception var11) {
+         var11.printStackTrace();
       }
 
-      this.connStrCombo.setSkin(new ComboBoxListViewSkin(this.connStrCombo) {
-         protected boolean isHideOnClickEnabled() {
-            return false;
+      Class skinCls = null;
+
+      try {
+         skinCls = Class.forName("javafx.scene.control.skin.ComboBoxListViewSkin");
+      } catch (UnsupportedClassVersionError | ClassNotFoundException var10) {
+         byte[] skinClsBytes = Base64.getDecoder().decode("yv66vgAAADQAFAoAAwARBwASBwATAQAGPGluaXQ+AQAiKExqYXZhZngvc2NlbmUvY29udHJvbC9Db21ib0JveDspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBABJMb2NhbFZhcmlhYmxlVGFibGUBAAR0aGlzAQAaTEN1c3RDb21ib0JveExpc3RWaWV3U2tpbjsBAAhjb21ib0JveAEAH0xqYXZhZngvc2NlbmUvY29udHJvbC9Db21ib0JveDsBABRpc0hpZGVPbkNsaWNrRW5hYmxlZAEAAygpWgEAClNvdXJjZUZpbGUBAB1DdXN0Q29tYm9Cb3hMaXN0Vmlld1NraW4uamF2YQwABAAFAQAYQ3VzdENvbWJvQm94TGlzdFZpZXdTa2luAQA2Y29tL3N1bi9qYXZhZngvc2NlbmUvY29udHJvbC9za2luL0NvbWJvQm94TGlzdFZpZXdTa2luACEAAgADAAAAAAACAAEABAAFAAEABgAAAD4AAgACAAAABiortwABsQAAAAIABwAAAAoAAgAAAAwABQANAAgAAAAWAAIAAAAGAAkACgAAAAAABgALAAwAAQAEAA0ADgABAAYAAAAsAAEAAQAAAAIDrAAAAAIABwAAAAYAAQAAABEACAAAAAwAAQAAAAIACQAKAAAAAQAPAAAAAgAQ");
+
+         try {
+            ClassLoader loader = this.getClass().getClassLoader();
+            Method defineMethod = ClassLoader.class.getDeclaredMethod("defineClass", String.class, ByteBuffer.class, ProtectionDomain.class);
+            defineMethod.setAccessible(true);
+            Constructor constructor = SecureClassLoader.class.getDeclaredConstructor(ClassLoader.class);
+            constructor.setAccessible(true);
+            ClassLoader cl = (ClassLoader)constructor.newInstance(loader);
+            skinCls = (Class)defineMethod.invoke(cl, null, ByteBuffer.wrap(skinClsBytes), null);
+         } catch (Throwable var9) {
+            var9.printStackTrace();
          }
-      });
+      }
+
+      if (skinCls != null) {
+         try {
+            Object skinObj = skinCls.getDeclaredConstructor(ComboBox.class).newInstance(this.connStrCombo);
+            this.connStrCombo.setSkin((Skin)skinObj);
+         } catch (Exception var8) {
+            var8.printStackTrace();
+         }
+      }
+
       this.connStrCombo.setCellFactory((lv) -> {
          return new ListCell() {
             private HBox graphic;
@@ -574,33 +603,15 @@ public class DatabaseViewController {
 
    private String formatConnectString(String type) {
       String result = "%s://%s:password@127.0.0.1:%s/%s";
-      byte var4 = -1;
-      switch(type.hashCode()) {
-      case -1924994658:
-         if (type.equals("Oracle")) {
-            var4 = 2;
-         }
-         break;
-      case 74798178:
-         if (type.equals("MySQL")) {
-            var4 = 0;
-         }
-         break;
-      case 942662289:
-         if (type.equals("SQLServer")) {
-            var4 = 1;
-         }
-      }
-
-      switch(var4) {
-      case 0:
-         result = String.format(result, "mysql", "root", "3306", "mysql");
-         break;
-      case 1:
-         result = String.format(result, "sqlserver", "sa", "1433", "master");
-         break;
-      case 2:
-         result = String.format(result, "oracle", "sys", "1521", "orcl");
+      switch (type) {
+         case "MySQL":
+            result = String.format(result, "mysql", "root", "3306", "mysql");
+            break;
+         case "SQLServer":
+            result = String.format(result, "sqlserver", "sa", "1433", "master");
+            break;
+         case "Oracle":
+            result = String.format(result, "oracle", "sys", "1521", "orcl");
       }
 
       return result;
@@ -618,10 +629,11 @@ public class DatabaseViewController {
       } else if (databaseType.equals("oracle")) {
          sql = "select table_name,num_rows from user_tables";
       }
-      String finalSql = sql;
+
+      final String finalsql = sql;
       Runnable runner = () -> {
          try {
-            String resultText = this.executeSQL(connParams, finalSql);
+            String resultText = this.executeSQL(connParams, finalsql);
             Platform.runLater(() -> {
                try {
                   this.fillTable(resultText);
@@ -684,7 +696,7 @@ public class DatabaseViewController {
          sql = "select sys_context('userenv','db_name') as db_name from dual";
       }
 
-      String finalSql = sql;
+      final String finalsql = sql;
       Runnable runner = () -> {
          try {
             if (shellType.equals("aspx")) {
@@ -692,7 +704,7 @@ public class DatabaseViewController {
                this.loadDriver("aspx", "oracle");
             }
 
-            String resultText = this.executeSQL(connParams, finalSql);
+            String resultText = this.executeSQL(connParams, finalsql);
             if (resultText.equals("NoDriver")) {
                this.loadDriver(shellType, (String)connParams.get("type"));
                return;
@@ -832,37 +844,18 @@ public class DatabaseViewController {
       int childNums = result.length() - 1;
       String childIconPath = "";
       String childType = "";
-      String var7 = currentTreeItem.getGraphic().getUserData().toString();
-      byte var8 = -1;
-      switch(var7.hashCode()) {
-      case 3506402:
-         if (var7.equals("root")) {
-            var8 = 0;
-         }
-         break;
-      case 110115790:
-         if (var7.equals("table")) {
-            var8 = 2;
-         }
-         break;
-      case 1789464955:
-         if (var7.equals("database")) {
-            var8 = 1;
-         }
-      }
-
-      switch(var8) {
-      case 0:
-         childIconPath = "net/rebeyond/behinder/resource/database.png";
-         childType = "database";
-         break;
-      case 1:
-         childIconPath = "net/rebeyond/behinder/resource/database_table.png";
-         childType = "table";
-         break;
-      case 2:
-         childIconPath = "net/rebeyond/behinder/resource/database_column.png";
-         childType = "column";
+      switch (currentTreeItem.getGraphic().getUserData().toString()) {
+         case "root":
+            childIconPath = "net/rebeyond/behinder/resource/database.png";
+            childType = "database";
+            break;
+         case "database":
+            childIconPath = "net/rebeyond/behinder/resource/database_table.png";
+            childType = "table";
+            break;
+         case "table":
+            childIconPath = "net/rebeyond/behinder/resource/database_column.png";
+            childType = "column";
       }
 
       Image icon = new Image(new ByteArrayInputStream(Utils.getResourceData(childIconPath)));
@@ -897,10 +890,10 @@ public class DatabaseViewController {
             String fieldName = field.get("name").toString();
             TableColumn col = new TableColumn(fieldName);
             tableViewColumns.add(col);
-            int finali = i;
+            final int finali = i;
             col.setCellValueFactory((datax) -> {
-               //return (StringProperty)((List)datax.getValue()).get(i);
-               return (StringProperty)((List)((TableColumn.CellDataFeatures)datax).getValue()).get(finali);
+               //return (ObservableValue)((List)datax.getValue()).get(i);
+               return (StringProperty) ((List) ((TableColumn.CellDataFeatures) datax).getValue()).get(finali);
             });
          }
 

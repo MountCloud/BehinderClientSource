@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 
@@ -16,7 +17,7 @@ public class MyJavaFileObject extends SimpleJavaFileObject {
       this.source = source;
    }
 
-   public MyJavaFileObject(String name, Kind kind) {
+   public MyJavaFileObject(String name, JavaFileObject.Kind kind) {
       super(URI.create("String:///" + name + kind.extension), kind);
       this.source = null;
    }

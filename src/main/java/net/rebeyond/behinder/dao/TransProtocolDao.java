@@ -29,6 +29,28 @@ public class TransProtocolDao extends BaseDao {
       return transProtocol;
    }
 
+   public TransProtocol findLegacyTransProtocolByTypeAndName(String scriptType, String name) throws Exception {
+      TransProtocol transProtocol = null;
+      PreparedStatement statement = this.connection.prepareStatement("select * from TransProtocol where id <0 and type=? and name=?");
+      statement.setString(1, scriptType);
+      statement.setString(2, name);
+      ResultSet rs = statement.executeQuery();
+      ResultSetMetaData rsmd = rs.getMetaData();
+
+      while(rs.next()) {
+         int numColumns = rsmd.getColumnCount();
+         transProtocol = new TransProtocol();
+
+         for(int i = 1; i <= numColumns; ++i) {
+            String column_name = rsmd.getColumnName(i);
+            this.setField(transProtocol, column_name, rs.getObject(column_name));
+         }
+      }
+
+      statement.close();
+      return transProtocol;
+   }
+
    public List findTransProtocols() throws Exception {
       List result = new ArrayList();
       PreparedStatement statement = this.connection.prepareStatement("select * from TransProtocol");
@@ -120,7 +142,7 @@ public class TransProtocolDao extends BaseDao {
 
    public List findTransProtocolByType(String type) throws Exception {
       List result = new ArrayList();
-      PreparedStatement statement = this.connection.prepareStatement("select * from TransProtocol where type = ?");
+      PreparedStatement statement = this.connection.prepareStatement("select * from TransProtocol where type = ? and id>0");
       statement.setString(1, type);
       ResultSet rs = statement.executeQuery();
       ResultSetMetaData rsmd = rs.getMetaData();
