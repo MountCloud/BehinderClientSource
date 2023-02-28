@@ -271,6 +271,7 @@
           <include>**/*.32</include>
           <include>**/*.64</include>
           <include>**/*.bak</include>
+          <include>**/*.config</include>
         </includes>
         <filtering>true</filtering>
       </resource>
@@ -312,6 +313,7 @@
             <nonFilteredFileExtension>bak</nonFilteredFileExtension>
             <nonFilteredFileExtension>jsp</nonFilteredFileExtension>
             <nonFilteredFileExtension>db</nonFilteredFileExtension>
+            <nonFilteredFileExtension>config</nonFilteredFileExtension>
           </nonFilteredFileExtensions>
         </configuration>
       </plugin>

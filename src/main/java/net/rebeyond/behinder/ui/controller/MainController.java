@@ -473,6 +473,7 @@ public class MainController {
             Scene scene = new Scene(transProtocolPane);
             scene.getRoot().setStyle("-fx-font-family: 'Arial'");
             stage.setScene(scene);
+            transProtocolPaneController.setStage(stage);
             stage.show();
          } catch (Exception var7) {
             var7.printStackTrace();
@@ -732,7 +733,7 @@ public class MainController {
 
       this.idCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-            public void updateItem(String item, boolean empty) {
+            public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                this.setText((String)null);
                this.setGraphic((Node)null);
@@ -748,7 +749,7 @@ public class MainController {
       });
       this.statusCol.setCellFactory((col) -> {
          TableCell cell = new TableCell() {
-            public void updateItem(String item, boolean empty) {
+            public void updateItem(Object item, boolean empty) {
                super.updateItem(item, empty);
                if (empty) {
                   this.setGraphic((Node)null);
@@ -779,7 +780,7 @@ public class MainController {
                         this.setAlignment(Pos.CENTER);
                      } catch (Exception var7) {
                         var7.printStackTrace();
-                        this.setText(item);
+                        this.setText(item.toString());
                      }
 
                   }
@@ -846,7 +847,11 @@ public class MainController {
       window.setOnCloseRequest((e) -> {
          window.hide();
       });
-      alert.setTitle("新增Shell");
+      if(shellID==-1){
+         alert.setTitle("新增Shell");
+      }else{
+         alert.setTitle("编辑Shell");
+      }
       Stage stage = (Stage)alert.getDialogPane().getScene().getWindow();
       stage.getIcons().add(new Image(new ByteArrayInputStream(Utils.getResourceData("net/rebeyond/behinder/resource/logo.jpg"))));
       alert.setHeaderText("");

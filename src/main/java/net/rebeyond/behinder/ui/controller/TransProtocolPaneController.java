@@ -22,6 +22,8 @@ import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+
+import javafx.stage.Stage;
 import net.rebeyond.behinder.core.Constants;
 import net.rebeyond.behinder.core.IShellService;
 import net.rebeyond.behinder.core.Params;
@@ -92,6 +94,7 @@ public class TransProtocolPaneController {
    private JSONObject currentShell;
    private TransProtocolDao transProtocolDao = new TransProtocolDao();
    private ShellManager shellManager;
+   private Stage stage;
 
    public void init() {
       try {
@@ -154,6 +157,7 @@ public class TransProtocolPaneController {
 
       });
       this.cancelBtn.setOnAction((event) -> {
+         stage.close();
       });
       this.encodeBtn.setOnAction((event) -> {
          String clearContent = this.clearTxt.getText();
@@ -636,5 +640,9 @@ public class TransProtocolPaneController {
       public Class g(byte[] b) {
          return super.defineClass(b, 0, b.length);
       }
+   }
+
+   public void setStage(Stage stage){
+      this.stage = stage;
    }
 }
