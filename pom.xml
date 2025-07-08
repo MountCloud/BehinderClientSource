@@ -161,6 +161,13 @@
       <version>4.9.3</version>
     </dependency>
 
+<!--  添加了okio依赖-->
+    <dependency>
+      <groupId>com.squareup.okio</groupId>
+      <artifactId>okio</artifactId>
+      <version>3.9.0</version> <!-- 可根据需要替换为合适版本 -->
+    </dependency>
+
 <!--    &lt;!&ndash; https://mavenlibs.com/maven/dependency/de.jensd/fontawesomefx-commons &ndash;&gt;-->
 <!--    <dependency>-->
 <!--      <groupId>de.jensd</groupId>-->
@@ -335,7 +342,9 @@
             <id>make-assembly</id>
             <phase>package</phase>
             <goals>
-              <goal>assembly</goal>
+<!--              已经过时的写法,适配新版maven-->
+<!--              <goal>assembly</goal>-->
+              <goal>single</goal>
             </goals>
           </execution>
         </executions>
